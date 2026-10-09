@@ -8,7 +8,7 @@
 const W = 480, H = 270, HUD_H = 40, VH = H - HUD_H, HORIZ = VH / 2;
 const PLANE = 0.8, PROJ = (W / 2) / PLANE;
 const FONT = '"Press Start 2P", monospace';
-const WALL_CHARS = '#RSNCWXD12?34567';
+const WALL_CHARS = '#RSNCWXD12?34567TOJQEU89';
 const SPECIAL_NAMES = { '3': 'Broadcom ESXi', '4': 'Proxmox', '5': 'Vates XCP-ng', '6': 'Hyper-V' };
 
 /* ------------------------------------------------------------ definitions */
@@ -49,8 +49,11 @@ Object.assign(ETYPES, {
   bitrot: { ...MINI_BASE, name: 'BIT ROT', tag: 'SILENT DATA CORRUPTION', hp: 950, speed: 0.8, dmg: [10, 16], shot: 'rot', fan: 3, shotSpeed: 6.5, shotScale: 0.4, minion: 'bug' },
   shadowit: { ...MINI_BASE, name: 'SHADOW IT', tag: 'UNSANCTIONED SAAS', hp: 850, speed: 2.2, dmg: [7, 11], shot: 'card', fan: 3, shotSpeed: 12, shotScale: 0.3, teleport: true },
 });
-const ENEMY_CHARS = { b: 'bug', d: 'drone', o: 'bot', t: 'troll', m: 'spam' };
+// The data thief of the thief objective never fights: he runs for the exit (js/objectives.js).
+ETYPES.thief = { name: 'Data thief', hp: 60, speed: 2.4, radius: 0.3, scale: 0.95, z: 0, flee: true, dmg: [0, 0], atkRange: 0, cd: 9, sight: 20, pain: 0.3 };
+const ENEMY_CHARS = { b: 'bug', d: 'drone', o: 'bot', t: 'troll', m: 'spam', y: 'thief' };
 const ITEM_CHARS = '+HAascrukgjFMKGYL';
+const OBJ_ITEMS = 'lhw';   // objective items (tapes, spare disk, stolen disk): not counted in the items score
 const DECOR_CHARS = 'xef';
 
 /* ----------------------------------------------------------- one-liners */
@@ -73,6 +76,9 @@ const QUIPS = {
   drink: ['Turbo engaged!', 'Twenty-four hours without sleep, no problem.'],
   barrel: ['Boom! UPS discharged.', 'Power outage... for you.'],
   exit: ['Reboot started. Next!', "The datacenter says thanks. You're welcome."],
+  objective: ['Done. Put it in the change log.', 'Another ticket closed before the SLA.', "And they say ops doesn't ship.", 'Fixed. Nobody will ever know.'],
+  thief: ['Hey! That disk is company property!', "You can run, but you can't hide from the audit log.", 'Nobody walks out with my data.'],
+  defend: ['Nobody touches prod on my watch.', 'Ninety seconds. I can do ninety seconds.', 'Failover started. Come and get it.'],
 };
 let voiceOn = true;
 let lastQuip = -99;
@@ -182,7 +188,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const randi = (a, b) => Math.floor(rand(a, b + 1));
 const alive = (e) => e.state !== 'dead' && e.state !== 'dying';
 // sound family of an enemy
-const sndKind = (e) => (ETYPES[e.type].boss ? 'boss' : e.type === 'troll' ? 'bug' : e.type === 'spam' ? 'bot' : e.type);
+const sndKind = (e) => (ETYPES[e.type].boss ? 'boss' : e.type === 'troll' ? 'bug' : e.type === 'spam' || e.type === 'thief' ? 'bot' : e.type);
 
 function loadLevel(idx) {
   const def = getLevel(idx);
@@ -192,7 +198,7 @@ function loadLevel(idx) {
     map: new Uint8Array(w * h), block: new Uint8Array(w * h),
     floor: new Uint8Array(w * h), ceil: new Uint8Array(w * h), variant: new Uint8Array(w * h),
     doors: new Array(w * h).fill(null), doorList: [],
-    enemies: [], items: [], decor: [], barrels: [], proj: [], fx: [],
+    enemies: [], items: [], decor: [], barrels: [], proj: [], fx: [], zones: [],
     flow: new Int16Array(w * h), flowT: 0,
     time: 0, kills: 0, totalKills: 0, itemsGot: 0, totalItems: 0,
     secrets: 0, totalSecrets: 0, migrated: 0, totalSpecials: 0,
@@ -219,6 +225,8 @@ function loadLevel(idx) {
     else if (c === 'V') spawnEnemy(def.miniType || 'spaghetti', x + 0.5, y + 0.5);
     else if (ENEMY_CHARS[c]) spawnEnemy(ENEMY_CHARS[c], x + 0.5, y + 0.5);
     else if (ITEM_CHARS.includes(c)) { L.items.push({ x: x + 0.5, y: y + 0.5, type: c, taken: false }); L.totalItems++; }
+    else if (OBJ_ITEMS.includes(c)) L.items.push({ x: x + 0.5, y: y + 0.5, type: c, taken: false, obj: true });
+    else if (c === 'z') L.zones.push({ x: x + 0.5, y: y + 0.5, i });
     else if (c === 'B') { L.barrels.push({ x: x + 0.5, y: y + 0.5, hp: 25, fuse: -1, dead: false, face: ((x * 7 + y * 13) % 4) * Math.PI / 2 }); L.block[i] = 1; }
     else if (DECOR_CHARS.includes(c)) { L.decor.push({ x: x + 0.5, y: y + 0.5, type: c, uses: 0, face: ((x * 7 + y * 13) % 4) * Math.PI / 2 }); if (c === 'x') L.block[i] = 1; }
   }
@@ -230,6 +238,7 @@ function loadLevel(idx) {
       if (t && 'RSN34567'.includes(String.fromCharCode(t))) L.floor[y * w + x] = 1;
     }
   }
+  for (const z of L.zones) L.floor[z.i] = 2;   // firmware upload zones
   P.x = start.x; P.y = start.y;
   let best = 0;
   for (let k = 0; k < 4; k++) {
@@ -240,6 +249,7 @@ function loadLevel(idx) {
   Object.assign(P, { bobPhase: 0, bobAmt: 0, wAnim: 0, fireCd: 0, raise: 1, flashT: 0, hurtT: 0, pickT: 0, dead: false, deadT: 0, spin: 0,
     faceMood: '', faceT: 0, look: 0, lookT: 0, hurtDir: 0, shake: 0, boostT: 0, nutT: 0, pitch: 0 });
   computeFlow();
+  Objectives.init(L);
   Light.bake(L);
 }
 
@@ -424,17 +434,20 @@ function useAction() {
       openDoor(d);
       return;
     }
-    if (String.fromCharCode(t) === 'X') {
-      if (L.bossAlive) { Sfx.deny(); msg('The system is locked! Destroy the boss.'); return; }
+    const ch = String.fromCharCode(t);
+    if (ch === 'X') {
+      if (!Objectives.done(L)) { Sfx.deny(); msg(Objectives.lockedText(L)); return; }
       completeLevel();
       return;
     }
+    Objectives.use(L, cx, cy, ch);
     return;
   }
 }
 
 function switchWeapon(i) {
   if (i === INV.cur || !INV.weapons[i]) return;
+  if (!Objectives.canHold(L, i)) { msg('Your hands are full with the SPARE disk: keyboard or pistol only.'); return; }
   INV.cur = i; P.raise = 1; P.wAnim = 0;
 }
 
@@ -464,7 +477,7 @@ function updatePlayer(dt) {
   const run = keys.ShiftLeft || keys.ShiftRight;
   if (P.boostT > 0) P.boostT -= dt;
   if (len > 0) {
-    const sp = (run ? 5.6 : 3.8) * (P.boostT > 0 ? 1.45 : 1) * dt / len;
+    const sp = (run ? 5.6 : 3.8) * (P.boostT > 0 ? 1.45 : 1) * (L.obj && L.obj.carry ? 0.85 : 1) * dt / len;
     moveEntity(P, mx * sp, my * sp, 0.28, true);
     P.bobPhase += dt * (run ? 11 : 8);
     P.bobAmt = Math.min(1, P.bobAmt + dt * 4);
@@ -481,7 +494,7 @@ function updatePlayer(dt) {
 
   for (const it of L.items) {
     if (it.taken) continue;
-    if ((it.x - P.x) ** 2 + (it.y - P.y) ** 2 < 0.36 && pickup(it)) { it.taken = true; if (!it.drop) L.itemsGot++; }
+    if ((it.x - P.x) ** 2 + (it.y - P.y) ** 2 < 0.36 && pickup(it)) { it.taken = true; if (!it.drop && !it.obj) L.itemsGot++; }
   }
 
   P.fireCd -= dt;
@@ -514,6 +527,10 @@ function pickup(it) {
     P.faceMood = 'grin'; P.faceT = 1.5; P.pickT = 0.3;
     return true;
   };
+  if (it.obj) {
+    if (it.type === 'w') { msg('Stolen disk recovered. The customer data is safe.'); Sfx.key(); P.pickT = 0.3; return true; }
+    return Objectives.pickup(L, it);
+  }
   let ok = true, text = '';
   switch (it.type) {
     case '+': if (INV.hp >= 100) return false; INV.hp = Math.min(100, INV.hp + 10); text = 'Espresso: +10 ego'; break;
@@ -720,6 +737,7 @@ function killEnemy(e, how) {
   Sfx.enemyDeath(sndKind(e), dist);
   if (how !== 'stomp') addFx(e.x, e.y, 'boom', 0.2 + T.z, T.boss ? 1.5 : 0.5);
   if (useGL) GLR.kill(e);
+  Objectives.kill(L, e);
   if ((e.type === 'bot' || e.type === 'spam') && Math.random() < 0.7) L.items.push({ x: e.x, y: e.y, type: 'a', taken: false, drop: true });
   if (T.mini) {
     L.bossAlive = L.enemies.some((o) => o !== e && alive(o) && ETYPES[o.type].boss);
@@ -841,6 +859,7 @@ function updateEnemy(e, dt) {
   if (e.flash > 0) e.flash -= dt;
   if (e.state === 'dead') return;
   if (e.state === 'dying') { e.timer -= dt; if (e.timer <= 0) e.state = 'dead'; return; }
+  if (T.flee) { Objectives.thief(L, e, dt); return; }
   const dx = P.x - e.x, dy = P.y - e.y, dist = Math.hypot(dx, dy) || 0.001;
   e.losT -= dt;
   if (e.losT <= 0) {
@@ -1422,11 +1441,18 @@ function drawHud(g) {
 }
 
 function drawOverlayText(g) {
+  // the level objective, on top of the messages; it blinks when time runs out
+  const ob = Objectives.hud(L);
+  if (ob && !showMap && !(Objectives.urgent(L) && L.time % 0.6 < 0.2)) {
+    g.font = `5px ${FONT}`; g.textAlign = 'left';
+    g.fillStyle = '#000'; g.fillText(ob, 7, 11);
+    g.fillStyle = L.obj.done ? '#3dff6a' : Objectives.urgent(L) ? '#ff3b3b' : '#20e8ff'; g.fillText(ob, 6, 10);
+  }
   g.font = `6px ${FONT}`; g.textAlign = 'left';
   L.msgs.forEach((m, i) => {
     g.globalAlpha = Math.min(1, m.t);
-    g.fillStyle = '#000'; g.fillText(m.text, 7, 13 + i * 10);
-    g.fillStyle = '#ffe14a'; g.fillText(m.text, 6, 12 + i * 10);
+    g.fillStyle = '#000'; g.fillText(m.text, 7, 23 + i * 10);
+    g.fillStyle = '#ffe14a'; g.fillText(m.text, 6, 22 + i * 10);
   });
   g.globalAlpha = 1;
   if (L.titleT > 0) {
@@ -1470,7 +1496,8 @@ function drawMap(g) {
   const ox = (W - cs * L.w) / 2, oy = (VH - cs * L.h) / 2;
   g.fillStyle = 'rgba(0,8,4,0.85)'; g.fillRect(0, 0, W, VH);
   const col = { '#': '#6b7178', '?': '#6b7178', R: '#2e8b3d', S: '#2e6da6', N: '#8a6d1f', C: '#b8bcc0', W: '#c2a020', X: '#3dff6a', D: '#9aa3ad', '1': '#d42020', '2': '#1f58d6',
-    '3': '#cc092f', '4': '#e57000', '5': '#2f9bff', '6': '#00a4ef', '7': '#7855fa' };
+    '3': '#cc092f', '4': '#e57000', '5': '#2f9bff', '6': '#00a4ef', '7': '#7855fa',
+    T: '#4fb4ff', O: '#ff6a3a', J: '#c2a020', Q: '#3dff6a', E: '#ff2a2a', U: '#555b62', '8': '#ff6a3a', '9': '#3dff6a' };
   for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
     const i = y * L.w + x, t = L.map[i];
     if (!t) { if (L.block[i]) { g.fillStyle = '#5a4a2a'; g.fillRect(ox + x * cs + cs * 0.2, oy + y * cs + cs * 0.2, cs * 0.6, cs * 0.6); } continue; }
@@ -1479,6 +1506,11 @@ function drawMap(g) {
   }
   for (const it of L.items) if (!it.taken) { g.fillStyle = '#ffe14a'; g.fillRect(ox + it.x * cs - 1, oy + it.y * cs - 1, 2, 2); }
   for (const e of L.enemies) if (alive(e)) { g.fillStyle = '#ff3b3b'; g.fillRect(ox + e.x * cs - 1.5, oy + e.y * cs - 1.5, 3, 3); }
+  // objective targets: blinking rings
+  if (L.time % 0.8 < 0.55) for (const [x, y, c] of Objectives.markers(L)) {
+    g.strokeStyle = c; g.lineWidth = 1;
+    g.beginPath(); g.arc(ox + x * cs, oy + y * cs, Math.max(3, cs * 0.8), 0, 7); g.stroke();
+  }
   const px = ox + P.x * cs, py = oy + P.y * cs;
   g.fillStyle = '#fff';
   g.beginPath();
@@ -1528,6 +1560,8 @@ function present() {
   if (P.hurtT > 0) { g.fillStyle = `rgba(255,0,0,${P.hurtT * 0.8})`; g.fillRect(0, 0, W, VH); }
   if (P.pickT > 0) { g.fillStyle = `rgba(255,230,80,${P.pickT * 0.5})`; g.fillRect(0, 0, W, VH); }
   if (P.dead) { g.fillStyle = `rgba(120,0,0,${Math.min(0.6, P.deadT * 0.4)})`; g.fillRect(0, 0, W, VH); }
+  const alarm = Objectives.alarm(L);
+  if (alarm) { g.fillStyle = `rgba(255,20,10,${alarm})`; g.fillRect(0, 0, W, VH); }
   if (P.hurtT > 0 && P.hurtDir) {
     g.save(); g.translate(W / 2, HORIZ); g.rotate(P.hurtDir);
     g.fillStyle = `rgba(255,40,40,${P.hurtT * 2})`;
@@ -1559,6 +1593,7 @@ function update(dt) {
   separateEnemies();
   updateProjectiles(dt);
   updateBarrels(dt);
+  Objectives.update(L, dt);
   updateMsgs(dt);
   if (P.dead && P.deadT > 1.6 && state === 'playing') showDeath();
 }
@@ -1654,7 +1689,7 @@ const CONTROLS = `
     <tr><td>WASD / ZQSD / ↑↓</td><td>Move</td></tr>
     <tr><td>Mouse / ← →</td><td>Turn (mouse: also look up / down in MODERN)</td></tr>
     <tr><td>Click / Ctrl</td><td>Fire</td></tr>
-    <tr><td>E / Space</td><td>Open, search walls, drink</td></tr>
+    <tr><td>E / Space</td><td>Open, search walls, drink, objectives (hold to repair)</td></tr>
     <tr><td>1-8 / wheel</td><td>Switch weapon</td></tr>
     <tr><td>Shift</td><td>Run</td></tr>
     <tr><td>Tab / M</td><td>Datacenter map</td></tr>
@@ -1737,7 +1772,8 @@ function startLevel(idx) {
   showPanel(`
     <h2>${L.def.name}<br><span class="ep">EPISODE ${L.def.episode + 1}: ${EPISODES[L.def.episode].name}</span></h2>
     <p class="story">${L.def.intro}</p>
-    <p class="story small">Racks to migrate to Nutanix: ${L.totalSpecials} | Secret areas: ${L.totalSecrets}</p>
+    <p class="story objective">OBJECTIVE: ${Objectives.title(L)}</p>
+    <p class="story small">Bonus: racks to migrate to Nutanix: ${L.totalSpecials} | Secret areas: ${L.totalSecrets}</p>
     <button data-go class="big">ENTER</button>
   `, () => { hidePanel(); state = 'playing'; lockPointer(); quip('start', 0.9, true); });
 }
@@ -1802,8 +1838,8 @@ function showDeath() {
   state = 'dead';
   document.exitPointerLock && document.exitPointerLock();
   showPanel(`
-    <h1 class="dead">SYSTEM COMPROMISED</h1>
-    <p class="story">Kernel panic: the on-call admin is not responding.<br>Enemies ${L.kills}/${L.totalKills} | ${fmtTime(L.time)}</p>
+    <h1 class="dead">${L.failReason ? 'OBJECTIVE FAILED' : 'SYSTEM COMPROMISED'}</h1>
+    <p class="story">${L.failReason || 'Kernel panic: the on-call admin is not responding.'}<br>Enemies ${L.kills}/${L.totalKills} | ${fmtTime(L.time)}</p>
     <button data-act="restart" class="big">RESTORE SNAPSHOT</button>
     <button data-act="title">MAIN MENU</button>
   `);
@@ -1827,6 +1863,7 @@ function completeLevel() {
       <tr><td>ENEMIES</td><td>${pct(L.kills, L.totalKills)}</td></tr>
       <tr><td>ITEMS</td><td>${pct(L.itemsGot, L.totalItems)}</td></tr>
       <tr><td>SECRETS</td><td>${pct(L.secrets, L.totalSecrets)}</td></tr>
+      <tr><td>OBJECTIVE</td><td>${Objectives.title(L, true)}</td></tr>
       <tr><td>NUTANIX MIGRATIONS</td><td>${L.migrated}/${L.totalSpecials}</td></tr>
       <tr><td>TIME</td><td>${fmtTime(L.time)}</td></tr>
     </table>`;

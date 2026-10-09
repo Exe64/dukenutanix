@@ -20,7 +20,54 @@
  *             a keyboard hit migrates them to Nutanix)
  * Props       x pallet of servers (blocking)   B UPS battery (explosive)
  *             e fire extinguisher   f water cooler (usable)
+ * Objective   T tape library   l LTO tape   O broken CRAC   J power panel (off; Q on)
+ *             E infected rack (U once isolated)   8 failed server   h spare disk
+ *             9 production database   z firmware zone   y data thief
+ *             (placed automatically according to the level's objective)
  */
+
+/*
+ * Every level has one objective (game.js runs them), fixed like the maps: never the
+ * same on two levels in a row, and each episode favors the ones that suit it.
+ * x5 levels: the mini-boss; x10 levels: the episode boss.
+ */
+const OBJECTIVE_TYPES = ['backup', 'overheat', 'power', 'ransom', 'hotswap', 'defend', 'firmware', 'evac', 'thief'];
+const EPISODE_FLAVOR = [
+  ['backup', 'hotswap', 'ransom'],       // clean rooms
+  ['overheat', 'firmware', 'defend'],    // cooling zone
+  ['ransom', 'defend', 'firmware'],      // network core
+  ['backup', 'power', 'thief'],          // cold archives
+  ['power', 'evac', 'overheat'],         // hyperscale
+];
+const LEVEL_OBJECTIVES = (() => {
+  const R = LevelGen.rng(31337), out = [];
+  const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(R() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  let prev = null;
+  for (let ep = 0; ep < 5; ep++) {
+    // the episode's own objectives come first, then the others
+    const order = [...shuffle([...EPISODE_FLAVOR[ep]]), ...shuffle(OBJECTIVE_TYPES.filter((t) => !EPISODE_FLAVOR[ep].includes(t)))];
+    if (ep === 0) { order.splice(order.indexOf('backup'), 1); order.splice(order.indexOf('hotswap'), 1); order.unshift('backup', 'hotswap'); }
+    for (let k = 0; k < 10; k++) {
+      if (k === 4) { out.push('miniboss'); continue; }
+      if (k === 9) { out.push('boss'); continue; }
+      const j = Math.max(0, order.findIndex((t) => t !== prev));
+      const t = order.splice(j, 1)[0];
+      out.push(t); prev = t;
+    }
+  }
+  return out;
+})();
+const OBJECTIVE_INTRO = {
+  backup: 'The backups are scattered all over the floor: bring the 5 LTO tapes back to the TAPE LIBRARY.',
+  overheat: 'The air conditioning is failing: repair the 3 broken CRAC units before the room hits thermal shutdown (5 minutes).',
+  power: 'Power is out. Find the 3 MAIN POWER panels in the dark and switch them back on.',
+  ransom: 'The ransomware is encrypting 6 racks: unplug every infected rack before encryption reaches 100% (5 minutes).',
+  hotswap: 'A production server lost a disk: grab the SPARE disk and hot-swap it into the failed server.',
+  defend: 'Everything wants a piece of the PROD DB: start the failover on its rack and keep it alive for 90 seconds.',
+  firmware: 'Firmware day: stand in the 3 FW upload zones until each upload completes. They will come for you.',
+  evac: 'FIRE ALARM! The gas suppression system fires in 5 minutes: reach the REBOOT terminal before that.',
+  thief: 'An insider is running off with a disk full of customer data: stop the DATA THIEF before he reaches the exit.',
+};
 
 const EPISODES = [
   { name: 'CLEAN ROOMS', boss: 'botnet', ambient: 1.0,
@@ -188,14 +235,20 @@ function getLevel(i) {
   const ep = Math.floor(i / 10), k = i % 10;
   const code = `E${ep + 1}M${k + 1}`;
   let def;
+  let objective = LEVEL_OBJECTIVES[i];
   if (HANDMADE[i]) {
-    def = { map: LevelGen.placeSpecials(HANDMADE[i].map, 777 + i), intro: HANDMADE[i].intro };
+    let map = LevelGen.placeSpecials(HANDMADE[i].map, 777 + i);
+    const placed = LevelGen.placeObjective(map, objective, 555 + i);
+    if (placed && LevelGen.validate(placed).ok) map = placed;
+    else if (LevelGen.OBJ_NEEDS[objective]) objective = 'evac';   // needs nothing on the map
+    def = { map, intro: HANDMADE[i].intro + (OBJECTIVE_INTRO[objective] ? ' ' + OBJECTIVE_INTRO[objective] : '') };
   } else {
     const spec = levelSpec(i);
+    spec.objective = objective;
     const gen = LevelGen.generate(spec);
     const obj = spec.miniboss ? `Mini-boss alert: ${MINIBOSS_NAMES[spec.miniboss]} is guarding the REBOOT terminal.`
       : spec.boss ? `${BOSS_NAMES[spec.boss].replace(/^./, (c) => c.toUpperCase())} guards the REBOOT terminal. Destroy it.`
-      : spec.keys >= 2 ? 'Blue badge, red badge, then the REBOOT terminal.' : 'Find the red badge and reach the REBOOT terminal.';
+      : OBJECTIVE_INTRO[objective];
     def = { map: gen.map, intro: `${EPISODES[ep].intro} ${obj}` };
   }
   def.index = i;
@@ -205,6 +258,7 @@ function getLevel(i) {
   def.ambient = EPISODES[ep].ambient;
   def.bossType = k === 9 ? EPISODES[ep].boss : null;
   def.miniType = k === 4 ? MINIBOSSES[ep] : null;
+  def.objective = objective;
   levelCache[i] = def;
   return def;
 }

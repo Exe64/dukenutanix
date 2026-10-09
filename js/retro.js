@@ -177,7 +177,7 @@ const Retro = (() => {
   }
   // COLORMAP level for a sector brightness seen at distance d (Doom's R_ScaleFromGlobalAngle lights).
   function level(sect, d, extra) {
-    let ln = (sect >> 4) + extra;
+    let ln = (sect >> 4) + extra + (torch ? Math.max(0, torch - d * 1.1) | 0 : 0);
     ln = ln < 0 ? 0 : ln > 15 ? 15 : ln;
     const l = Math.round((15 - ln) * 4 - LIGHTK / Math.max(d, 0.01));
     return l < 0 ? 0 : l > 31 ? 31 : l;
@@ -188,7 +188,7 @@ const Retro = (() => {
   const zb = new Float32Array(SW);
   let buf, bctx, out, out32, wcan, wctx, fcan, fctx;
   const rowLev = new Uint8Array(16);
-  let extra = 0;
+  let extra = 0, torch = 0;   // torch: the flashlight of the power outage, bright up close
 
   function view3d() {
     const dirX = Math.cos(P.a), dirY = Math.sin(P.a);
@@ -383,7 +383,9 @@ const Retro = (() => {
 
   function overlays() {
     const yellow = col('#ffe14a');
-    L.msgs.forEach((m, i) => text(m.text, 2, 2 + i * 7, yellow));
+    const ob = Objectives.hud(L);
+    if (ob && !showMap && !(Objectives.urgent(L) && L.time % 0.6 < 0.2)) text(ob, 2, 2, col(L.obj.done ? '#3dff6a' : Objectives.urgent(L) ? '#ff3b3b' : '#20e8ff'));
+    L.msgs.forEach((m, i) => text(m.text, 2, 10 + i * 7, yellow));
     if (L.titleT > 0 && !showMap) {
       center(L.def.name, 34, col('#3dff6a'), 2);
       center(`EPISODE ${L.def.episode + 1}: ${EPISODES[L.def.episode].name}`, 50, col('#9aa3ad'));
@@ -405,7 +407,8 @@ const Retro = (() => {
   }
 
   const MAPCOL = { '#': '#6b7178', '?': '#6b7178', R: '#2e8b3d', S: '#2e6da6', N: '#8a6d1f', C: '#b8bcc0', W: '#c2a020', X: '#3dff6a', D: '#9aa3ad',
-    1: '#d42020', 2: '#1f58d6', 3: '#cc092f', 4: '#e57000', 5: '#2f9bff', 6: '#00a4ef', 7: '#7855fa' };
+    1: '#d42020', 2: '#1f58d6', 3: '#cc092f', 4: '#e57000', 5: '#2f9bff', 6: '#00a4ef', 7: '#7855fa',
+    T: '#4fb4ff', O: '#ff6a3a', J: '#c2a020', Q: '#3dff6a', E: '#ff2a2a', U: '#555b62', 8: '#ff6a3a', 9: '#3dff6a' };
   function automap() {
     rect(0, 0, SW, VHR, 0);
     const cs = Math.min((SW - 16) / L.w, (VHR - 16) * ASPECT / L.h), csy = cs / ASPECT;
@@ -417,6 +420,11 @@ const Retro = (() => {
       rect(x0, y0, Math.max(1, Math.round(ox + (x + 1) * cs) - x0), Math.max(1, Math.round(oy + (y + 1) * csy) - y0), col(MAPCOL[String.fromCharCode(t)] || '#666666'));
     }
     for (const e of L.enemies) if (alive(e)) rect(ox + e.x * cs - 1, oy + e.y * csy - 1, 2, 2, col('#ff3b3b'));
+    // objective targets: blinking squares
+    if (L.time % 0.8 < 0.55) for (const [x, y, c] of Objectives.markers(L)) {
+      const mx = Math.round(ox + x * cs), my = Math.round(oy + y * csy), k = col(c);
+      rect(mx - 3, my - 3, 7, 1, k); rect(mx - 3, my + 3, 7, 1, k); rect(mx - 3, my - 3, 1, 7, k); rect(mx + 3, my - 3, 1, 7, k);
+    }
     for (let k = 0; k < 4; k++) rect(ox + (P.x + Math.cos(P.a) * k * 0.25) * cs - 1, oy + (P.y + Math.sin(P.a) * k * 0.25) * csy - 1, 2, 2, 15);
     rect(ox + P.x * cs - 1, oy + P.y * csy - 1, 3, 3, 15);
     center('DATACENTER MAP: ' + L.def.name, 2, col('#3dff6a'));
@@ -427,6 +435,8 @@ const Retro = (() => {
     if (P.dead) return Math.min(8, 2 + Math.floor(P.deadT * 4));
     if (P.hurtT > 0) return Math.max(1, Math.min(8, Math.ceil(P.hurtT / 0.35 * 6)));
     if (P.pickT > 0) return 8 + Math.max(1, Math.min(4, Math.ceil(P.pickT / 0.3 * 3)));
+    const alarm = Objectives.alarm(L);   // fire alarm: red flashes
+    if (alarm > 0.05) return alarm > 0.12 ? 2 : 1;
     if (P.boostT > 4 || (P.boostT > 0 && (P.boostT * 4 | 0) % 2)) return 13;
     return 0;
   }
@@ -435,6 +445,7 @@ const Retro = (() => {
     init();
     sectors();
     extra = P.flashT > 0 ? (INV.cur === 2 || INV.cur === 4 ? 2 : 1) : 0;
+    torch = L.obj && L.obj.dark && !P.dead ? 10 : 0;
     view3d();
     weapon();
     if (showMap) automap();

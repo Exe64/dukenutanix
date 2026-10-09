@@ -32,6 +32,9 @@ const WALL_GLOW = {
   1: [1.0, 0.2, 0.15, 0.55], 2: [0.25, 0.45, 1.0, 0.55],
   R: [0.3, 1.0, 0.5, 0.14], S: [0.3, 0.7, 1.0, 0.14], N: [0.4, 1.0, 0.6, 0.18],
   3: [0.3, 0.6, 1.0, 0.4], 4: [1.0, 0.55, 0.15, 0.4], 5: [0.3, 0.8, 1.0, 0.4], 6: [0.3, 0.6, 1.0, 0.4], 7: [0.55, 0.4, 1.0, 0.45],
+  // objective tiles
+  T: [0.4, 0.8, 1.0, 0.25], O: [1.0, 0.35, 0.15, 0.35], J: [1.0, 0.75, 0.2, 0.3], Q: [0.3, 1.0, 0.4, 0.3],
+  E: [1.0, 0.12, 0.1, 0.5], 8: [1.0, 0.3, 0.15, 0.35], 9: [0.3, 1.0, 0.45, 0.45],
 };
 
 // Dynamic light colors by projectile / effect kind: [r, g, b, strength, radius].
@@ -78,7 +81,7 @@ const Light = {
   bake(L) {
     const lw = L.w * LG, lh = L.h * LG, n = lw * lh;
     const mood = LIGHT_MOODS[L.def.episode % LIGHT_MOODS.length];
-    const amb = L.def.ambient;
+    const amb = L.def.ambient * (L.ambMul ?? 1);
     const R = new Float32Array(n).fill(mood.amb[0] * amb);
     const G = new Float32Array(n).fill(mood.amb[1] * amb);
     const B = new Float32Array(n).fill(mood.amb[2] * amb);
@@ -145,6 +148,8 @@ const Light = {
   update(L, P) {
     if (!this.base) return;
     const lights = [];
+    // the admin's flashlight while the power is out (in every quality)
+    if (L.obj && L.obj.dark && !P.dead) lights.push([P.x + Math.cos(P.a) * 1.2, P.y + Math.sin(P.a) * 1.2, 3.2, 1.0, 0.95, 0.82, 0.55]);
     if (this.high) {
       if (P.flashT > 0 && !P.dead) {
         const c = INV && INV.cur === 7 ? [0.4, 0.8, 1.0] : INV && INV.cur === 6 ? [0.7, 0.6, 1.0] : [1.0, 0.75, 0.4];

@@ -477,10 +477,36 @@ const Monsters3D = (() => {
     return model;
   }
 
+  // The data thief: balaclava, black jacket, the stolen hard drive under his arm.
+  function thief() {
+    begin();
+    for (const s of [1, -1]) {
+      part(s > 0 ? 'legA' : 'legB', [0, s * 5.5, 22]);
+      box([0, s * 5.5, 11], [3.5, 3.5, 11], '#2a2d33', SKIN);
+      box([2, s * 5.5, 1.2], [5, 4, 1.2], '#111214', SKIN);
+    }
+    part('body', [0, 0, 22]);
+    box([0, 0, 32], [6.5, 11, 11], '#1a1c20', { gloss: 0.35, spec: 0.2 });
+    box([6.6, 0, 33], [0.2, 1, 9], '#9aa1a8', METAL);
+    box([0, 0, 21.5], [6.8, 11.2, 1.2], '#3a3f4a', SKIN);
+    part('head', [0, 0, 43]);
+    ellipsoid([0, 0, 50], [7, 7, 8], '#14161a', SKIN);
+    box([6, 0, 51.5], [1.6, 5, 1.6], '#c89a74', SKIN);
+    for (const s of [1, -1]) sp([7.4, s * 2.4, 51.5], 1.1, '#f2f2f2', { gloss: 0.8, spec: 0.6 });
+    part('armL', [0, 13.5, 41], { side: 1 });
+    box([2, 13.5, 33], [3, 3, 8], '#1a1c20', SKIN);
+    box([7, 10, 27], [5, 2, 6.5], '#9aa1a8', { ...METAL, yaw: 0.2 });
+    box([12.1, 10.5, 27], [0.2, 1.5, 1.5], '#3dff6a', { emit: true });
+    part('gun', [0, -13.5, 41], { side: -1 });
+    box([0, -13.5, 33], [3, 3, 8], '#1a1c20', SKIN);
+    sp([0, -13.5, 24], 2.6, '#2a2d33', SKIN);
+    return model;
+  }
+
   /* --------------------------------------------------------------- build */
   // {type: {parts: [{anim, pivot, side, k, first, count}]}, data, atlas, stride}
   function build() {
-    const makers = { bug, drone, bot, troll, spam, spaghetti, hotspot, storm, bitrot, shadowit };
+    const makers = { bug, drone, bot, troll, spam, spaghetti, hotspot, storm, bitrot, shadowit, thief };
     for (const [k, pal] of Object.entries(BOSS_PAL)) makers[k] = boss(pal);
     const models = {}, chunks = [];
     let n = 0;

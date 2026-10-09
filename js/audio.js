@@ -126,5 +126,6 @@ const Sfx = (() => {
     nutanix() { [523, 784, 1046, 1568].forEach((f, i) => tone('square', f, f, 0.12, 0.16, i * 0.08)); tone('sine', 2093, 2093, 0.5, 0.15, 0.32); },
     slurp() { noise(0.4, 600, 1200, 0.25, 'bandpass', 4); tone('sine', 300, 500, 0.3, 0.1); },
     exit() { [523, 659, 784, 1046].forEach((f, i) => tone('square', f, f, 0.18, 0.2, i * 0.12)); },
+    alarm() { tone('square', 880, 660, 0.35, 0.12); tone('square', 880, 660, 0.35, 0.12, 0.4); },
   };
 })();

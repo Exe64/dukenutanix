@@ -153,7 +153,7 @@ npx @tauri-apps/cli@2 build      # or "dev" to run it without packaging
 | WASD / ZQSD / ↑↓ | Move (QWERTY and AZERTY) |
 | Mouse / ← → | Turn (and look up and down with the mouse in MODERN) |
 | Click / Ctrl | Fire |
-| E / Space | Open doors, search walls (secret areas), drink from water coolers, activate the REBOOT terminal |
+| E / Space | Open doors, search walls (secret areas), drink from water coolers, use objective panels (hold to repair a CRAC), activate the REBOOT terminal |
 | 1-8 / wheel | Switch weapon |
 | Shift | Run |
 | Tab / M | Datacenter map |
@@ -164,7 +164,28 @@ npx @tauri-apps/cli@2 build      # or "dev" to run it without packaging
 
 Cheat codes: `iddqd` (root mode) and `idkfa`.
 
-## Nutanix migrations
+## Objectives
+
+Every level has an objective, shown at the top of the screen and in the briefing. The REBOOT terminal stays
+locked until it is done. Consecutive levels never share the same objective, and the targets blink on the
+automap (Tab).
+
+| Objective | What to do |
+| --- | --- |
+| Backup restore | Find the 5 LTO tapes and load them into the tape library |
+| Overheat | Repair the 3 broken CRAC units: hold E for 3 seconds at each one. 5 minutes, and the heat hurts in the last one |
+| Power outage | The level is dark, with only a flashlight: switch the 3 MAIN POWER panels back on, the lights come back zone by zone |
+| Ransomware | Unplug the 6 infected racks (red screens) before the encryption reaches 100%. 5 minutes |
+| Hot swap | Carry the SPARE disk to the failed server. Hands full on the way: keyboard or pistol only, and a bit slower |
+| Defend prod | Start the failover on the PROD DB rack, then keep the waves of monsters away from it for 90 seconds |
+| Firmware update | Stand in the 3 upload zones on the floor until each upload completes, while monsters keep coming |
+| Fire evacuation | The gas suppression system is armed: reach the REBOOT terminal within 5 minutes |
+| Data thief | A thief runs for the exit with a stolen disk as soon as he spots you, opening every door: stop him first |
+
+The x5 levels have their mini-boss and the x10 levels their boss as the objective. Failing an objective
+(time out, PROD DB destroyed, thief escaped) ends the level like a death: restore the snapshot and try again.
+
+## Nutanix migrations (bonus)
 
 Every level contains 5 special racks, each in its vendor's colors:
 
@@ -176,7 +197,7 @@ Every level contains 5 special racks, each in its vendor's colors:
 | Hyper-V | 1 | the four Microsoft squares |
 
 Hit one with the **keyboard** (weapon 1) and it migrates into a **Nutanix** rack (charcoal and Iris purple).
-Migrating all 5 racks in a level grants an armor bonus. The counter is shown in the top-right corner
+This is a bonus on top of the level objective. Migrating all 5 racks in a level grants an armor bonus. The counter is shown in the top-right corner
 and in the end-of-level summary.
 
 ## Arsenal
@@ -235,7 +256,8 @@ For every level, the script checks:
 - that every door is framed by walls;
 - that every cell, the exit and the special racks are reachable with the available badges;
 - that the exit cannot be triggered from another room;
-- that every x5 level has exactly one mini-boss.
+- that every x5 level has exactly one mini-boss;
+- that the tiles and items of the level objective are all there, and that no two consecutive levels share an objective.
 
 ## Project layout
 
@@ -248,6 +270,7 @@ js/levels.js             episodes, level names, hand-drawn levels, difficulty se
 js/textures.js           textures, rack logos, sprites
 js/weapons.js            first-person weapon models: pre-rendered sprites and GPU meshes
 js/monsters3d.js         monsters as animated 3D models (MODERN on the GPU)
+js/objectives.js         level objectives: rules, timers, the data thief, HUD line and automap markers
 js/gl.js                 MODERN renderer on the GPU (WebGL2)
 js/lighting.js           lightmap baking, dynamic lights, bloom
 js/retro.js              RETRO renderer: 320x200, 256 color palette, COLORMAP, 35 Hz

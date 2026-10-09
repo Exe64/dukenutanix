@@ -502,7 +502,8 @@ const GLR = (() => {
     concrete: [1.1, 0.16, 0.12, 0.012], rack: [2.6, 0.62, 0.55, 0.045], door: [2.2, 0.5, 0.5, 0.03], crac: [2.2, 0.5, 0.45, 0.035],
     warn: [1.4, 0.3, 0.2, 0.012], exit: [1.8, 0.4, 0.3, 0.02], floor: [1.2, 0.78, 0.6, 0.008], perf: [2.2, 0.66, 0.55, 0.014], ceil: [1.2, 0.22, 0.12, 0.012],
   };
-  const TILE_MAT = { '#': 'concrete', '?': 'concrete', W: 'warn', R: 'rack', S: 'rack', N: 'rack', C: 'crac', D: 'door', 1: 'door', 2: 'door', X: 'exit' };
+  const TILE_MAT = { '#': 'concrete', '?': 'concrete', W: 'warn', R: 'rack', S: 'rack', N: 'rack', C: 'crac', D: 'door', 1: 'door', 2: 'door', X: 'exit',
+    T: 'rack', O: 'crac', J: 'warn', Q: 'warn', E: 'rack', U: 'rack', 8: 'rack', 9: 'rack' };
 
   // Detail map, tiled several times per texture and faded in up close: fine grain and
   // micro relief so that surfaces don't turn into smooth blur when the player
@@ -597,7 +598,7 @@ const GLR = (() => {
     const reg = (t, mat) => { if (t.glLayer === undefined) { t.glLayer = list.length; list.push([t, mat]); } };
     for (const ch of Object.keys(Assets.walls)) for (const v of Assets.walls[ch]) v.forEach((t) => reg(t, TILE_MAT[ch] || 'rack'));
     for (const ep of Assets.concrete) for (const v of ep) v.forEach((t) => reg(t, 'concrete'));
-    reg(Assets.floor[0], 'floor'); reg(Assets.floor[1], 'perf');
+    reg(Assets.floor[0], 'floor'); reg(Assets.floor[1], 'perf'); reg(Assets.floor[2], 'floor');
     Assets.ceil.forEach((t) => reg(t, 'ceil'));
     texWalls = newArray(list.length, gl.SRGB8_ALPHA8, GT);
     texNrm = newArray(list.length, gl.RGBA8, GT);
@@ -756,7 +757,7 @@ const GLR = (() => {
       tex2D(t, gl.LINEAR, gl.CLAMP_TO_EDGE);
     };
     up(texLightA, A); up(texLightB, Bd);
-    ambient = mood.amb.map((v) => v * L.def.ambient * 0.42);
+    ambient = mood.amb.map((v) => v * L.def.ambient * (L.ambMul ?? 1) * 0.42);
   }
   let ambient = [0.3, 0.3, 0.3];
 
@@ -784,11 +785,13 @@ const GLR = (() => {
   let dlN = 0;
   function gatherLights(L, P, inv) {
     dlN = 0;
-    if (!Light.high) return;
     const push = (x, y, z, rad, r, g, b, k) => {
       if (dlN >= MAX_DL || k <= 0) return;
       DL.set([x, y, z, rad], dlN * 4); DC.set([r * k, g * k, b * k, 0], dlN * 4); dlN++;
     };
+    // the admin's flashlight while the power is out (in every quality)
+    if (L.obj && L.obj.dark && !P.dead) push(P.x + Math.cos(P.a) * 1.3, P.y + Math.sin(P.a) * 1.3, 0.45, 3.2, 1.0, 0.95, 0.82, 0.7);
+    if (!Light.high) return;
     if (P.flashT > 0 && !P.dead) {
       const c = inv && inv.cur === 7 ? [0.4, 0.8, 1.0] : inv && inv.cur === 6 ? [0.7, 0.6, 1.0] : [1.0, 0.72, 0.4];
       push(P.x + Math.cos(P.a) * 0.5, P.y + Math.sin(P.a) * 0.5, 0.45, 5.5, c[0], c[1], c[2], 2.2);
@@ -2218,6 +2221,8 @@ const GLR = (() => {
     shot(cur, P) { if (ok) shot(cur, P); },
     // a wall tile changed (rack migrated to Nutanix): the static geometry is rebuilt
     retile(L) { if (ok && L === curL) buildWorld(L); },
+    // the lights changed (power objective): ceiling panels and lightmap rebuilt
+    relight(L) { if (ok && L === curL) { buildWorld(L); bake(L); updateCells(L, true); } },
     // finishes the background work at once (automated tests)
     flushWarm() { if (curL) warmUp(curL, 1e9); },
     // the weapon meshes (weapons.js build3D), keyed by the 2D art of each pose

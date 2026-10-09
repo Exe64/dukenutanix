@@ -13,8 +13,11 @@
  */
 const LevelGen = (() => {
   // 3 Broadcom ESXi, 4 Proxmox, 5 Vates, 6 Hyper-V, 7 Nutanix (special racks)
-  const WALLS = '#RSNCWX34567';
-  const OBSTACLES = '#RSNCWX34567xB';
+  // objective tiles: T tape library, O broken CRAC, J/Q power panel off/on, E/U infected/isolated rack,
+  // 8 failed server, 9 production database
+  const WALLS = '#RSNCWX34567TOJQEU89';
+  const OBSTACLES = '#RSNCWX34567TOJQEU89xB';
+  const OBJ_TILES = 'TOJE89';
   const SPECIALS = '33456';
 
   function rng(seed) {
@@ -29,6 +32,11 @@ const LevelGen = (() => {
       const out = tryGenerate(spec, spec.seed + attempt * 7919);
       if (!out) continue;
       out.map = placeSpecials(out.map, spec.seed + 17);
+      if (spec.objective) {
+        const m = placeObjective(out.map, spec.objective, spec.seed + 29);
+        if (!m) continue;
+        out.map = m;
+      }
       if (validate(out.map).ok) return out;
     }
     throw new Error('Unable to generate ' + spec.name);
@@ -369,9 +377,75 @@ const LevelGen = (() => {
       [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => !OBSTACLES.includes(map[y + dy][x + dx])).length > 1) errors.push(`exit ${x},${y} reachable from both sides`);
     const count = (ch) => map.join('').split(ch).length - 1;
     if (count('3') !== 2 || count('4') !== 1 || count('5') !== 1 || count('6') !== 1) errors.push('missing special racks');
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if ('3456'.includes(map[y][x]) &&
-      ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => seen.has((x + dx) + ',' + (y + dy)))) errors.push(`special rack ${x},${y} unreachable`);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (('3456' + OBJ_TILES).includes(map[y][x]) &&
+      ![[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => seen.has((x + dx) + ',' + (y + dy)))) errors.push(`tile ${map[y][x]} at ${x},${y} unreachable`);
     return { ok: errors.length === 0, errors };
+  }
+
+  /*
+   * Objectives (see OBJECTIVES in game.js): what each one needs on the map, placed
+   * spread apart on walls facing a reachable cell or on free reachable floor cells.
+   */
+  const OBJ_NEEDS = {
+    backup: { walls: [['T', '#', 1]], floor: [['l', 5]] },
+    overheat: { walls: [['O', 'C', 3]] },
+    power: { walls: [['J', '#', 3]] },
+    ransom: { walls: [['E', 'RSN', 6]] },
+    hotswap: { walls: [['8', 'RSN', 1]], floor: [['h', 1]] },
+    defend: { walls: [['9', 'RSN', 1]] },
+    firmware: { floor: [['z', 3]] },
+    thief: { floor: [['y', 1]] },
+  };
+  function placeObjective(map, type, seed) {
+    const need = OBJ_NEEDS[type];
+    if (!need) return map;
+    const R = rng(seed);
+    const g = map.map((r) => [...r]);
+    const h = g.length, w = g[0].length;
+    const reach = reachable(map, '?');   // never behind a secret wall
+    let sx = 0, sy = 0;
+    map.forEach((r, y) => { const x = r.indexOf('P'); if (x >= 0) { sx = x; sy = y; } });
+    const faces = (x, y) => x > 0 && y > 0 && x < w - 1 && y < h - 1 && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => reach.has((x + dx) + ',' + (y + dy)));
+    const taken = [];
+    // picks n cells among cands, far from each other, from what is already placed and from the start
+    const spread = (cands, n, ch) => {
+      for (let k = 0; k < n; k++) {
+        let best = null, bestScore = -1;
+        for (let t = 0; t < 40 && cands.length; t++) {
+          const c = cands[Math.floor(R() * cands.length)];
+          if (g[c[1]][c[0]] !== c[2] || taken.some((o) => o[0] === c[0] && o[1] === c[1])) continue;
+          const dStart = Math.hypot(c[0] - sx, c[1] - sy);
+          if (dStart < 4) continue;
+          // the thief starts a short run from the player; everything else spreads out
+          const score = ch === 'y' ? -Math.abs(dStart - 8) : Math.min(dStart, ...taken.map((o) => Math.hypot(o[0] - c[0], o[1] - c[1])));
+          if (score > bestScore) { bestScore = score; best = c; }
+        }
+        if (!best) return false;
+        taken.push(best);
+        g[best[1]][best[0]] = ch;
+      }
+      return true;
+    };
+    for (const [ch, from, n] of need.walls || []) {
+      const cands = [];
+      const collect = (chars) => {
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (chars.includes(g[y][x]) && faces(x, y)) cands.push([x, y, g[y][x]]);
+      };
+      collect(from);
+      if (cands.length < n * 2) collect(from === '#' ? 'RSN' : '#');
+      if (!spread(cands, n, ch)) return null;
+    }
+    for (const [ch, n] of need.floor || []) {
+      const cands = [];
+      for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+        if (g[y][x] !== '.' || !reach.has(x + ',' + y)) continue;
+        // firmware zones and the thief need some room around them
+        if ((ch === 'z' || ch === 'y') && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => g[y + dy][x + dx] !== '.')) continue;
+        cands.push([x, y, '.']);
+      }
+      if (!spread(cands, n, ch)) return null;
+    }
+    return g.map((r) => r.join(''));
   }
 
   /*
@@ -407,7 +481,7 @@ const LevelGen = (() => {
     return g.map((r) => r.join(''));
   }
 
-  function reachable(map) {
+  function reachable(map, extra = '') {
     let sx = 0, sy = 0;
     map.forEach((r, y) => { const x = r.indexOf('P'); if (x >= 0) { sx = x; sy = y; } });
     const seen = new Set([sx + ',' + sy]), q = [[sx, sy]];
@@ -416,14 +490,14 @@ const LevelGen = (() => {
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const nx = x + dx, ny = y + dy, k = nx + ',' + ny;
         const n = map[ny] && map[ny][nx];
-        if (!n || seen.has(k) || OBSTACLES.includes(n)) continue;
+        if (!n || seen.has(k) || OBSTACLES.includes(n) || extra.includes(n)) continue;
         seen.add(k); q.push([nx, ny]);
       }
     }
     return seen;
   }
 
-  return { generate, validate, placeSpecials, rng, SPECIALS };
+  return { generate, validate, placeSpecials, placeObjective, rng, SPECIALS, OBJ_NEEDS };
 })();
 
 if (typeof module !== 'undefined') module.exports = LevelGen;

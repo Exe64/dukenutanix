@@ -265,7 +265,109 @@ function drawExit(g, R, led, L) {
   g.fillStyle = '#f2c230'; g.fillRect(2, 60, 60, 2);
 }
 
+/* --------------------------------------------------- objective tiles */
+
+// Tape library: rows of LTO cartridges behind glass, a robot rail and a status screen.
+function drawTapeLibrary(g, R, led, L) {
+  g.fillStyle = '#15181c'; g.fillRect(0, 0, 64, 64);
+  g.fillStyle = '#2c3138'; g.fillRect(2, 2, 60, 60);
+  led(6, 5, 52, 10, '#04121f');
+  g.fillStyle = '#4fb4ff'; g.font = 'bold 6px monospace'; g.textAlign = 'center'; g.fillText('TAPE LIBRARY', 32, 12);
+  g.textAlign = 'left';
+  g.fillStyle = '#0b0d10'; g.fillRect(6, 18, 52, 34);
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 8; c++) {
+    const x = 8 + c * 6.2, y = 20 + r * 8;
+    if (R() < 0.35) { g.fillStyle = '#05070a'; g.fillRect(x, y, 5, 6); continue; }   // empty slot
+    g.fillStyle = '#1d2a4a'; g.fillRect(x, y, 5, 6);
+    g.fillStyle = '#e8e8e0'; g.fillRect(x + 0.5, y + 1, 4, 1.6);
+  }
+  g.fillStyle = 'rgba(160,200,255,0.10)'; g.fillRect(6, 18, 52, 34);
+  g.fillStyle = '#8a929b'; g.fillRect(6, 35.5, 52, 1);
+  led(10, 56, 3, 2, L() < 0.6 ? '#3dff6a' : '#123018'); led(16, 56, 3, 2, '#ffb52e');
+  g.fillStyle = '#e8c21a'; g.fillRect(40, 55, 18, 4); g.fillStyle = '#111'; g.font = '3px monospace'; g.fillText('INSERT HERE', 41, 58);
+}
+
+// CRAC unit out of order: error on the display, red alarm LED, scorched grille.
+function drawCracBroken(g, R, led, L) {
+  drawCrac(g, R, led, L);
+  led(6, 6, 20, 10, '#2a0404');
+  g.fillStyle = '#ff3b3b'; g.font = 'bold 6px monospace'; g.fillText('ERR 3F', 8, 13.5);
+  led(37, 8, 3, 2, L() < 0.5 ? '#ff2020' : '#400808');
+  g.fillStyle = 'rgba(30,20,10,0.45)'; g.fillRect(5, 30, 23, 18);
+  g.fillStyle = '#e8c21a'; g.fillRect(36, 40, 22, 9); g.fillStyle = '#111'; g.font = 'bold 4px monospace'; g.fillText('OUT OF', 39, 44); g.fillText('ORDER', 40, 48);
+}
+
+// Main power panel; on: levers up and green LEDs, off: levers down and red LEDs.
+function drawBreaker(on) {
+  return (g, R, led, L) => {
+    noiseFill(g, R, 0, 0, 64, 64, 150, 156, 162, 8);
+    g.fillStyle = '#6b7178'; g.fillRect(4, 4, 56, 56);
+    g.fillStyle = '#8d939a'; g.fillRect(6, 6, 52, 52);
+    g.fillStyle = '#e8c21a'; g.beginPath(); g.moveTo(32, 9); g.lineTo(26, 20); g.lineTo(31, 20); g.lineTo(28, 28); g.lineTo(36, 16); g.lineTo(31, 16); g.lineTo(34, 9); g.fill();
+    g.fillStyle = '#111'; g.font = 'bold 5px monospace'; g.textAlign = 'center'; g.fillText('MAIN POWER', 32, 34);
+    g.textAlign = 'left';
+    for (let k = 0; k < 3; k++) {
+      const x = 13 + k * 14;
+      g.fillStyle = '#2b2f35'; g.fillRect(x, 38, 10, 16);
+      g.fillStyle = on ? '#3dff6a' : '#c01010'; g.fillRect(x + 3, on ? 39 : 47, 4, 6);
+      led(x + 3.5, 55.5, 3, 1.5, on ? '#3dff6a' : (L() < 0.6 ? '#ff2a2a' : '#400808'));
+    }
+  };
+}
+
+// Rack being encrypted by the ransomware: a red screen with a padlock and a progress bar.
+function drawInfected(g, R, led, L) {
+  drawRack('R')(g, R, led, L);
+  led(8, 14, 48, 30, '#2a0000');
+  g.fillStyle = '#ff2a2a'; g.font = 'bold 6px monospace'; g.textAlign = 'center';
+  g.fillText('ENCRYPTING', 32, 22);
+  g.textAlign = 'left';
+  g.strokeStyle = '#ff2a2a'; g.lineWidth = 1.5; g.beginPath(); g.arc(32, 29, 3.5, Math.PI, 0); g.stroke();
+  g.fillStyle = '#ff2a2a'; g.fillRect(27.5, 29, 9, 7);
+  g.fillStyle = '#2a0000'; g.fillRect(31.5, 31, 1, 3);
+  g.fillStyle = '#5a0000'; g.fillRect(12, 38, 40, 3);
+  led(12, 38, 8 + L() * 30, 3, '#ff2a2a');
+}
+
+// Rack isolated by the admin: dark LEDs, its network cable pulled out and dangling.
+function drawUnplugged(g, R, led, L) {
+  drawRack('R')(g, R, () => {}, L);
+  g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(4, 3, 56, 58);
+  cable(g, [[48, 20], [52, 30], [50, 42], [53, 56]], '#2a7de1', 1.6);
+  rj45(g, 53, 57, '#2a7de1');
+  g.fillStyle = '#e8c21a'; g.fillRect(10, 26, 26, 8); g.fillStyle = '#111'; g.font = 'bold 5px monospace'; g.fillText('ISOLATED', 11, 32);
+}
+
+// Server with a failed disk: an empty bay, a blinking amber/red LED and a label.
+function drawFailedServer(g, R, led, L) {
+  drawRack('R')(g, R, led, L);
+  g.fillStyle = '#2e3238'; g.fillRect(5, 24, 54, 14);
+  g.fillStyle = '#050607'; g.fillRect(14, 26, 14, 10);
+  g.fillStyle = '#1b1e22'; g.fillRect(31, 26, 14, 10);
+  led(48, 28, 4, 3, L() < 0.5 ? '#ff2a2a' : '#ffb52e');
+  g.fillStyle = '#ff3b3b'; g.font = 'bold 4px monospace'; g.fillText('DISK FAIL', 10, 43);
+}
+
+// The production database: a premium rack with a lit label that nobody dares to touch.
+function drawProdDB(g, R, led, L) {
+  drawRack('S')(g, R, led, L);
+  led(6, 4, 52, 11, '#042010');
+  g.fillStyle = '#3dff6a'; g.font = 'bold 8px monospace'; g.textAlign = 'center'; g.fillText('PROD DB', 32, 12.5);
+  g.textAlign = 'left';
+  g.fillStyle = '#c21d1d'; g.fillRect(14, 52, 36, 7); g.fillStyle = '#fff'; g.font = 'bold 4px monospace'; g.fillText('DO NOT TOUCH', 17, 57);
+}
+
 /* ------------------------------------------------------- floors/ceilings */
+
+// Firmware upload zone: a floor tile with a lit ring (stand on it to upload).
+function drawZoneFloor(g, R, led) {
+  drawFloor(false)(g, R);
+  g.fillStyle = '#e8c21a'; g.fillRect(4, 4, 56, 3); g.fillRect(4, 57, 56, 3); g.fillRect(4, 4, 3, 56); g.fillRect(57, 4, 3, 56);
+  g.strokeStyle = '#20e8ff'; g.lineWidth = 2; g.beginPath(); g.arc(32, 32, 18, 0, Math.PI * 2); g.stroke();
+  const ring = (x, y, w, h) => led(x, y, w, h, '#20e8ff');
+  for (let a = 0; a < 16; a++) ring(32 + Math.cos(a / 16 * 6.28) * 18 - 1, 32 + Math.sin(a / 16 * 6.28) * 18 - 1, 2, 2);
+  g.fillStyle = '#20e8ff'; g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.fillText('FW', 32, 36); g.textAlign = 'left';
+}
 
 function drawFloor(perf) {
   return (g, R) => {
@@ -856,6 +958,26 @@ function drawShadowIT(g, phase, atk, v = 0, dir = 1) {
   g.restore();
 }
 
+// Data thief: an insider in a balaclava running away with a hard drive under the arm
+function drawThief(g, phase, atk, v = 0, dir = 1) {
+  const lo = phase ? 4 : -4, f = FACE_SHIFT[v] * dir * 0.6, back = v >= 3;
+  g.fillStyle = '#2a2f38'; g.fillRect(24, 44, 7, 20 + Math.min(0, lo)); g.fillRect(33, 44, 7, 20 - Math.max(0, lo));
+  g.fillStyle = '#111'; g.fillRect(22, 61 + Math.min(0, lo), 10, 3); g.fillRect(32, 61 - Math.max(0, lo), 10, 3);
+  // dark jacket
+  g.fillStyle = '#3a3f4a'; g.beginPath(); g.moveTo(19, 46); g.lineTo(22, 22); g.lineTo(42, 22); g.lineTo(45, 46); g.closePath(); g.fill();
+  g.fillStyle = '#2a2e36'; g.fillRect(31, 22, 2, 24);
+  // visitor badge, flipped
+  if (!back) { g.fillStyle = '#f2f2f2'; g.fillRect(35 + f * 0.5, 28, 5, 7); g.fillStyle = '#c21d1d'; g.fillRect(35 + f * 0.5, 28, 5, 2); }
+  // head in a balaclava
+  ell(g, 32 + f * 0.4, 15, 8, 9, '#1a1c20');
+  if (!back) { g.fillStyle = '#d0a07a'; g.fillRect(27 + f, 12, 10, 4); }
+  eyes(v, dir, 29 + f, 35 + f, (x) => { g.fillStyle = '#fff'; g.fillRect(x - 1, 13, 2.5, 2); g.fillStyle = '#000'; g.fillRect(x, 13.5, 1, 1); });
+  // arms: one holding the stolen disk, one swinging
+  g.fillStyle = '#3a3f4a'; g.fillRect(13, 24 + (phase ? 2 : 0), 7, 15); g.fillRect(44, 24, 7, 13);
+  drawHdd(g, 50, 40, 0.75, 0.2);
+  if (atk) { g.fillStyle = '#ffe14a'; g.font = 'bold 6px monospace'; g.fillText('$$$', 4, 10); }
+}
+
 /* ------------------------------------------------- volumetric decor props */
 
 // Faces are small canvases drawn in a design space (w x h), at TS x resolution.
@@ -1051,6 +1173,23 @@ function buildDecor() {
 function drawItem(type) {
   return (g) => {
     switch (type) {
+      case 'l': // LTO backup tape
+        g.fillStyle = '#1d2a4a'; g.fillRect(20, 42, 24, 20);
+        g.fillStyle = '#2e4270'; g.fillRect(20, 42, 24, 2);
+        g.fillStyle = '#e8e8e0'; g.fillRect(23, 46, 18, 5);
+        g.fillStyle = '#111'; g.font = 'bold 4px monospace'; g.fillText('LTO-8', 26, 50.5);
+        g.fillStyle = '#5a6068'; g.fillRect(36, 54, 6, 6);
+        g.fillStyle = '#3dff6a'; g.fillRect(22, 58, 3, 2);
+        break;
+      case 'h': // spare hard drive, in its tray
+        g.fillStyle = '#c21d1d'; g.fillRect(16, 46, 6, 16);
+        drawHdd(g, 34, 54, 1.25, 0);
+        g.fillStyle = '#ffe14a'; g.font = 'bold 4px monospace'; g.fillText('SPARE', 25, 44);
+        break;
+      case 'w': // the stolen disk, dropped by the thief
+        drawHdd(g, 32, 54, 1.25, 0.3);
+        g.fillStyle = '#ff3b3b'; g.font = 'bold 4px monospace'; g.fillText('STOLEN', 22, 44);
+        break;
       case '+': // coffee
         g.fillStyle = '#eee'; g.fillRect(24, 46, 14, 16);
         g.fillStyle = '#6b3b1a'; g.fillRect(25, 46, 12, 3);
@@ -1225,9 +1364,15 @@ function buildAssets() {
     'X': variants(drawExit, 1, 2),
   };
   for (const [ch, brand] of Object.entries(SPECIAL_TILES)) Assets.walls[ch] = variants(specialRack(brand), 1, 2);
+  // objective tiles (see OBJECTIVES in game.js)
+  Object.assign(Assets.walls, {
+    T: variants(drawTapeLibrary, 1, 2), O: variants(drawCracBroken, 1, 2), J: variants(drawBreaker(false), 1, 2),
+    Q: variants(drawBreaker(true), 1, 1), E: variants(drawInfected, 1, 2), U: variants(drawUnplugged, 1, 1),
+    8: variants(drawFailedServer, 1, 2), 9: variants(drawProdDB, 1, 2),
+  });
   // concrete (and secret fake walls) in each episode's colors
   Assets.concrete = [0, 1, 2, 3, 4].map((ep) => variants(concrete(ep), 2, 1));
-  Assets.floor = [makeTexture(drawFloor(false), 5), makeTexture(drawFloor(true), 6)];
+  Assets.floor = [makeTexture(drawFloor(false), 5), makeTexture(drawFloor(true), 6), makeTexture(drawZoneFloor, 7, 77)];
   Assets.ceil = [makeTexture(drawCeiling('plain'), 7), makeTexture(drawCeiling('light'), 8), makeTexture(drawCeiling('tray'), 9)];
 
   Assets.enemies = {
@@ -1244,8 +1389,9 @@ function buildAssets() {
   Assets.enemies.storm = buildEnemySprites(drawStorm, ['#3a3f4a', '#5a6070', '#f2f2f2', '#ffe14a'], 22);
   Assets.enemies.bitrot = buildEnemySprites(drawBitrot, ['#1d2a4a', '#4a7a2a', '#6b4a2a', '#2a2a2a'], 23);
   Assets.enemies.shadowit = buildEnemySprites(drawShadowIT, ['#1a1426', '#2c2240', '#e8c21a', '#555'], 24);
+  Assets.enemies.thief = buildEnemySprites(drawThief, ['#3a3f4a', '#1a1c20', '#9aa1a8', '#f2f2f2'], 25);
   Assets.items = {};
-  for (const k of '+HAascruFMLejkgKGY') Assets.items[k] = makeSprite(drawItem(k), true);
+  for (const k of '+HAascruFMLejkgKGYlhw') Assets.items[k] = makeSprite(drawItem(k), true);
   Assets.decor = buildDecor();
   Assets.proj = {
     orb: orbSprite('#ff3bd0', '#7a1f5c', 7),
