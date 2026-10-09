@@ -334,6 +334,7 @@ const Objectives = (() => {
     const o = L.obj;
     if (!o) return true;
     if (o.type === 'boss' || o.type === 'miniboss') return !L.bossAlive;
+    if (o.type === 'evac') return !o.failed;   // reaching the terminal is the objective
     return o.done;
   }
 
