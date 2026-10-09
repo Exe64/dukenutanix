@@ -240,6 +240,7 @@ For every level, the script checks:
 ## Project layout
 
 ```
+ROADMAP.md               ideas kept for later (multiplayer deathmatch...)
 index.html               page, menus, styles
 docs/banner.jpg          README banner
 js/levelgen.js           procedural generator + map validation
