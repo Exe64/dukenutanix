@@ -22,14 +22,6 @@ Préparation, coup/tir et retour pour tous les monstres qui attaquent, dans les 
 
 ---
 
-### [Issue: #13] Logique en pas fixe pour les deux styles [PRIORITÉ: MOYENNE] [Complexité: M] 🟢
-
-Plan : [`13-fixed-timestep.md`](13-fixed-timestep.md)
-
-Logique à 60 Hz avec accumulateur en MODERN comme en RETRO, rendu interpolé ; prérequis du multijoueur.
-
----
-
 ### [Issue: #14] Manette et remappage des touches [PRIORITÉ: MOYENNE] [Complexité: M] 🟢
 
 Plan : [`14-gamepad-remap.md`](14-gamepad-remap.md)
@@ -175,6 +167,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`11-progressive-lightmap-bake.md`](done/11-progressive-lightmap-bake.md)
 - **[Issue: #12] `#12` — Démarrage plus rapide : assets construits à la demande** (2026-10-22) 🔵 — armes et maillages 3D construits au premier usage de leur style (démarrage RETRO -26 %, MODERN -3 %)
   [`12-lazy-asset-build.md`](done/12-lazy-asset-build.md)
+- **[Issue: #13] `#13` — Logique en pas fixe pour les deux styles** (2026-10-22) 🔵 — logique à 70 Hz fixes dans les deux styles, joueur interpolé en MODERN, souris appliquée à chaque frame
+  [`13-fixed-timestep.md`](done/13-fixed-timestep.md)
 
 ---
 

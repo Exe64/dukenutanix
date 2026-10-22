@@ -466,11 +466,7 @@ function bestWeapon() {
 function updatePlayer(dt) {
   if (P.dead) { P.deadT += dt; return; }
   const turn = ((keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0));
-  P.a += turn * 2.8 * dt + mouseDX * 0.0022 * sensitivity;
-  mouseDX = 0;
-  // looking up and down (GPU renderer only; aiming stays automatic in height)
-  if (useGL) P.pitch = Math.max(-0.6, Math.min(0.6, P.pitch - mouseDY * 0.0022 * sensitivity));
-  mouseDY = 0;
+  P.a += turn * 2.8 * dt;
   const fwd = ((keys.KeyW || keys.ArrowUp) ? 1 : 0) - ((keys.KeyS || keys.ArrowDown) ? 1 : 0);
   const str = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
   const dx = Math.cos(P.a), dy = Math.sin(P.a);
@@ -1605,6 +1601,16 @@ function updateMsgs(dt) {
   if (L.subtitle) L.subtitle.t -= dt;
 }
 
+// The mouse turns the view at every displayed frame, not at the logic's rate: no added latency.
+function applyLook() {
+  if (!P.dead) {
+    P.a += mouseDX * 0.0022 * sensitivity;
+    // looking up and down (GPU renderer only; aiming stays automatic in height)
+    if (useGL) P.pitch = Math.max(-0.6, Math.min(0.6, P.pitch - mouseDY * 0.0022 * sensitivity));
+  }
+  mouseDX = 0; mouseDY = 0;
+}
+
 function update(dt) {
   L.time += dt;
   animClock += dt;
@@ -1629,7 +1635,7 @@ function drawFrame() {
   else { if (useGL) renderGL(); else render(); present(); }
 }
 
-let last = 0, tics = 0;
+let last = 0;
 // Average render cost while playing: on a machine too slow for the HIGH
 // effects, quality drops to LOW once (the player can switch back with G).
 let renderCost = 0, slowT = 0, autoLowered = false;
@@ -1641,26 +1647,41 @@ function frame(ts) {
   step(ts);
   perf.cpuMs = avg(perf.cpuMs, Math.min(200, performance.now() - t0));
 }
+// The logic runs at a fixed 70 Hz in both styles (twice Doom's 35 Hz tics), so the
+// game plays the same whatever the style or the screen's refresh rate. RETRO shows a
+// frame every 2 steps (35 fps); MODERN draws every display frame, with the player's
+// position interpolated between the last two steps.
+const LOGIC_HZ = 70, LOGIC_DT = 1 / LOGIC_HZ;
+let acc = 0, steps = 0;
 function step(ts) {
   const raw = Math.min(0.2, (ts - last) / 1000 || 0);
   last = ts;
   const shown = L && state !== 'title' && state !== 'loading' && state !== 'select';
+  const playing = state === 'playing';
+  if (playing) applyLook();
+  acc += raw;
+  let n = 0;
+  for (; acc >= LOGIC_DT; acc -= LOGIC_DT, n++) {
+    P.px = P.x; P.py = P.y; P.pbob = P.bobPhase;
+    if (state === 'playing') update(LOGIC_DT);
+    steps++;
+  }
+  if (!playing) { P.px = P.x; P.py = P.y; P.pbob = P.bobPhase; }
   if (style === 'retro') {
-    // Doom's 35 Hz: the logic advances in fixed tics and a frame is drawn per tic
-    tics += raw * 35;
-    let n = 0;
-    for (; tics >= 1; tics--, n++) if (state === 'playing') update(1 / 35);
-    if (n && shown) { Retro.frame(); if (showPerf) drawPerf(); }
+    if (n && shown && (steps >> 1) !== ((steps - n) >> 1)) { Retro.frame(); if (showPerf) drawPerf(); }
     requestAnimationFrame(frame);
     return;
   }
   const dt = Math.min(0.05, raw);
-  if (state === 'playing') update(dt);
   if (shown) {
+    // the player between the last two logic steps (restored after drawing)
+    const x = P.x, y = P.y, bob = P.bobPhase, k = acc / LOGIC_DT;
+    if (P.px !== undefined) { P.x = P.px + (x - P.px) * k; P.y = P.py + (y - P.py) * k; P.bobPhase = P.pbob + (bob - P.pbob) * k; }
     if (useGL) {
-      renderGL(state === 'playing' ? dt : 0); present();
+      renderGL(playing ? dt : 0); present();
+      P.x = x; P.y = y; P.bobPhase = bob;
       // the GPU works asynchronously: judge it by the time between frames
-      if (state === 'playing' && !autoLowered) {
+      if (playing && !autoLowered) {
         renderCost += (raw * 1000 - renderCost) * 0.05;
         slowT = renderCost > 28 ? slowT + dt : 0;
         if (slowT > 3) {
@@ -1674,7 +1695,8 @@ function step(ts) {
     }
     const t0 = performance.now();
     render(); present();
-    if (state === 'playing' && !autoLowered && (Light.high || RS > 1)) {
+    P.x = x; P.y = y; P.bobPhase = bob;
+    if (playing && !autoLowered && (Light.high || RS > 1)) {
       renderCost += (performance.now() - t0 - renderCost) * 0.05;
       slowT = renderCost > 14 ? slowT + dt : 0;
       if (slowT > 3) {
