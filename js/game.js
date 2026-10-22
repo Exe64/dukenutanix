@@ -167,6 +167,7 @@ let L = null;            // current level
 let INV = null;          // inventory carried between levels
 let INV_START = null;    // inventory at level start (for restarts)
 let god = false;
+let skill = SKILL_DEFAULT;   // difficulty (SKILLS in levels.js), kept in the save
 let animFrame = 0, animClock = 0;
 const P = { x: 0, y: 0, a: 0 };
 
@@ -223,7 +224,7 @@ function loadLevel(idx) {
     if (c === 'P') start = { x: x + 0.5, y: y + 0.5 };
     else if (c === 'Z') spawnEnemy(def.bossType || 'ransomware', x + 0.5, y + 0.5);
     else if (c === 'V') spawnEnemy(def.miniType || 'spaghetti', x + 0.5, y + 0.5);
-    else if (ENEMY_CHARS[c]) spawnEnemy(ENEMY_CHARS[c], x + 0.5, y + 0.5);
+    else if (ENEMY_CHARS[c]) { if (keepEnemy(c, x, y, skill)) spawnEnemy(ENEMY_CHARS[c], x + 0.5, y + 0.5); }
     else if (ITEM_CHARS.includes(c)) { L.items.push({ x: x + 0.5, y: y + 0.5, type: c, taken: false }); L.totalItems++; }
     else if (OBJ_ITEMS.includes(c)) L.items.push({ x: x + 0.5, y: y + 0.5, type: c, taken: false, obj: true });
     else if (c === 'z') L.zones.push({ x: x + 0.5, y: y + 0.5, i });
@@ -665,6 +666,7 @@ function meleeAttack(w) {
 
 function damagePlayer(dmg, fromX, fromY) {
   if (P.dead || god) return;
+  dmg *= SKILLS[skill].dmg;
   if (INV.armor > 0) {
     const ab = Math.min(INV.armor, Math.floor(dmg / 3));
     INV.armor -= ab; dmg -= ab;
@@ -1692,7 +1694,7 @@ function readSave() {
 function writeSave(idx, inv) {
   const s = readSave() || { maxLevel: 0 };
   s.maxLevel = Math.max(s.maxLevel || 0, idx);
-  s.level = idx; s.inv = inv;
+  s.level = idx; s.inv = inv; s.skill = skill;
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) { /* storage unavailable */ }
 }
 
@@ -1730,10 +1732,12 @@ const CONTROLS = `
   </table>`;
 
 const actions = {
-  newGame() { Sfx.init(); INV = newInventory(); startLevel(0); },
+  newGame() { showSkill(); },
+  skill(arg) { Sfx.init(); skill = +arg; INV = newInventory(); startLevel(0); },
   continueGame() {
     Sfx.init();
     const s = readSave();
+    skill = s && s.skill !== undefined ? s.skill : SKILL_DEFAULT;
     INV = s && s.inv ? cloneInv(s.inv) : defaultLoadout(s ? s.level : 0);
     startLevel(s ? s.level : 0);
   },
@@ -1741,6 +1745,7 @@ const actions = {
   play(arg) {
     Sfx.init();
     const idx = +arg, s = readSave();
+    skill = s && s.skill !== undefined ? s.skill : SKILL_DEFAULT;
     INV = s && s.level === idx && s.inv ? cloneInv(s.inv) : defaultLoadout(idx);
     startLevel(idx);
   },
@@ -1774,6 +1779,15 @@ function showTitle() {
   `);
 }
 
+function showSkill() {
+  state = 'select';
+  showPanel(`
+    <h2>CHOOSE YOUR ACCESS LEVEL</h2>
+    ${SKILLS.map((k, i) => `<p class="story small"><button data-act="skill" data-arg="${i}" class="${i === SKILL_DEFAULT ? 'big' : ''}">${k.name}</button><br>${k.hint}</p>`).join('')}
+    <button data-act="title">BACK</button>
+  `);
+}
+
 function showSelect() {
   state = 'select';
   const s = readSave();
@@ -1803,7 +1817,7 @@ function startLevel(idx) {
     <h2>${L.def.name}<br><span class="ep">EPISODE ${L.def.episode + 1}: ${EPISODES[L.def.episode].name}</span></h2>
     <p class="story">${L.def.intro}</p>
     <p class="story objective">OBJECTIVE: ${Objectives.title(L)}</p>
-    <p class="story small">Bonus: racks to migrate to Nutanix: ${L.totalSpecials} | Secret areas: ${L.totalSecrets}</p>
+    <p class="story small">Difficulty: ${SKILLS[skill].name} | Bonus: racks to migrate to Nutanix: ${L.totalSpecials} | Secret areas: ${L.totalSecrets}</p>
     <button data-go class="big">ENTER</button>
   `, () => { hidePanel(); state = 'playing'; perf.frameMs = perf.cpuMs = 0; lockPointer(); quip('start', 0.9, true); });
 }

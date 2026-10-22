@@ -107,6 +107,10 @@ python3 -m http.server 8000
 
 Progress is saved locally (CONTINUE button, and a level select for unlocked levels).
 
+A new game asks for the difficulty: **INTERN** (fewer enemies, half the damage), **SYSADMIN** (a few
+fewer enemies, three quarters of the damage), **ON-CALL** (the default) or **ROOT** (one and a half times
+the damage). Bosses, mini-bosses and the data thief are there at every difficulty; the choice is saved with the game.
+
 ### Building a release
 
 Push a version tag and GitHub Actions does the rest (`.github/workflows/release.yml`):
@@ -258,6 +262,7 @@ For every level, the script checks:
 - that every cell, the exit and the special racks are reachable with the available badges;
 - that the exit cannot be triggered from another room;
 - that every x5 level has exactly one mini-boss;
+- that enemies remain on the easiest difficulty;
 - that the tiles and items of the level objective are all there, and that no two consecutive levels share an objective.
 
 ## Project layout

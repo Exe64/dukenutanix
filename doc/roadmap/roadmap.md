@@ -14,14 +14,6 @@ La vision d'ensemble (multijoueur) est résumée dans [`ROADMAP.md`](../../ROADM
 ---
 
 ## À faire
-### [Issue: #5] Niveaux de difficulté [PRIORITÉ: HAUTE] [Complexité: M] 🟢
-
-Plan : [`5-difficulty-levels.md`](5-difficulty-levels.md)
-
-Choix de la difficulté au lancement d'une partie : densité d'ennemis et multiplicateur de dégâts, niveaux seedés inchangés.
-
----
-
 ### [Issue: #6] Checkpoints en cours de niveau [PRIORITÉ: HAUTE] [Complexité: M] 🟢
 
 Plan : [`6-mid-level-checkpoints.md`](6-mid-level-checkpoints.md)
@@ -211,6 +203,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`9-release-actions-node24.md`](done/9-release-actions-node24.md)
 - **[Issue: #4] `#4` — Son spatialisé (stéréo)** (2026-10-22) 🔵 — panoramique stéréo des sons du monde selon le côté d'où ils viennent
   [`4-stereo-audio.md`](done/4-stereo-audio.md)
+- **[Issue: #5] `#5` — Niveaux de difficulté** (2026-10-22) 🔵 — 4 niveaux de difficulté choisis au NEW GAME (ennemis filtrés, dégâts ajustés), sauvegardés, contrôlés par validate-levels
+  [`5-difficulty-levels.md`](done/5-difficulty-levels.md)
 
 ---
 

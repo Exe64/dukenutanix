@@ -264,3 +264,18 @@ function getLevel(i) {
 }
 
 const LEVEL_COUNT = 50;
+
+// Difficulty, chosen for a new game: the share of regular enemies kept and the damage taken.
+const SKILLS = [
+  { name: 'INTERN', hint: 'Fewer bugs, half the damage', enemies: 0.6, dmg: 0.5 },
+  { name: 'SYSADMIN', hint: 'A quieter shift', enemies: 0.8, dmg: 0.75 },
+  { name: 'ON-CALL', hint: 'The datacenter as designed', enemies: 1, dmg: 1 },
+  { name: 'ROOT', hint: 'Every hit hurts more', enemies: 1, dmg: 1.5 },
+];
+const SKILL_DEFAULT = 2;
+// Regular enemies (b d o t m) are thinned out on the easy skills, always the same ones
+// for a given cell; bosses, mini-bosses and the data thief always stay.
+function keepEnemy(ch, x, y, skill) {
+  if (!'bdotm'.includes(ch)) return true;
+  return (((x * 7919 + y * 104729) >>> 3) % 251) / 251 < SKILLS[skill].enemies;
+}
