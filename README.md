@@ -13,7 +13,8 @@ No external assets: textures, logos, sprites, weapons and sounds are all generat
 
 Two visual styles, switched with **T**, from the title screen or from the pause menu (the choice is remembered):
 - **MODERN** (default): a real 3D renderer on the GPU (WebGL2, `js/gl.js`) at the screen's native resolution,
-  with per-pixel lighting, reflections, HDR post-processing and 3D props. You can look up and down with the mouse.
+  with per-pixel lighting, reflections, HDR post-processing and 3D props. You can look up and down with the mouse,
+  and shots go where the crosshair points (AIM: AUTO in the pause menu brings back Doom's automatic aiming in height).
 - **RETRO**: a renderer that follows Doom's own limits (`js/retro.js`), described below.
 
 ### The MODERN style

@@ -22,14 +22,6 @@ Préparation, coup/tir et retour pour tous les monstres qui attaquent, dans les 
 
 ---
 
-### [Issue: #15] Visée libre en MODERN [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
-
-Plan : [`15-modern-free-aim.md`](15-modern-free-aim.md)
-
-En MODERN, utiliser le pitch de la caméra pour la visée (hitscan et projectiles) au lieu de l'auto-visée en hauteur.
-
----
-
 ### [Issue: #16] Options de confort et d'accessibilité [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
 
 Plan : [`16-comfort-options.md`](16-comfort-options.md)
@@ -163,6 +155,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`13-fixed-timestep.md`](done/13-fixed-timestep.md)
 - **[Issue: #14] `#14` — Manette et remappage des touches** (2026-10-22) 🔵 — manette (API Gamepad, jeu et menus) et remappage des touches depuis la pause, sauvegardé
   [`14-gamepad-remap.md`](done/14-gamepad-remap.md)
+- **[Issue: #15] `#15` — Visée libre en MODERN** (2026-10-22) 🔵 — visée libre en MODERN GPU (tir instantané et projectiles suivent le pitch), option AIM: AUTO dans la pause
+  [`15-modern-free-aim.md`](done/15-modern-free-aim.md)
 
 ---
 

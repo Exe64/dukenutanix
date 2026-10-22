@@ -400,6 +400,12 @@ function msg(text) {
 const keys = {};
 let mouseDX = 0, mouseDY = 0, firing = false, showMap = false;
 let sensitivity = 1;
+// MODERN on the GPU can look up and down: shots then go where the crosshair points
+// (free aim). AUTO keeps Doom's automatic aiming in height, as in RETRO.
+let aimMode = 'free';
+const freeAim = () => useGL && aimMode === 'free';
+// height span of a target ([bottom, top], in the 0..1 room height)
+const enemySpan = (e) => { const T = ETYPES[e.type]; return [T.z, T.z + T.scale * (e.shrunk > 0 ? 0.4 : 1)]; };
 
 // Remappable actions (KeyboardEvent.code values, so WASD stays in place on AZERTY),
 // saved in dukenutanix.keys. Escape always pauses; N, G, T, V and F3 stay fixed.
@@ -636,6 +642,12 @@ function fire() {
     if (w.proj === 'sfp') { p.scale = 0.3; p.z = 0.25; }
     if (w.proj === 'zip') { p.scale = 0.3; }
     if (w.proj === 'hdd') { p.scale = 0.22; p.z = 0.45; p.vz = 1.6; p.fuse = 1.7; p.life = 10; }
+    if (freeAim()) {
+      // from eye height along the crosshair (the hard drive is thrown higher or lower)
+      const slope = Math.tan(P.pitch);
+      if (w.proj === 'hdd') p.vz += slope * w.speed;
+      else { p.z = 0.5 - (p.scale || 0.2) / 2; p.vz = slope * w.speed; p.aimed = true; }
+    }
     L.proj.push(p);
     return;
   }
@@ -645,30 +657,35 @@ function fire() {
 function hitscan(a, dmg) {
   const dx = Math.cos(a), dy = Math.sin(a);
   castRay(P.x, P.y, dx, dy);
-  const wallD = RH.d;
+  // free aim: the ray climbs or drops with the pitch from eye height (0.5) and stops at
+  // the floor or the ceiling; targets are hit only within their height
+  const slope = freeAim() ? Math.tan(P.pitch) : 0, zAt = (d) => 0.5 + slope * d;
+  const wallD = slope ? Math.min(RH.d, 0.5 / Math.abs(slope)) : RH.d;
   let best = null, bestD = wallD, barrel = null;
-  const test = (ox, oy, r) => {
+  const test = (ox, oy, r, span) => {
     const ex = ox - P.x, ey = oy - P.y, along = ex * dx + ey * dy;
-    return along > 0 && along < bestD && Math.abs(ex * dy - ey * dx) < r ? along : -1;
+    if (!(along > 0 && along < bestD && Math.abs(ex * dy - ey * dx) < r)) return -1;
+    const z = zAt(along);
+    return !slope || (z > span[0] - 0.08 && z < span[1] + 0.08) ? along : -1;
   };
   for (const e of L.enemies) {
     if (!alive(e)) continue;
     const r = ETYPES[e.type].radius * (e.shrunk > 0 ? 0.4 : 1) + 0.05;
-    const al = test(e.x, e.y, r);
+    const al = test(e.x, e.y, r, enemySpan(e));
     if (al > 0) { best = e; barrel = null; bestD = al; }
   }
   for (const b of L.barrels) {
     if (b.dead) continue;
-    const al = test(b.x, b.y, 0.35);
+    const al = test(b.x, b.y, 0.35, [0, 0.6]);
     if (al > 0) { barrel = b; best = null; bestD = al; }
   }
   if (best) {
-    addFx(P.x + dx * (bestD - 0.2), P.y + dy * (bestD - 0.2), 'spark', 0.35 + ETYPES[best.type].z, 0.25);
+    addFx(P.x + dx * (bestD - 0.2), P.y + dy * (bestD - 0.2), 'spark', slope ? zAt(bestD) - 0.1 : 0.35 + ETYPES[best.type].z, 0.25);
     damageEnemy(best, dmg);
   } else if (barrel) {
     damageBarrel(barrel, dmg);
   } else if (wallD < 60) {
-    addFx(P.x + dx * (wallD - 0.05), P.y + dy * (wallD - 0.05), 'spark', 0.3 + Math.random() * 0.3, 0.2);
+    addFx(P.x + dx * (wallD - 0.05), P.y + dy * (wallD - 0.05), 'spark', slope ? Math.max(0, Math.min(0.9, zAt(wallD) - 0.1)) : 0.3 + Math.random() * 0.3, 0.2);
   }
 }
 
@@ -1046,6 +1063,11 @@ function updateProjectiles(dt) {
     const steps = Math.ceil(Math.hypot(p.vx, p.vy) * dt / 0.1);
     for (let s = 0; s < steps && !p.dead; s++) {
       p.x += p.vx * dt / steps; p.y += p.vy * dt / steps;
+      if (p.aimed) {
+        p.z += p.vz * dt / steps;
+        const c = p.z + (p.scale || 0.2) / 2;
+        if (c < 0.02 || c > 0.98) { projImpact(p); break; }
+      }
       if (projHitsWall(p.x, p.y)) { projImpact(p); break; }
       if (p.owner === 'enemy') {
         if (!P.dead && (p.x - P.x) ** 2 + (p.y - P.y) ** 2 < 0.35 * 0.35) {
@@ -1067,6 +1089,7 @@ function projHitsTargets(p) {
   for (const e of L.enemies) {
     if (!alive(e)) continue;
     const r = ETYPES[e.type].radius * (e.shrunk > 0 ? 0.4 : 1) + 0.12;
+    if (p.aimed) { const c = p.z + (p.scale || 0.2) / 2, [lo, hi] = enemySpan(e); if (c < lo - 0.1 || c > hi + 0.1) continue; }
     if ((p.x - e.x) ** 2 + (p.y - e.y) ** 2 < r * r) {
       if (p.kind === 'zip') { p.dead = true; shrinkEnemy(e); addFx(p.x, p.y, 'plasmaHit', p.z, 0.3); }
       else if (p.kind === 'sfp' || p.kind === 'hdd') projImpact(p);
@@ -1827,6 +1850,11 @@ const actions = {
   restart() { INV = cloneInv(INV_START); startLevel(L.idx); },
   checkpoint() { restoreCheckpoint(); },
   controls() { showBinds(); },
+  aim() {
+    aimMode = aimMode === 'free' ? 'auto' : 'free';
+    try { localStorage.setItem('dukenutanix.aim', aimMode); } catch (e) { /* ignored */ }
+    document.getElementById('aim').textContent = `AIM: ${aimMode.toUpperCase()}`;
+  },
   rebind(a) { rebinding = a; showBinds(); },
   resetBinds() { binds = JSON.parse(JSON.stringify(DEFAULT_BINDS)); saveBinds(); showBinds(); },
   pauseMenu() { showPause(); },
@@ -1918,6 +1946,7 @@ function showPause() {
     <button id="gfx">GRAPHICS: ${Light.high ? 'HIGH' : 'LOW'}</button>
     <button id="sty">STYLE: ${style.toUpperCase()}</button>
     <button data-act="controls">CONTROLS</button>
+    ${useGL ? `<button data-act="aim" id="aim">AIM: ${aimMode.toUpperCase()}</button>` : ''}
     <label class="sens">Mouse sensitivity <input type="range" min="0.3" max="2.5" step="0.1" value="${sensitivity}" id="sens"></label>
     ${CONTROLS}
   `);
@@ -2179,6 +2208,7 @@ function boot() {
     const s = localStorage.getItem('dukenutanix.sens'); if (s) sensitivity = +s;
     if (localStorage.getItem('dukenutanix.voice') === '0') voiceOn = false;
     showPerf = localStorage.getItem('dukenutanix.perf') === '1';
+    if (localStorage.getItem('dukenutanix.aim') === 'auto') aimMode = 'auto';
     const kb = JSON.parse(localStorage.getItem('dukenutanix.keys') || 'null');
     if (kb) for (const a of Object.keys(DEFAULT_BINDS)) if (Array.isArray(kb[a]) && kb[a].length) binds[a] = kb[a];
     if (localStorage.getItem('dukenutanix.gfx') === 'low') { Light.high = false; vignette.hidden = true; }
