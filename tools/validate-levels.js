@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const load = (f) => fs.readFileSync(path.join(__dirname, '../js', f), 'utf8');
-const { getLevel, LEVEL_COUNT, LevelGen, SKILLS, keepEnemy } = new Function(load('levelgen.js').replace(/if \(typeof module[^\n]*/, '') + load('levels.js') + '; return { getLevel, LEVEL_COUNT, LevelGen, SKILLS, keepEnemy };')();
+const { getLevel, LEVEL_COUNT, LevelGen, SKILLS, keepEnemy, seedLevel } = new Function(load('levelgen.js').replace(/if \(typeof module[^\n]*/, '') + load('levels.js') + '; return { getLevel, LEVEL_COUNT, LevelGen, SKILLS, keepEnemy, seedLevel };')();
 let ok = true, prevObj = null;
 const t0 = Date.now();
 for (let i = 0; i < LEVEL_COUNT; i++) {
@@ -28,5 +28,13 @@ for (let i = 0; i < LEVEL_COUNT; i++) {
   console.log(`${def.code.padEnd(6)} ${String(def.map[0].length).padStart(2)}x${String(def.map.length).padEnd(2)} enemies ${String(enemies).padStart(2)} (${String(easy).padStart(2)} ${SKILLS[0].name.toLowerCase()})  secret ${n('?')}  badge doors ${n('1') + n('2')}  ${(def.objective === 'boss' ? 'boss ' + def.bossType : def.objective === 'miniboss' ? 'mini-boss ' + def.miniType : def.objective).padEnd(20)} ${r.ok ? 'OK' : 'ERROR'}`);
   if (!r.ok) { ok = false; r.errors.slice(0, 5).forEach((e) => console.log('   ' + e)); }
 }
+// seeded runs (daily seed, endless): a sample of seeds and depths must generate valid maps
+let seeded = 0;
+for (const seed of [1, 7, 20261022, 123456789]) for (let depth = 1; depth <= 18; depth++) {
+  const def = seedLevel(seed, depth), r = LevelGen.validate(def.map);
+  if (!r.ok) { ok = false; console.log(`seed ${seed} depth ${depth} ERROR`); r.errors.slice(0, 5).forEach((e) => console.log('   ' + e)); }
+  seeded++;
+}
+console.log(`${seeded} seeded run levels checked`);
 console.log(`${ok ? 'Levels OK' : 'Errors found'} (${Date.now() - t0} ms)`);
 process.exit(ok ? 0 : 1);

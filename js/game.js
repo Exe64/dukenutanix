@@ -192,7 +192,7 @@ const alive = (e) => e.state !== 'dead' && e.state !== 'dying';
 const sndKind = (e) => (ETYPES[e.type].boss ? 'boss' : e.type === 'troll' ? 'bug' : e.type === 'spam' || e.type === 'thief' ? 'bot' : e.type);
 
 function loadLevel(idx) {
-  const def = getLevel(idx);
+  const def = run ? seedLevel(run.seed, run.depth) : getLevel(idx);
   const rows = def.map, w = rows[0].length, h = rows.length;
   L = {
     idx, def, w, h,
@@ -1853,9 +1853,13 @@ const CONTROLS = `
 
 const actions = {
   newGame() { showSkill(); },
-  skill(arg) { Sfx.init(); skill = +arg; INV = newInventory(); startLevel(0); },
+  skill(arg) { Sfx.init(); run = null; skill = +arg; INV = newInventory(); startLevel(0); },
+  daily() { startRun(dailySeed(), true); },
+  endless() { startRun(Math.floor(Math.random() * 1e9), false); },
+  retryRun() { startRun(run.seed, run.daily); },
   continueGame() {
     Sfx.init();
+    run = null;
     const s = readSave();
     skill = s && s.skill !== undefined ? s.skill : SKILL_DEFAULT;
     INV = s && s.inv ? cloneInv(s.inv) : defaultLoadout(s ? s.level : 0);
@@ -1864,6 +1868,7 @@ const actions = {
   select() { showSelect(); },
   play(arg) {
     Sfx.init();
+    run = null;
     const idx = +arg, s = readSave();
     skill = s && s.skill !== undefined ? s.skill : SKILL_DEFAULT;
     INV = s && s.level === idx && s.inv ? cloneInv(s.inv) : defaultLoadout(idx);
@@ -1908,10 +1913,35 @@ function showTitle() {
     ${cont}
     <button data-act="newGame" class="${s ? '' : 'big'}">NEW GAME</button>
     <button data-act="select">SELECT LEVEL</button>
+    <br><button data-act="daily">DAILY RUN</button>
+    <button data-act="endless">ENDLESS RUN</button>
+    <p class="hint">Daily run: today's seed, the same for everyone${readRuns()[dailySeed()] ? ` (your best: depth ${readRuns()[dailySeed()]})` : ''}. Endless: a new seed each time. One life, as deep as you can go.</p>
     <button data-act="style" id="tsty">STYLE: ${style.toUpperCase()}</button>
     ${CONTROLS}
     <p class="hint">Click inside the game to capture the mouse. Cheats: iddqd, idkfa.</p>
   `);
+}
+
+/* ------------------------------------------------------------ seeded runs */
+
+// Daily seed and endless runs (seedLevel in levels.js): a new level at each depth, the
+// inventory carried over, the first death ends the run. The best depth per seed is kept.
+let run = null;   // { seed, depth, daily } during a run
+const RUNS_KEY = 'dukenutanix.runs';
+const dailySeed = () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
+function readRuns() { try { return JSON.parse(localStorage.getItem(RUNS_KEY)) || {}; } catch (e) { return {}; } }
+function writeRunScore(depth) {
+  const runs = readRuns(), best = Math.max(runs[run.seed] || 0, depth);
+  runs[run.seed] = best;
+  try { localStorage.setItem(RUNS_KEY, JSON.stringify(runs)); } catch (e) { /* storage unavailable */ }
+  return best;
+}
+function startRun(seed, daily) {
+  Sfx.init();
+  run = { seed, depth: 1, daily };
+  skill = SKILL_DEFAULT;
+  INV = defaultLoadout(seedLevel(seed, 1).index);
+  startLevel(0);
 }
 
 function showSkill() {
@@ -1945,7 +1975,7 @@ function showSelect() {
 function startLevel(idx) {
   loadLevel(idx);
   INV_START = cloneInv(INV);
-  writeSave(idx, INV_START);
+  if (!run) writeSave(idx, INV_START);
   if (!INV.weapons[INV.cur]) INV.cur = 1;
   state = 'briefing';
   drawFrame();
@@ -2071,6 +2101,18 @@ function restoreCheckpoint() {
 function showDeath() {
   state = 'dead';
   document.exitPointerLock && document.exitPointerLock();
+  if (run) {
+    // a seeded run ends with the first death
+    const best = writeRunScore(run.depth - 1);
+    showPanel(`
+      <h1 class="dead">RUN OVER</h1>
+      <p class="story">${L.failReason || 'Kernel panic: the on-call admin is not responding.'}<br>
+      Run ${run.seed}: ${run.depth - 1} depth(s) cleared. Best on this seed: depth ${best}.</p>
+      <button data-act="retryRun" class="big">RETRY THIS SEED</button>
+      <button data-act="title">MAIN MENU</button>
+    `);
+    return;
+  }
   showPanel(`
     <h1 class="dead">${L.failReason ? 'OBJECTIVE FAILED' : 'SYSTEM COMPROMISED'}</h1>
     <p class="story">${L.failReason || 'Kernel panic: the on-call admin is not responding.'}<br>Enemies ${L.kills}/${L.totalKills} | ${fmtTime(L.time)}</p>
@@ -2087,6 +2129,17 @@ function completeLevel() {
   firing = false;
   document.exitPointerLock && document.exitPointerLock();
   const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : 'N/A';
+  if (run) {
+    // seeded run: on to the next depth, the inventory carried over
+    const best = writeRunScore(run.depth);
+    showPanel(`
+      <h2>${L.def.name}<br><span class="ok">REBOOTED</span></h2>
+      <p class="story">Run ${run.seed}: depth ${run.depth} cleared in ${fmtTime(L.time)}. Best on this seed: depth ${best}.</p>
+      <button data-go class="big">NEXT DEPTH</button>
+      <button data-act="title">END RUN</button>
+    `, () => { INV.hp = Math.max(INV.hp, 1); run.depth++; startLevel(L.idx); });
+    return;
+  }
   const lastLevel = L.idx === LEVEL_COUNT - 1;
   const rank = levelRank(L), rec = writeRecord(L, rank);
   if (!lastLevel) {

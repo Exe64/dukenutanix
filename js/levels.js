@@ -267,6 +267,25 @@ function getLevel(i) {
 
 const LEVEL_COUNT = 50;
 
+// Seeded runs (daily seed, endless): levels generated outside the campaign. The depth
+// picks a campaign level as a template (size, enemies, weapons: harder and harder) and
+// the run's seed changes the map and the objective. No boss arenas.
+function seedLevel(seed, depth) {
+  const R = LevelGen.rng(seed * 7 + depth * 131);
+  let t = Math.min(48, (depth - 1) * 3 + Math.floor(R() * 3));
+  if (t % 10 === 4 || t % 10 === 9) t--;
+  const spec = levelSpec(t), ep = Math.floor(t / 10);
+  spec.seed = (seed * 31 + depth * 977) % 1e9;
+  spec.objective = OBJECTIVE_TYPES[Math.floor(R() * OBJECTIVE_TYPES.length)];
+  const map = LevelGen.generate(spec).map;
+  return {
+    map, index: t, code: `D${depth}`, episode: ep, name: `DEPTH ${depth} : ${LEVEL_NAMES[t]}`,
+    intro: `Run ${seed}, depth ${depth}. ${OBJECTIVE_INTRO[spec.objective] || ''}`,
+    ambient: EPISODES[ep].ambient, bossType: null, miniType: null, objective: spec.objective,
+    par: Math.round((90 + map.length * map[0].length / 6) / 15) * 15, run: { seed, depth },
+  };
+}
+
 // Difficulty, chosen for a new game: the share of regular enemies kept and the damage taken.
 const SKILLS = [
   { name: 'INTERN', hint: 'Fewer bugs, half the damage', enemies: 0.6, dmg: 0.5 },

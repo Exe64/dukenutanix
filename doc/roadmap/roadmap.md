@@ -30,14 +30,6 @@ Transformer `P` et `INV` en liste de joueurs, testée avec des bots locaux ; fon
 
 ---
 
-### [Issue: #20] Graine du jour et mode infini [PRIORITÉ: MOYENNE] [Complexité: M] 🟢
-
-Plan : [`20-daily-seed-endless.md`](20-daily-seed-endless.md)
-
-Niveaux générés à partir d'une graine hors campagne : une graine par date et un enchaînement infini, avec scores locaux.
-
----
-
 ### [Issue: #21] Saisie d'une graine personnalisée [PRIORITÉ: MOYENNE] [Complexité: XS] 🟢
 
 Plan : [`21-custom-seed.md`](21-custom-seed.md)
@@ -139,6 +131,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`17-level-records.md`](done/17-level-records.md)
 - **[Issue: #19] `#19` — Test de fumée navigateur (Playwright)** (2026-10-22) 🔵 — test de fumée navigateur (tools/smoke-test.js, Playwright) dans les deux styles, lancé en CI
   [`19-smoke-test-playwright.md`](done/19-smoke-test-playwright.md)
+- **[Issue: #20] `#20` — Graine du jour et mode infini** (2026-10-22) 🔵 — parties à graine : graine du jour et mode infini, une vie, inventaire conservé, meilleure profondeur par graine
+  [`20-daily-seed-endless.md`](done/20-daily-seed-endless.md)
 
 ---
 

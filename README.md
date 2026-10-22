@@ -110,6 +110,10 @@ Progress is saved locally (CONTINUE button, and a level select for unlocked leve
 end-of-level screen shows it with your best time and a rank (S, A, B, C: one step each for beating the par, clearing
 every enemy and finding every secret), and the level select shows the best rank.
 
+Besides the campaign, the title screen offers **seeded runs**, one life, as deep as you can go: the **daily run** uses
+today's date as the seed (the same levels for everyone that day), the **endless run** a new seed each time. Each depth is
+a new generated level, harder and harder, and the inventory carries over; the best depth per seed is remembered.
+
 A new game asks for the difficulty: **INTERN** (fewer enemies, half the damage), **SYSADMIN** (a few
 fewer enemies, three quarters of the damage), **ON-CALL** (the default) or **ROOT** (one and a half times
 the damage). Bosses, mini-bosses and the data thief are there at every difficulty; the choice is saved with the game.
@@ -273,6 +277,7 @@ For every level, the script checks:
 - that the exit cannot be triggered from another room;
 - that every x5 level has exactly one mini-boss;
 - that enemies remain on the easiest difficulty;
+- that a sample of seeded run levels (4 seeds, 18 depths each) are valid too;
 - that the tiles and items of the level objective are all there, and that no two consecutive levels share an objective.
 
 ## Project layout
