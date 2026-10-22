@@ -46,14 +46,6 @@ Séquenceur Web Audio façon tracker, un thème par épisode et un thème de bos
 
 ---
 
-### [Issue: #24] Succès [PRIORITÉ: BASSE] [Complexité: S] 🟢
-
-Plan : [`24-achievements.md`](24-achievements.md)
-
-Succès stockés localement (migrations, boss sans dégâts, secrets…) avec notification en jeu.
-
----
-
 ### [Issue: #25] Nouveaux objectifs Nutanix [PRIORITÉ: BASSE] [Complexité: L] 🟢
 
 Plan : [`25-nutanix-objectives.md`](25-nutanix-objectives.md)
@@ -127,6 +119,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`20-daily-seed-endless.md`](done/20-daily-seed-endless.md)
 - **[Issue: #21] `#21` — Saisie d'une graine personnalisée** (2026-10-22) 🔵 — saisie d'une graine (nombre ou mot) depuis l'écran titre, graine affichée dans la pause
   [`21-custom-seed.md`](done/21-custom-seed.md)
+- **[Issue: #24] `#24` — Succès** (2026-10-22) 🔵 — 10 succès stockés localement, annoncés en jeu et sur l'écran de fin, listés depuis l'écran titre
+  [`24-achievements.md`](done/24-achievements.md)
 
 ---
 

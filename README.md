@@ -108,7 +108,9 @@ python3 -m http.server 8000
 
 Progress is saved locally (CONTINUE button, and a level select for unlocked levels). Each level has a par time; the
 end-of-level screen shows it with your best time and a rank (S, A, B, C: one step each for beating the par, clearing
-every enemy and finding every secret), and the level select shows the best rank.
+every enemy and finding every secret), and the level select shows the best rank. Ten **achievements** (a full Nutanix
+migration, every secret, a boss without a scratch, depth 5 in a run...) are announced when unlocked and listed from the
+title screen (ACHIEVEMENTS).
 
 Besides the campaign, the title screen offers **seeded runs**, one life, as deep as you can go: the **daily run** uses
 today's date as the seed (the same levels for everyone that day), the **endless run** a new seed each time. Each depth is

@@ -542,7 +542,7 @@ function updatePlayer(dt) {
   for (const e of L.enemies) {
     if (!alive(e) || e.shrunk <= 0) continue;
     if ((e.x - P.x) ** 2 + (e.y - P.y) ** 2 < 0.45 * 0.45) {
-      e.hp = 0; killEnemy(e, 'stomp');
+      e.hp = 0; killEnemy(e, 'stomp'); count('stomp', 10, 'stomper');
       Sfx.squish(); msg('SPLAT!'); quip('stomp', 0.8, true);
     }
   }
@@ -715,6 +715,7 @@ function meleeAttack(w) {
     if (useGL) GLR.retile(L);
     L.migrated++;
     Sfx.nutanix();
+    count('migrated', 25, 'cloudNative');
     const hx = P.x + dx * (RH.d - 0.1), hy = P.y + dy * (RH.d - 0.1);
     addFx(hx, hy, 'nutanix', 0.55, 0.7, 0.5);
     P.pickT = 0.2;
@@ -738,6 +739,7 @@ function damagePlayer(dmg, fromX, fromY) {
     INV.armor -= ab; dmg -= ab;
   }
   INV.hp -= Math.round(dmg);
+  L.hurt = true;
   P.hurtT = 0.35;
   P.faceMood = 'ouch'; P.faceT = 0.6;
   if (fromX !== undefined) {
@@ -1857,6 +1859,7 @@ const actions = {
   daily() { startRun(dailySeed(), true); },
   endless() { startRun(Math.floor(Math.random() * 1e9), false); },
   retryRun() { startRun(run.seed, run.daily); },
+  achievements() { showAchievements(); },
   customSeed() {
     showPanel(`
       <h2>CUSTOM SEED</h2>
@@ -1930,6 +1933,7 @@ function showTitle() {
     <br><button data-act="daily">DAILY RUN</button>
     <button data-act="endless">ENDLESS RUN</button>
     <button data-act="customSeed">CUSTOM SEED</button>
+    <button data-act="achievements">ACHIEVEMENTS</button>
     <p class="hint">Daily run: today's seed, the same for everyone${readRuns()[dailySeed()] ? ` (your best: depth ${readRuns()[dailySeed()]})` : ''}. Endless: a new seed each time. One life, as deep as you can go.</p>
     <button data-act="style" id="tsty">STYLE: ${style.toUpperCase()}</button>
     ${CONTROLS}
@@ -1959,6 +1963,64 @@ function startRun(seed, daily) {
   skill = SKILL_DEFAULT;
   INV = defaultLoadout(seedLevel(seed, 1).index);
   startLevel(0);
+}
+
+/* ----------------------------------------------------------- achievements */
+
+// Unlocked once, kept in dukenutanix.achievements (with counters for the cumulative ones);
+// a message and a jingle announce them, the title screen lists them.
+const ACHIEVEMENTS = [
+  ['fullMigration', 'FULL MIGRATION', 'Migrate all 5 racks of a level to Nutanix'],
+  ['cloudNative', 'CLOUD NATIVE', 'Migrate 25 racks in total'],
+  ['archaeologist', 'ARCHAEOLOGIST', 'Find every secret area of a level'],
+  ['exterminator', 'ZERO BUGS', 'Clear every enemy of a level'],
+  ['speedrun', 'SLA MET', 'Finish a level under its par time'],
+  ['rankS', 'FIVE NINES', 'Get an S rank'],
+  ['untouchable', 'UNTOUCHABLE', 'Beat a boss or mini-boss level without taking damage'],
+  ['root', 'ROOT ACCESS', 'Finish a level in ROOT difficulty'],
+  ['deepDive', 'DEEP DIVE', 'Clear depth 5 in a seeded run'],
+  ['stomper', 'GARBAGE COLLECTOR', 'Stomp 10 compressed enemies'],
+];
+function readAch() { try { return JSON.parse(localStorage.getItem('dukenutanix.achievements')) || {}; } catch (e) { return {}; } }
+function unlock(id) {
+  const a = readAch();
+  if (a[id]) return false;
+  a[id] = new Date().toISOString().slice(0, 10);
+  try { localStorage.setItem('dukenutanix.achievements', JSON.stringify(a)); } catch (e) { /* ignored */ }
+  msg(`ACHIEVEMENT: ${ACHIEVEMENTS.find((x) => x[0] === id)[1]}`);
+  Sfx.secret();
+  return true;
+}
+// cumulative counters (racks migrated, enemies stomped): unlocks at the target
+function count(key, target, id) {
+  const a = readAch();
+  a.counts = a.counts || {};
+  a.counts[key] = (a.counts[key] || 0) + 1;
+  try { localStorage.setItem('dukenutanix.achievements', JSON.stringify(a)); } catch (e) { /* ignored */ }
+  if (a.counts[key] >= target) unlock(id);
+}
+// end of a level: the per-level achievements, as HTML lines for the end-of-level screen
+function levelAchievements(L) {
+  const got = [];
+  const check = (cond, id) => { if (cond && unlock(id)) got.push(ACHIEVEMENTS.find((x) => x[0] === id)[1]); };
+  check(L.totalSpecials && L.migrated >= L.totalSpecials, 'fullMigration');
+  check(L.totalSecrets && L.secrets >= L.totalSecrets, 'archaeologist');
+  check(L.totalKills && L.kills >= L.totalKills, 'exterminator');
+  check(L.time <= L.def.par, 'speedrun');
+  check(levelRank(L) === 'S', 'rankS');
+  check((L.def.bossType || L.def.miniType) && !L.hurt, 'untouchable');
+  check(skill === 3, 'root');
+  check(run && run.depth >= 5, 'deepDive');
+  return got.length ? `<p class="story small">${got.map((n) => `ACHIEVEMENT UNLOCKED: <b>${n}</b>`).join('<br>')}</p>` : '';
+}
+function showAchievements() {
+  const a = readAch();
+  showPanel(`
+    <h2>ACHIEVEMENTS ${ACHIEVEMENTS.filter((x) => a[x[0]]).length}/${ACHIEVEMENTS.length}</h2>
+    <table class="ctl ach">${ACHIEVEMENTS.map(([id, name, text]) => `<tr class="${a[id] ? 'got' : ''}"><td>${a[id] ? name : '???'}</td><td>${text}${a[id] ? ` (${a[id]})` : ''}</td></tr>`).join('')}</table>
+    <p class="hint">Migrated racks: ${(a.counts && a.counts.migrated) || 0}/25 | Stomped enemies: ${(a.counts && a.counts.stomp) || 0}/10</p>
+    <button data-act="title" class="big">BACK</button>
+  `);
 }
 
 function showSkill() {
@@ -2146,12 +2208,14 @@ function completeLevel() {
   firing = false;
   document.exitPointerLock && document.exitPointerLock();
   const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : 'N/A';
+  const achHtml = levelAchievements(L);
   if (run) {
     // seeded run: on to the next depth, the inventory carried over
     const best = writeRunScore(run.depth);
     showPanel(`
       <h2>${L.def.name}<br><span class="ok">REBOOTED</span></h2>
       <p class="story">Run ${run.seed}: depth ${run.depth} cleared in ${fmtTime(L.time)}. Best on this seed: depth ${best}.</p>
+      ${achHtml}
       <button data-go class="big">NEXT DEPTH</button>
       <button data-act="title">END RUN</button>
     `, () => { INV.hp = Math.max(INV.hp, 1); run.depth++; startLevel(L.idx); });
@@ -2184,6 +2248,7 @@ function completeLevel() {
       It's 6:47 AM. The admin lights an e-cigarette, puts his shades back on and
       leaves the post-mortem to somebody else.</p>
       ${stats}
+      ${achHtml}
       <button data-act="title" class="big">MAIN MENU</button>
     `);
     return;
@@ -2193,6 +2258,7 @@ function completeLevel() {
     <h2>${L.def.name}<br><span class="ok">REBOOTED</span></h2>
     ${epDone ? `<p class="story"><b>EPISODE ${L.def.episode + 1} COMPLETE!</b> Next stop: ${EPISODES[L.def.episode + 1].name}.</p>` : ''}
     ${stats}
+    ${achHtml}
     <button data-go class="big">NEXT ROOM</button>
   `, () => {
     INV.hp = Math.max(INV.hp, 1);
