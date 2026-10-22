@@ -1,0 +1,18 @@
+# Checks the 50 levels on every push and pull request (the release workflow
+# runs the same check, but only when a version is built).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  levels:
+    name: Check the levels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: node tools/validate-levels.js

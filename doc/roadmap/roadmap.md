@@ -38,14 +38,6 @@ Snapshot automatique à chaque étape d'objectif, restauré à la mort au lieu d
 
 ---
 
-### [Issue: #7] CI : valider les niveaux à chaque push [PRIORITÉ: HAUTE] [Complexité: XS] 🟢
-
-Plan : [`7-ci-validate-levels.md`](7-ci-validate-levels.md)
-
-Workflow GitHub léger qui lance `node tools/validate-levels.js` sur push et PR.
-
----
-
 ### [Issue: #8] Versionner doc/ [PRIORITÉ: HAUTE] [Complexité: XS] 🟢
 
 Plan : [`8-version-doc.md`](8-version-doc.md)
@@ -229,6 +221,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`2-perf-overlay.md`](done/2-perf-overlay.md)
 - **[Issue: #3] `#3` — Portes GPU : reconstruire seulement quand elles bougent** (2026-10-22) 🔵 — mesh des portes GPU reconstruit seulement quand une porte bouge (signature des d.open)
   [`3-doors-dirty-flag.md`](done/3-doors-dirty-flag.md)
+- **[Issue: #7] `#7` — CI : valider les niveaux à chaque push** (2026-10-22) 🔵 — workflow CI qui valide les 50 niveaux sur push et PR
+  [`7-ci-validate-levels.md`](done/7-ci-validate-levels.md)
 
 ---
 
