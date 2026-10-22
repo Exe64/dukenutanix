@@ -1185,6 +1185,7 @@ function render() {
     list.push({ spr, scale, z, flash, bright: bright ? 1 : 0, tx, ty, x, y });
   };
   collectSprites(add, false);
+  perf.sprites = list.length;
   list.sort((a, b) => b.ty - a.ty);
   for (const s of list) drawSprite(s);
 
@@ -1570,6 +1571,29 @@ function present() {
   }
   drawOverlayText(g);
   drawHud(g);
+  if (showPerf) drawPerf();
+}
+
+/* ------------------------------------------------- F3 performance overlay */
+
+let showPerf = false;
+const perf = { frameMs: 0, cpuMs: 0, sprites: 0 };
+// Frame time, CPU time of a frame (logic + draw calls), draw calls, sprites and
+// the last lightmap bakes, in the top-left corner of the view.
+function drawPerf() {
+  const g = vctx, gs = GLR.stats;
+  const lines = [
+    `${Math.round(1000 / (perf.frameMs || 16.7))} FPS  ${perf.frameMs.toFixed(1)} MS  CPU ${perf.cpuMs.toFixed(1)} MS`,
+    style === 'retro' ? 'RETRO 320X200 35 HZ' : useGL ? `MODERN GPU ${Light.high ? 'HIGH' : 'LOW'}  DRAWS ${gs.draws}  SPRITES ${gs.sprites}`
+      : `MODERN SOFTWARE ${RW}X${RVH} ${Light.high ? 'HIGH' : 'LOW'}  SPRITES ${perf.sprites}`,
+    `BAKE ${(Light.bakeMs || 0).toFixed(0)} MS${useGL ? `  GPU BAKE ${gs.bakeMs.toFixed(0)} MS` : ''}`,
+  ];
+  g.setTransform(view.width / W, 0, 0, view.width / W, 0, 0);
+  g.font = `5px ${FONT}`; g.textAlign = 'left';
+  const w = Math.max(...lines.map((t) => g.measureText(t).width));
+  g.fillStyle = 'rgba(0,0,0,0.6)'; g.fillRect(4, 30, w + 6, lines.length * 8 + 4);
+  g.fillStyle = '#3dff6a';
+  lines.forEach((t, i) => g.fillText(t, 7, 38 + i * 8));
 }
 
 /* ------------------------------------------------------------- game loop */
@@ -1609,6 +1633,14 @@ let last = 0, tics = 0;
 // effects, quality drops to LOW once (the player can switch back with G).
 let renderCost = 0, slowT = 0, autoLowered = false;
 function frame(ts) {
+  const t0 = performance.now();
+  // rolling averages, restarted when a level starts (the first sample seeds them)
+  const avg = (v, x) => (v ? v + (x - v) * 0.05 : x);
+  if (ts > last && last) perf.frameMs = avg(perf.frameMs, Math.min(200, ts - last));
+  step(ts);
+  perf.cpuMs = avg(perf.cpuMs, Math.min(200, performance.now() - t0));
+}
+function step(ts) {
   const raw = Math.min(0.2, (ts - last) / 1000 || 0);
   last = ts;
   const shown = L && state !== 'title' && state !== 'loading' && state !== 'select';
@@ -1617,7 +1649,7 @@ function frame(ts) {
     tics += raw * 35;
     let n = 0;
     for (; tics >= 1; tics--, n++) if (state === 'playing') update(1 / 35);
-    if (n && shown) Retro.frame();
+    if (n && shown) { Retro.frame(); if (showPerf) drawPerf(); }
     requestAnimationFrame(frame);
     return;
   }
@@ -1697,6 +1729,7 @@ const CONTROLS = `
     <tr><td>N / V</td><td>Mute sound / voice</td></tr>
     <tr><td>G</td><td>Graphics quality (high / low)</td></tr>
     <tr><td>T</td><td>Style: modern / retro (Doom-like 320x200)</td></tr>
+    <tr><td>F3</td><td>Performance overlay</td></tr>
   </table>`;
 
 const actions = {
@@ -1775,7 +1808,7 @@ function startLevel(idx) {
     <p class="story objective">OBJECTIVE: ${Objectives.title(L)}</p>
     <p class="story small">Bonus: racks to migrate to Nutanix: ${L.totalSpecials} | Secret areas: ${L.totalSecrets}</p>
     <button data-go class="big">ENTER</button>
-  `, () => { hidePanel(); state = 'playing'; lockPointer(); quip('start', 0.9, true); });
+  `, () => { hidePanel(); state = 'playing'; perf.frameMs = perf.cpuMs = 0; lockPointer(); quip('start', 0.9, true); });
 }
 
 function pauseGame() {
@@ -1912,6 +1945,12 @@ function onCheat(k) {
 }
 
 window.addEventListener('keydown', (e) => {
+  if (e.code === 'F3') {
+    e.preventDefault();
+    showPerf = !showPerf;
+    try { localStorage.setItem('dukenutanix.perf', showPerf ? '1' : '0'); } catch (err) { /* ignored */ }
+    return;
+  }
   if (['Tab', 'Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
   if (state === 'briefing' && (e.code === 'Enter' || e.code === 'Space')) { panel.querySelector('[data-go]')?.click(); return; }
   if (state === 'intermission' && e.code === 'Enter') { (panel.querySelector('[data-go]') || panel.querySelector('[data-act]'))?.click(); return; }
@@ -1992,6 +2031,7 @@ function boot() {
   try {
     const s = localStorage.getItem('dukenutanix.sens'); if (s) sensitivity = +s;
     if (localStorage.getItem('dukenutanix.voice') === '0') voiceOn = false;
+    showPerf = localStorage.getItem('dukenutanix.perf') === '1';
     if (localStorage.getItem('dukenutanix.gfx') === 'low') { Light.high = false; vignette.hidden = true; }
   } catch (e) { /* ignored */ }
   buildAssets();
@@ -2007,7 +2047,7 @@ function boot() {
   Update.check();
   requestAnimationFrame(frame);
   // debug hook for automated tests
-  window.__duke = { get L() { return L; }, P, get INV() { return INV; }, get state() { return state; }, actions, keys, castRay };
+  window.__duke = { get L() { return L; }, P, get INV() { return INV; }, get state() { return state; }, actions, keys, castRay, perf, get showPerf() { return showPerf; } };
 }
 
 if (document.fonts && document.fonts.load) {

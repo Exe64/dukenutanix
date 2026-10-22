@@ -79,6 +79,7 @@ const Light = {
   },
 
   bake(L) {
+    const t0 = performance.now();
     const lw = L.w * LG, lh = L.h * LG, n = lw * lh;
     const mood = LIGHT_MOODS[L.def.episode % LIGHT_MOODS.length];
     const amb = L.def.ambient * (L.ambMul ?? 1);
@@ -142,6 +143,7 @@ const Light = {
     this.vis = new Int8Array(L.w * L.h);
     this.fog = mood.fog;
     this.dirty = false;
+    this.bakeMs = performance.now() - t0;   // shown by the F3 overlay
   },
 
   // Adds the frame's dynamic lights on top of the baked lightmap.

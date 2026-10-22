@@ -696,6 +696,7 @@ const GLR = (() => {
   /* ----------------------------------------------------------- lightmap */
   // Directional lightmap of a level (see the header): two RGBA float textures.
   function bake(L) {
+    const t0 = performance.now();
     const lw = L.w * LG2, lh = L.h * LG2, n = lw * lh;
     const mood = LIGHT_MOODS[L.def.episode % LIGHT_MOODS.length];
     const R = new Float32Array(n), G = new Float32Array(n), B = new Float32Array(n);
@@ -758,6 +759,7 @@ const GLR = (() => {
     };
     up(texLightA, A); up(texLightB, Bd);
     ambient = mood.amb.map((v) => v * L.def.ambient * (L.ambMul ?? 1) * 0.42);
+    stats.bakeMs = performance.now() - t0;
   }
   let ambient = [0.3, 0.3, 0.3];
 
@@ -1716,7 +1718,10 @@ const GLR = (() => {
 
   let reflOn = false;
   // f: {L, P, inv, anim, collect(add), shakeX, shakeY (fractions of the view), weapon (see drawWeapon)}
+  // per-frame counters for the F3 overlay
+  const stats = { draws: 0, sprites: 0, bakeMs: 0 };
   function render(f) {
+    stats.draws = 0;
     const L = f.L, P = f.P;
     if (L !== curL) setLevel(L);
     resizeBuffers();
@@ -1734,6 +1739,7 @@ const GLR = (() => {
     gatherParticles();
     sprN = 0;
     f.collect(addSprite);
+    stats.sprites = sprN;
     if (sprN) {
       // back to front, alpha blended over the world
       sprOrder.length = sprN;
@@ -2165,6 +2171,10 @@ const GLR = (() => {
       cv = canvas;
       gl = cv.getContext('webgl2', { antialias: false, alpha: false, depth: true, premultipliedAlpha: false, powerPreference: 'high-performance' });
       if (!gl) return false;
+      for (const k of ['drawArrays', 'drawElements', 'drawArraysInstanced']) {
+        const draw = gl[k].bind(gl);
+        gl[k] = (...a) => { stats.draws++; draw(...a); };
+      }
       aniso = gl.getExtension('EXT_texture_filter_anisotropic');
       floatOK = !!gl.getExtension('EXT_color_buffer_float');
       progWorld = compile(WORLD_VS, WORLD_FS);
@@ -2233,6 +2243,7 @@ const GLR = (() => {
     get hasMonsters() { return ok && !!monModels; },
     get ok() { return ok; },
     get hdr() { return hdr; },
+    stats,
     get canvas() { return cv; },
     onLost: null,
   };

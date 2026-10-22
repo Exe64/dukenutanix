@@ -161,6 +161,7 @@ npx @tauri-apps/cli@2 build      # or "dev" to run it without packaging
 | N / V | Mute sound / the admin's voice |
 | G | Graphics quality (high / low) |
 | T | Style: modern / retro (Doom-like 320x200) |
+| F3 | Performance overlay: frame rate, frame and CPU time, draw calls, sprites, lightmap bake time |
 
 Cheat codes: `iddqd` (root mode) and `idkfa`.
 

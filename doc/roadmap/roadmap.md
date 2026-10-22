@@ -14,15 +14,6 @@ La vision d'ensemble (multijoueur) est résumée dans [`ROADMAP.md`](../../ROADM
 ---
 
 ## À faire
-
-### [Issue: #2] Overlay de performance (F3) [PRIORITÉ: HAUTE] [Complexité: S] 🟢
-
-Plan : [`2-perf-overlay.md`](2-perf-overlay.md)
-
-Afficher avec F3 les métriques de rendu (ms/frame, draw calls, sprites, durée du bake) pour mesurer avant d'optimiser.
-
----
-
 ### [Issue: #3] Portes GPU : reconstruire seulement quand elles bougent [PRIORITÉ: HAUTE] [Complexité: XS] 🟢
 
 Plan : [`3-doors-dirty-flag.md`](3-doors-dirty-flag.md)
@@ -240,6 +231,10 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
 ---
 
 ## Fait
+
+### Plans livrés (2026-10-22 → 2026-10-22)
+- **[Issue: #2] `#2` — Overlay de performance (F3)** (2026-10-22) 🔵 — overlay F3 (FPS, temps de frame et CPU, draw calls, sprites, durée des bakes CPU et GPU), mémorisé
+  [`2-perf-overlay.md`](done/2-perf-overlay.md)
 
 ---
 
