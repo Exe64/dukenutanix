@@ -1857,6 +1857,20 @@ const actions = {
   daily() { startRun(dailySeed(), true); },
   endless() { startRun(Math.floor(Math.random() * 1e9), false); },
   retryRun() { startRun(run.seed, run.daily); },
+  customSeed() {
+    showPanel(`
+      <h2>CUSTOM SEED</h2>
+      <p class="story">Play the run of a seed shared by someone else: a number, or any word.</p>
+      <input id="seed" class="seed" maxlength="24" autocomplete="off" spellcheck="false">
+      <br><button data-act="playSeed" class="big">PLAY</button>
+      <button data-act="title">BACK</button>
+    `);
+    document.getElementById('seed').focus();
+  },
+  playSeed() {
+    const v = document.getElementById('seed').value.trim();
+    if (v) startRun(seedOf(v), false);
+  },
   continueGame() {
     Sfx.init();
     run = null;
@@ -1915,6 +1929,7 @@ function showTitle() {
     <button data-act="select">SELECT LEVEL</button>
     <br><button data-act="daily">DAILY RUN</button>
     <button data-act="endless">ENDLESS RUN</button>
+    <button data-act="customSeed">CUSTOM SEED</button>
     <p class="hint">Daily run: today's seed, the same for everyone${readRuns()[dailySeed()] ? ` (your best: depth ${readRuns()[dailySeed()]})` : ''}. Endless: a new seed each time. One life, as deep as you can go.</p>
     <button data-act="style" id="tsty">STYLE: ${style.toUpperCase()}</button>
     ${CONTROLS}
@@ -1928,6 +1943,8 @@ function showTitle() {
 // inventory carried over, the first death ends the run. The best depth per seed is kept.
 let run = null;   // { seed, depth, daily } during a run
 const RUNS_KEY = 'dukenutanix.runs';
+// a typed seed: a number as is, any other text hashed to a number
+const seedOf = (v) => (/^\d{1,9}$/.test(v) ? +v : [...v.toUpperCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 1e9, 7));
 const dailySeed = () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
 function readRuns() { try { return JSON.parse(localStorage.getItem(RUNS_KEY)) || {}; } catch (e) { return {}; } }
 function writeRunScore(depth) {
@@ -1997,7 +2014,7 @@ function pauseGame() {
 function showPause() {
   showPanel(`
     <h2>PAUSE</h2>
-    <p class="story">${L.def.name}<br>Enemies ${L.kills}/${L.totalKills} | Items ${L.itemsGot}/${L.totalItems} | Secrets ${L.secrets}/${L.totalSecrets}<br>
+    <p class="story">${L.def.name}${run ? `<br>Run seed: <b>${run.seed}</b>` : ''}<br>Enemies ${L.kills}/${L.totalKills} | Items ${L.itemsGot}/${L.totalItems} | Secrets ${L.secrets}/${L.totalSecrets}<br>
     Nutanix migrations ${L.migrated}/${L.totalSpecials} | ${fmtTime(L.time)}</p>
     <button data-act="resume" class="big">RESUME</button>
     <button data-act="restart">RESTART LEVEL</button>
@@ -2204,6 +2221,8 @@ function onCheat(k) {
 }
 
 window.addEventListener('keydown', (e) => {
+  // typing in a text field (custom seed): Enter plays, everything else goes to the field
+  if (e.target.id === 'seed') { if (e.code === 'Enter') actions.playSeed(); return; }
   if (rebinding) {
     e.preventDefault();
     if (e.code !== 'Escape') { binds[rebinding] = [e.code]; saveBinds(); }

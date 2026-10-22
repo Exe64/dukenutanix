@@ -113,6 +113,7 @@ every enemy and finding every secret), and the level select shows the best rank.
 Besides the campaign, the title screen offers **seeded runs**, one life, as deep as you can go: the **daily run** uses
 today's date as the seed (the same levels for everyone that day), the **endless run** a new seed each time. Each depth is
 a new generated level, harder and harder, and the inventory carries over; the best depth per seed is remembered.
+The pause menu shows the run's seed: share it, and **CUSTOM SEED** on the title screen replays it (a number, or any word).
 
 A new game asks for the difficulty: **INTERN** (fewer enemies, half the damage), **SYSADMIN** (a few
 fewer enemies, three quarters of the damage), **ON-CALL** (the default) or **ROOT** (one and a half times

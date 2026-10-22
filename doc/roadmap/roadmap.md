@@ -30,14 +30,6 @@ Transformer `P` et `INV` en liste de joueurs, testée avec des bots locaux ; fon
 
 ---
 
-### [Issue: #21] Saisie d'une graine personnalisée [PRIORITÉ: MOYENNE] [Complexité: XS] 🟢
-
-Plan : [`21-custom-seed.md`](21-custom-seed.md)
-
-Saisir une graine dans le menu pour jouer et partager une carte précise. **Dépend de** : #20.
-
----
-
 ### [Issue: #22] Mesurer MODERN sur du vrai matériel [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
 
 Plan : [`22-modern-real-hw-benchmark.md`](22-modern-real-hw-benchmark.md)
@@ -133,6 +125,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`19-smoke-test-playwright.md`](done/19-smoke-test-playwright.md)
 - **[Issue: #20] `#20` — Graine du jour et mode infini** (2026-10-22) 🔵 — parties à graine : graine du jour et mode infini, une vie, inventaire conservé, meilleure profondeur par graine
   [`20-daily-seed-endless.md`](done/20-daily-seed-endless.md)
+- **[Issue: #21] `#21` — Saisie d'une graine personnalisée** (2026-10-22) 🔵 — saisie d'une graine (nombre ou mot) depuis l'écran titre, graine affichée dans la pause
+  [`21-custom-seed.md`](done/21-custom-seed.md)
 
 ---
 
