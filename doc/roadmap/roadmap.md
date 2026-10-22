@@ -22,14 +22,6 @@ Préparation, coup/tir et retour pour tous les monstres qui attaquent, dans les 
 
 ---
 
-### [Issue: #12] Démarrage plus rapide : assets construits à la demande [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
-
-Plan : [`12-lazy-asset-build.md`](12-lazy-asset-build.md)
-
-Mesurer le démarrage et ne construire les armes RETRO qu'au premier passage en RETRO. **Dépend de** : #2.
-
----
-
 ### [Issue: #13] Logique en pas fixe pour les deux styles [PRIORITÉ: MOYENNE] [Complexité: M] 🟢
 
 Plan : [`13-fixed-timestep.md`](13-fixed-timestep.md)
@@ -181,6 +173,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`10-reflection-cost.md`](done/10-reflection-cost.md)
 - **[Issue: #11] `#11` — Rebake progressif de la lightmap** (2026-10-22) 🔵 — rebake GPU de la lightmap étalé sur plusieurs frames au rallumage d'un panneau (frame bloquée : 211 → 28 ms)
   [`11-progressive-lightmap-bake.md`](done/11-progressive-lightmap-bake.md)
+- **[Issue: #12] `#12` — Démarrage plus rapide : assets construits à la demande** (2026-10-22) 🔵 — armes et maillages 3D construits au premier usage de leur style (démarrage RETRO -26 %, MODERN -3 %)
+  [`12-lazy-asset-build.md`](done/12-lazy-asset-build.md)
 
 ---
 

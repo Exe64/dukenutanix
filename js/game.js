@@ -1856,7 +1856,14 @@ function setStyle(st, quiet) {
   if (hi) setRenderScale(MODERN_SCALE);
   else Retro.init();
   useGL = hi && !glDead && GLR.init(document.getElementById('gl'));
-  if (useGL) { GLR.setWeapons(Assets.weaponsHi, Assets.weapons3D); GLR.setMonsters(Assets.monsters3D); }
+  // each style's weapon art and 3D meshes are built the first time that style is used
+  if (hi) Assets.weaponsHi = Assets.weaponsHi || WeaponArt.build({ pixel: false });
+  else Assets.weaponsRetro = Assets.weaponsRetro || WeaponArt.build({ pixel: true, s: 320 / W, sy: 320 / W / 1.2 });
+  if (useGL) {
+    Assets.weapons3D = Assets.weapons3D || WeaponArt.build3D();
+    Assets.monsters3D = Assets.monsters3D || Monsters3D.build();
+    GLR.setWeapons(Assets.weaponsHi, Assets.weapons3D); GLR.setMonsters(Assets.monsters3D);
+  }
   if (GLR.canvas) GLR.canvas.style.display = useGL ? 'block' : 'none';
   view.style.background = useGL ? 'transparent' : '';
   Assets.weapons = hi ? Assets.weaponsHi : Assets.weaponsRetro;
@@ -2075,10 +2082,6 @@ function boot() {
   } catch (e) { /* ignored */ }
   buildAssets();
   GLR.onLost = () => { glDead = true; setStyle(style, true); };
-  Assets.weaponsRetro = WeaponArt.build({ pixel: true, s: 320 / W, sy: 320 / W / 1.2 });
-  Assets.weaponsHi = WeaponArt.build({ pixel: false });
-  Assets.weapons3D = WeaponArt.build3D();
-  Assets.monsters3D = Monsters3D.build();
   let st = 'modern';
   try { st = localStorage.getItem('dukenutanix.style') || 'modern'; } catch (e) { /* ignored */ }
   setStyle(st, true);
