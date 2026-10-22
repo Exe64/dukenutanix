@@ -917,7 +917,13 @@ const GLR = (() => {
 
   // Doors slide sideways into the wall; secret walls slide back, away from the player.
   const doorV = [], doorI = [];
+  let doorSig = '';
   function buildDoors(L, P) {
+    // rebuilt only when a door moved (or on a new level)
+    let sig = L.idx + ':';
+    for (const d of L.doorList) sig += d.open.toFixed(3) + ',';
+    if (sig === doorSig) return;
+    doorSig = sig;
     doorV.length = 0; doorI.length = 0;
     const T = 0.03;
     for (const d of L.doorList) {

@@ -14,14 +14,6 @@ La vision d'ensemble (multijoueur) est résumée dans [`ROADMAP.md`](../../ROADM
 ---
 
 ## À faire
-### [Issue: #3] Portes GPU : reconstruire seulement quand elles bougent [PRIORITÉ: HAUTE] [Complexité: XS] 🟢
-
-Plan : [`3-doors-dirty-flag.md`](3-doors-dirty-flag.md)
-
-`buildDoors` recrée et réenvoie le mesh des portes à chaque frame ; le faire seulement quand un `d.open` change.
-
----
-
 ### [Issue: #4] Son spatialisé (stéréo) [PRIORITÉ: HAUTE] [Complexité: S] 🟢
 
 Plan : [`4-stereo-audio.md`](4-stereo-audio.md)
@@ -235,6 +227,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
 ### Plans livrés (2026-10-22 → 2026-10-22)
 - **[Issue: #2] `#2` — Overlay de performance (F3)** (2026-10-22) 🔵 — overlay F3 (FPS, temps de frame et CPU, draw calls, sprites, durée des bakes CPU et GPU), mémorisé
   [`2-perf-overlay.md`](done/2-perf-overlay.md)
+- **[Issue: #3] `#3` — Portes GPU : reconstruire seulement quand elles bougent** (2026-10-22) 🔵 — mesh des portes GPU reconstruit seulement quand une porte bouge (signature des d.open)
+  [`3-doors-dirty-flag.md`](done/3-doors-dirty-flag.md)
 
 ---
 
