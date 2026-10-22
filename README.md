@@ -262,7 +262,8 @@ For every level, the script checks:
 ## Project layout
 
 ```
-ROADMAP.md               ideas kept for later (multiplayer deathmatch...)
+ROADMAP.md               multiplayer vision; the backlog is in doc/roadmap/roadmap.md
+doc/roadmap/             one plan per backlog item, each linked to its GitHub issue
 index.html               page, menus, styles
 docs/banner.jpg          README banner
 js/levelgen.js           procedural generator + map validation
