@@ -252,6 +252,7 @@ function loadLevel(idx) {
   computeFlow();
   Objectives.init(L);
   Light.bake(L);
+  checkpoint = null; L.cpProgress = Objectives.progress(L);
 }
 
 function spawnEnemy(type, x, y) {
@@ -1617,6 +1618,7 @@ function update(dt) {
   updateProjectiles(dt);
   updateBarrels(dt);
   Objectives.update(L, dt);
+  checkpointCheck();
   updateMsgs(dt);
   if (P.dead && P.deadT > 1.6 && state === 'playing') showDeath();
 }
@@ -1751,6 +1753,7 @@ const actions = {
   },
   resume() { resumeGame(); },
   restart() { INV = cloneInv(INV_START); startLevel(L.idx); },
+  checkpoint() { restoreCheckpoint(); },
   title() { showTitle(); },
   style() { toggleStyle(); const b = document.getElementById('tsty'); if (b) b.textContent = `STYLE: ${style.toUpperCase()}`; },
 };
@@ -1878,13 +1881,38 @@ function resumeGame() {
   lockPointer();
 }
 
+/* ----------------------------------------------------------- checkpoints */
+
+// Each objective step (Objectives.progress going up) saves the level, the player and
+// the inventory in memory; after a death the player can restart from there.
+let checkpoint = null;
+function checkpointCheck() {
+  if (P.dead || L.obj.failed) return;
+  const p = Objectives.progress(L);
+  if (p <= L.cpProgress) return;
+  L.cpProgress = p;
+  checkpoint = { L: structuredClone(L), P: { ...P }, INV: cloneInv(INV) };
+  msg('CHECKPOINT SAVED');
+}
+function restoreCheckpoint() {
+  L = structuredClone(checkpoint.L);
+  Object.assign(P, checkpoint.P);
+  INV = cloneInv(checkpoint.INV);
+  Objectives.restored(L);
+  computeFlow();
+  Light.bake(L);
+  hidePanel(); state = 'playing'; lockPointer();
+  msg('CHECKPOINT RESTORED');
+}
+
 function showDeath() {
   state = 'dead';
   document.exitPointerLock && document.exitPointerLock();
   showPanel(`
     <h1 class="dead">${L.failReason ? 'OBJECTIVE FAILED' : 'SYSTEM COMPROMISED'}</h1>
     <p class="story">${L.failReason || 'Kernel panic: the on-call admin is not responding.'}<br>Enemies ${L.kills}/${L.totalKills} | ${fmtTime(L.time)}</p>
-    <button data-act="restart" class="big">RESTORE SNAPSHOT</button>
+    ${checkpoint ? '<button data-act="checkpoint" class="big">RESTORE CHECKPOINT</button>' : ''}
+    <button data-act="restart" class="${checkpoint ? '' : 'big'}">${checkpoint ? 'RESTART LEVEL' : 'RESTORE SNAPSHOT'}</button>
     <button data-act="title">MAIN MENU</button>
   `);
 }

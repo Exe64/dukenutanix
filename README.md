@@ -188,7 +188,9 @@ automap (Tab).
 | Data thief | A thief runs for the exit with a stolen disk as soon as he spots you, opening every door: stop him first |
 
 The x5 levels have their mini-boss and the x10 levels their boss as the objective. Failing an objective
-(time out, PROD DB destroyed, thief escaped) ends the level like a death: restore the snapshot and try again.
+(time out, PROD DB destroyed, thief escaped) ends the level like a death. Each objective step (a tape loaded, a CRAC
+repaired, a panel switched on...) saves a checkpoint: after a death, restore it or restart the level. A restored
+countdown always leaves at least one minute.
 
 ## Nutanix migrations (bonus)
 

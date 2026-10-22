@@ -412,5 +412,20 @@ const Objectives = (() => {
     return out;
   }
 
-  return { init, update, thief, use, pickup, kill, canHold, done, lockedText, hud, urgent, markers, title, alarm, TIMED_S };
+  // Steps of the objective done so far (tapes stored, CRACs repaired, panels on, racks cut,
+  // spare disk taken, failover started, uploads finished, objective complete): game.js
+  // saves a checkpoint each time it goes up.
+  function progress(L) {
+    const o = L.obj;
+    return (o.stored || 0) + (o.fixed || 0) + (o.on || 0) + (o.cut || 0) + (o.carry ? 1 : 0) + (o.started ? 1 : 0)
+      + (o.zones ? o.zones.filter((z) => z.prog >= 1).length : 0) + (o.done ? 1 : 0);
+  }
+
+  // A restored checkpoint leaves at least a minute on the countdowns that fail the level.
+  function restored(L) {
+    const o = L.obj;
+    if (['overheat', 'ransom', 'evac'].includes(o.type)) o.left = Math.max(o.left, 60);
+  }
+
+  return { init, update, thief, use, pickup, kill, canHold, done, lockedText, hud, urgent, markers, title, alarm, progress, restored, TIMED_S };
 })();

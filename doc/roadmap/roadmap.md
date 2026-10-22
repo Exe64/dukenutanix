@@ -14,14 +14,6 @@ La vision d'ensemble (multijoueur) est résumée dans [`ROADMAP.md`](../../ROADM
 ---
 
 ## À faire
-### [Issue: #6] Checkpoints en cours de niveau [PRIORITÉ: HAUTE] [Complexité: M] 🟢
-
-Plan : [`6-mid-level-checkpoints.md`](6-mid-level-checkpoints.md)
-
-Snapshot automatique à chaque étape d'objectif, restauré à la mort au lieu de recommencer le niveau.
-
----
-
 ### [Issue: #1] RETRO : 3 frames d'attaque pour les monstres [PRIORITÉ: MOYENNE] [Complexité: M] 🟢
 
 Plan : [`1-retro-attack-frames.md`](1-retro-attack-frames.md)
@@ -199,6 +191,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`5-difficulty-levels.md`](done/5-difficulty-levels.md)
 - **[Issue: #8] `#8` — Versionner doc/** (2026-10-22) 🔵 — doc/ versionné, avec la config du workflow ; graft/ ignoré via la modification de l'autre session
   [`8-version-doc.md`](done/8-version-doc.md)
+- **[Issue: #6] `#6` — Checkpoints en cours de niveau** (2026-10-22) 🔵 — checkpoint en mémoire à chaque étape d'objectif, restauré après une mort (minuteurs d'au moins 60 s)
+  [`6-mid-level-checkpoints.md`](done/6-mid-level-checkpoints.md)
 
 ---
 
