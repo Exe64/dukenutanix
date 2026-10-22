@@ -1,5 +1,5 @@
-# Checks the 50 levels on every push and pull request (the release workflow
-# runs the same check, but only when a version is built).
+# On every push and pull request: checks the 50 levels (the release workflow runs the
+# same check, but only when a version is built) and plays the game in a headless browser.
 name: CI
 
 on:
@@ -16,3 +16,15 @@ jobs:
         with:
           node-version: 22
       - run: node tools/validate-levels.js
+
+  smoke:
+    name: Browser smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      # Playwright is only a test tool: installed on the fly, never a dependency of the game
+      - run: npm install --no-save playwright@1.58.2 && npx playwright install --with-deps chromium
+      - run: node tools/smoke-test.js

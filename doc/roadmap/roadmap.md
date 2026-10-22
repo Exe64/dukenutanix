@@ -30,14 +30,6 @@ Transformer `P` et `INV` en liste de joueurs, testée avec des bots locaux ; fon
 
 ---
 
-### [Issue: #19] Test de fumée navigateur (Playwright) [PRIORITÉ: MOYENNE] [Complexité: M] 🟢
-
-Plan : [`19-smoke-test-playwright.md`](19-smoke-test-playwright.md)
-
-Charger E1M1 en MODERN et en RETRO via `window.__duke`, jouer quelques secondes, échouer sur toute exception ; lancé en CI. **Dépend de** : #7.
-
----
-
 ### [Issue: #20] Graine du jour et mode infini [PRIORITÉ: MOYENNE] [Complexité: M] 🟢
 
 Plan : [`20-daily-seed-endless.md`](20-daily-seed-endless.md)
@@ -145,6 +137,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`16-comfort-options.md`](done/16-comfort-options.md)
 - **[Issue: #17] `#17` — Temps de référence, records et rang** (2026-10-22) 🔵 — temps de référence par niveau, meilleur temps et rang (S/A/B/C) à l'écran de fin et dans la sélection
   [`17-level-records.md`](done/17-level-records.md)
+- **[Issue: #19] `#19` — Test de fumée navigateur (Playwright)** (2026-10-22) 🔵 — test de fumée navigateur (tools/smoke-test.js, Playwright) dans les deux styles, lancé en CI
+  [`19-smoke-test-playwright.md`](done/19-smoke-test-playwright.md)
 
 ---
 
