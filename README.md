@@ -166,6 +166,9 @@ npx @tauri-apps/cli@2 build      # or "dev" to run it without packaging
 | G | Graphics quality (high / low) |
 | T | Style: modern / retro (Doom-like 320x200) |
 | F3 | Performance overlay: frame rate, frame and CPU time, draw calls, sprites, lightmap bake time |
+| Gamepad | Left stick move, right stick look, RT fire, LT run, A use, LB / RB weapons, Back map, Start pause; D-pad and A in the menus |
+
+The movement, fire, use and map keys can be remapped from the pause menu (CONTROLS); the choice is remembered.
 
 Cheat codes: `iddqd` (root mode) and `idkfa`.
 

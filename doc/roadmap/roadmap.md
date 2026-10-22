@@ -22,14 +22,6 @@ Préparation, coup/tir et retour pour tous les monstres qui attaquent, dans les 
 
 ---
 
-### [Issue: #14] Manette et remappage des touches [PRIORITÉ: MOYENNE] [Complexité: M] 🟢
-
-Plan : [`14-gamepad-remap.md`](14-gamepad-remap.md)
-
-Support manette via l'API Gamepad et menu de remappage des touches sauvegardé localement.
-
----
-
 ### [Issue: #15] Visée libre en MODERN [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
 
 Plan : [`15-modern-free-aim.md`](15-modern-free-aim.md)
@@ -169,6 +161,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`12-lazy-asset-build.md`](done/12-lazy-asset-build.md)
 - **[Issue: #13] `#13` — Logique en pas fixe pour les deux styles** (2026-10-22) 🔵 — logique à 70 Hz fixes dans les deux styles, joueur interpolé en MODERN, souris appliquée à chaque frame
   [`13-fixed-timestep.md`](done/13-fixed-timestep.md)
+- **[Issue: #14] `#14` — Manette et remappage des touches** (2026-10-22) 🔵 — manette (API Gamepad, jeu et menus) et remappage des touches depuis la pause, sauvegardé
+  [`14-gamepad-remap.md`](done/14-gamepad-remap.md)
 
 ---
 

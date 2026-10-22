@@ -146,7 +146,7 @@ const Objectives = (() => {
         o.left -= dt;
         if (o.repair) {
           const u = o.repair;
-          if (!(keys.KeyE || keys.Space) || !near(P.x, P.y, u.x + 0.5, u.y + 0.5, 1.9)) { o.repair = null; msg('Repair interrupted!'); break; }
+          if (!(held('use') || pad.use) || !near(P.x, P.y, u.x + 0.5, u.y + 0.5, 1.9)) { o.repair = null; msg('Repair interrupted!'); break; }
           u.prog = (u.prog || 0) + dt / 3;
           if ((u.prog * 6 | 0) !== ((u.prog - dt / 3) * 6 | 0)) Sfx.click();
           if (u.prog >= 1) {

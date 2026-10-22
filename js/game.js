@@ -401,6 +401,51 @@ const keys = {};
 let mouseDX = 0, mouseDY = 0, firing = false, showMap = false;
 let sensitivity = 1;
 
+// Remappable actions (KeyboardEvent.code values, so WASD stays in place on AZERTY),
+// saved in dukenutanix.keys. Escape always pauses; N, G, T, V and F3 stay fixed.
+const DEFAULT_BINDS = {
+  forward: ['KeyW', 'ArrowUp'], back: ['KeyS', 'ArrowDown'], left: ['KeyA'], right: ['KeyD'],
+  turnLeft: ['ArrowLeft'], turnRight: ['ArrowRight'], run: ['ShiftLeft', 'ShiftRight'],
+  fire: ['ControlLeft', 'ControlRight'], use: ['KeyE', 'Space'], map: ['Tab'],
+};
+const BIND_NAMES = { forward: 'Forward', back: 'Back', left: 'Strafe left', right: 'Strafe right', turnLeft: 'Turn left',
+  turnRight: 'Turn right', run: 'Run', fire: 'Fire', use: 'Use / open', map: 'Map' };
+let binds = JSON.parse(JSON.stringify(DEFAULT_BINDS));
+let rebinding = null;   // the action waiting for a key in the CONTROLS screen
+const held = (a) => binds[a].some((k) => keys[k]);
+const keyName = (c) => c.replace(/^Key|^Digit/, '').replace(/^Arrow(.*)/, '$1 arrow').replace(/(Left|Right)$/, ' $1').toUpperCase();
+function saveBinds() { try { localStorage.setItem('dukenutanix.keys', JSON.stringify(binds)); } catch (e) { /* ignored */ } }
+
+// Gamepad (standard mapping), polled every frame: left stick moves, right stick looks,
+// RT fires, LT or L3 runs, A uses, LB / RB / Y switch weapons, Back shows the map,
+// Start pauses. In the menus the D-pad moves between buttons and A presses.
+const pad = { lx: 0, ly: 0, rx: 0, ry: 0, fire: false, run: false, use: false, prev: [] };
+function pollPad() {
+  const gp = navigator.getGamepads ? [...navigator.getGamepads()].find((g) => g && g.connected) : null;
+  if (!gp) { Object.assign(pad, { lx: 0, ly: 0, rx: 0, ry: 0, fire: false, run: false, use: false, prev: [] }); return; }
+  const dz = (v) => (Math.abs(v || 0) < 0.2 ? 0 : (v - Math.sign(v) * 0.2) / 0.8);
+  const b = gp.buttons.map((x) => x.pressed), prev = pad.prev, hit = (i) => b[i] && !prev[i];
+  pad.lx = dz(gp.axes[0]); pad.ly = dz(gp.axes[1]); pad.rx = dz(gp.axes[2]); pad.ry = dz(gp.axes[3]);
+  pad.fire = !!b[7]; pad.run = !!(b[6] || b[10]); pad.use = !!b[0];
+  pad.prev = b;
+  if (overlay.classList.contains('hidden')) {
+    if (state !== 'playing' || P.dead) return;
+    if (hit(0)) useAction();
+    if (hit(4)) cycleWeapon(-1);
+    if (hit(5) || hit(3)) cycleWeapon(1);
+    if (hit(8)) showMap = !showMap;
+    if (hit(9)) pauseGame();
+    return;
+  }
+  const btns = [...panel.querySelectorAll('button:not([disabled])')];
+  if (!btns.length) return;
+  const i = btns.indexOf(document.activeElement);
+  if (hit(12) || hit(14)) btns[(i - 1 + btns.length) % btns.length].focus();
+  if (hit(13) || hit(15)) btns[(i + 1) % btns.length].focus();
+  if (hit(0)) (i >= 0 ? btns[i] : btns[0]).click();
+  if ((hit(9) || hit(1)) && state === 'paused') resumeGame();
+}
+
 function useAction() {
   const dx = Math.cos(P.a), dy = Math.sin(P.a);
   // water cooler in front of the player
@@ -465,14 +510,15 @@ function bestWeapon() {
 
 function updatePlayer(dt) {
   if (P.dead) { P.deadT += dt; return; }
-  const turn = ((keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0));
+  const turn = (held('turnRight') ? 1 : 0) - (held('turnLeft') ? 1 : 0);
   P.a += turn * 2.8 * dt;
-  const fwd = ((keys.KeyW || keys.ArrowUp) ? 1 : 0) - ((keys.KeyS || keys.ArrowDown) ? 1 : 0);
-  const str = (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0);
+  const clamp1 = (v) => Math.max(-1, Math.min(1, v));
+  const fwd = clamp1((held('forward') ? 1 : 0) - (held('back') ? 1 : 0) - pad.ly);
+  const str = clamp1((held('right') ? 1 : 0) - (held('left') ? 1 : 0) + pad.lx);
   const dx = Math.cos(P.a), dy = Math.sin(P.a);
   const mx = dx * fwd - dy * str, my = dy * fwd + dx * str;
   const len = Math.hypot(mx, my);
-  const run = keys.ShiftLeft || keys.ShiftRight;
+  const run = held('run') || pad.run;
   if (P.boostT > 0) P.boostT -= dt;
   if (len > 0) {
     const sp = (run ? 5.6 : 3.8) * (P.boostT > 0 ? 1.45 : 1) * (L.obj && L.obj.carry ? 0.85 : 1) * dt / len;
@@ -499,8 +545,9 @@ function updatePlayer(dt) {
   P.raise = Math.max(0, P.raise - dt * 4);
   if (P.wAnim > 0) P.wAnim = Math.max(0, P.wAnim - dt / WEAPONS[INV.cur].anim);
   if (P.flashT > 0) P.flashT -= dt;
-  if (firing && INV.cur === 3) P.spin += dt * 40;
-  if (firing && P.fireCd <= 0 && P.raise < 0.3) fire();
+  const shooting = firing || pad.fire;
+  if (shooting && INV.cur === 3) P.spin += dt * 40;
+  if (shooting && P.fireCd <= 0 && P.raise < 0.3) fire();
 
   P.faceT -= dt; if (P.faceT <= 0) P.faceMood = '';
   P.lookT -= dt; if (P.lookT <= 0) { P.look = randi(-1, 1); P.lookT = rand(0.6, 1.8); }
@@ -1602,11 +1649,11 @@ function updateMsgs(dt) {
 }
 
 // The mouse turns the view at every displayed frame, not at the logic's rate: no added latency.
-function applyLook() {
+function applyLook(dt) {
   if (!P.dead) {
-    P.a += mouseDX * 0.0022 * sensitivity;
+    P.a += mouseDX * 0.0022 * sensitivity + pad.rx * 3 * dt * sensitivity;
     // looking up and down (GPU renderer only; aiming stays automatic in height)
-    if (useGL) P.pitch = Math.max(-0.6, Math.min(0.6, P.pitch - mouseDY * 0.0022 * sensitivity));
+    if (useGL) P.pitch = Math.max(-0.6, Math.min(0.6, P.pitch - mouseDY * 0.0022 * sensitivity - pad.ry * 1.5 * dt * sensitivity));
   }
   mouseDX = 0; mouseDY = 0;
 }
@@ -1657,8 +1704,9 @@ function step(ts) {
   const raw = Math.min(0.2, (ts - last) / 1000 || 0);
   last = ts;
   const shown = L && state !== 'title' && state !== 'loading' && state !== 'select';
+  pollPad();
   const playing = state === 'playing';
-  if (playing) applyLook();
+  if (playing) applyLook(raw);
   acc += raw;
   let n = 0;
   for (; acc >= LOGIC_DT; acc -= LOGIC_DT, n++) {
@@ -1753,6 +1801,8 @@ const CONTROLS = `
     <tr><td>G</td><td>Graphics quality (high / low)</td></tr>
     <tr><td>T</td><td>Style: modern / retro (Doom-like 320x200)</td></tr>
     <tr><td>F3</td><td>Performance overlay</td></tr>
+    <tr><td>Gamepad</td><td>Sticks, RT fire, A use, LB / RB weapons, Start pause</td></tr>
+    <tr><td></td><td>Keys can be remapped: pause, CONTROLS</td></tr>
   </table>`;
 
 const actions = {
@@ -1776,6 +1826,10 @@ const actions = {
   resume() { resumeGame(); },
   restart() { INV = cloneInv(INV_START); startLevel(L.idx); },
   checkpoint() { restoreCheckpoint(); },
+  controls() { showBinds(); },
+  rebind(a) { rebinding = a; showBinds(); },
+  resetBinds() { binds = JSON.parse(JSON.stringify(DEFAULT_BINDS)); saveBinds(); showBinds(); },
+  pauseMenu() { showPause(); },
   title() { showTitle(); },
   style() { toggleStyle(); const b = document.getElementById('tsty'); if (b) b.textContent = `STYLE: ${style.toUpperCase()}`; },
 };
@@ -1851,6 +1905,9 @@ function pauseGame() {
   if (state !== 'playing') return;
   state = 'paused';
   firing = false;
+  showPause();
+}
+function showPause() {
   showPanel(`
     <h2>PAUSE</h2>
     <p class="story">${L.def.name}<br>Enemies ${L.kills}/${L.totalKills} | Items ${L.itemsGot}/${L.totalItems} | Secrets ${L.secrets}/${L.totalSecrets}<br>
@@ -1860,6 +1917,7 @@ function pauseGame() {
     <button data-act="title">MAIN MENU</button>
     <button id="gfx">GRAPHICS: ${Light.high ? 'HIGH' : 'LOW'}</button>
     <button id="sty">STYLE: ${style.toUpperCase()}</button>
+    <button data-act="controls">CONTROLS</button>
     <label class="sens">Mouse sensitivity <input type="range" min="0.3" max="2.5" step="0.1" value="${sensitivity}" id="sens"></label>
     ${CONTROLS}
   `);
@@ -1902,6 +1960,19 @@ function toggleGraphics(note) {
   vignette.hidden = !Light.high;
   try { localStorage.setItem('dukenutanix.gfx', Light.high ? 'high' : 'low'); } catch (e) { /* ignored */ }
   msg(note || (Light.high ? 'Graphics: high' : 'Graphics: low (faster)'));
+}
+
+// Key remapping, from the pause menu: click an action, then press its new key.
+function showBinds() {
+  showPanel(`
+    <h2>CONTROLS</h2>
+    <table class="ctl">${Object.keys(DEFAULT_BINDS).map((a) => `<tr><td>${BIND_NAMES[a]}</td><td><button data-act="rebind" data-arg="${a}">${
+      rebinding === a ? 'PRESS A KEY...' : binds[a].map(keyName).join(' / ')}</button></td></tr>`).join('')}</table>
+    <p class="hint">Click an action, then press its new key (Esc cancels).<br>
+    Gamepad: left stick move, right stick look, RT fire, LT run, A use, LB / RB weapons, Back map, Start pause.</p>
+    <button data-act="resetBinds">DEFAULT KEYS</button>
+    <button data-act="pauseMenu" class="big">BACK</button>
+  `);
 }
 
 function resumeGame() {
@@ -2013,6 +2084,12 @@ function onCheat(k) {
 }
 
 window.addEventListener('keydown', (e) => {
+  if (rebinding) {
+    e.preventDefault();
+    if (e.code !== 'Escape') { binds[rebinding] = [e.code]; saveBinds(); }
+    rebinding = null; showBinds();
+    return;
+  }
   if (e.code === 'F3') {
     e.preventDefault();
     showPerf = !showPerf;
@@ -2028,11 +2105,11 @@ window.addEventListener('keydown', (e) => {
   if (e.repeat) return;
   if (e.key && e.key.length === 1) onCheat(e.key);
   if (P.dead) return;
-  if (e.code === 'KeyE' || e.code === 'Space') useAction();
+  if (binds.use.includes(e.code)) useAction();
   if (e.code.startsWith('Digit')) { const n = +e.code.slice(5) - 1; if (n >= 0 && n < 8) switchWeapon(n); }
-  if (e.code === 'Tab' || e.key === 'm' || e.key === 'M') showMap = !showMap;
+  if (binds.map.includes(e.code) || e.key === 'm' || e.key === 'M') showMap = !showMap;
   if (e.code === 'Escape' || e.code === 'KeyP') pauseGame();
-  if (e.code === 'ControlLeft' || e.code === 'ControlRight') firing = true;
+  if (binds.fire.includes(e.code)) firing = true;
   if (e.key === 'n' || e.key === 'N') msg(Sfx.toggleMute() ? 'Sound off' : 'Sound on');
   if (e.key === 'g' || e.key === 'G') toggleGraphics();
   if (e.key === 't' || e.key === 'T') toggleStyle();
@@ -2045,7 +2122,7 @@ window.addEventListener('keydown', (e) => {
 });
 window.addEventListener('keyup', (e) => {
   keys[e.code] = false;
-  if (e.code === 'ControlLeft' || e.code === 'ControlRight') firing = false;
+  if (binds.fire.includes(e.code)) firing = false;
 });
 window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; firing = false; pauseGame(); });
 
@@ -2065,12 +2142,14 @@ window.addEventListener('mousemove', (e) => {
   mouseDX += e.movementX;
   mouseDY += e.movementY;
 });
+function cycleWeapon(dir) {
+  let i = INV.cur;
+  for (let k = 0; k < 8; k++) { i = (i + dir + 8) % 8; if (INV.weapons[i]) { switchWeapon(i); break; } }
+}
 view.addEventListener('wheel', (e) => {
   if (state !== 'playing') return;
   e.preventDefault();
-  const dir = e.deltaY > 0 ? 1 : -1;
-  let i = INV.cur;
-  for (let k = 0; k < 8; k++) { i = (i + dir + 8) % 8; if (INV.weapons[i]) { switchWeapon(i); break; } }
+  cycleWeapon(e.deltaY > 0 ? 1 : -1);
 }, { passive: false });
 view.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -2100,6 +2179,8 @@ function boot() {
     const s = localStorage.getItem('dukenutanix.sens'); if (s) sensitivity = +s;
     if (localStorage.getItem('dukenutanix.voice') === '0') voiceOn = false;
     showPerf = localStorage.getItem('dukenutanix.perf') === '1';
+    const kb = JSON.parse(localStorage.getItem('dukenutanix.keys') || 'null');
+    if (kb) for (const a of Object.keys(DEFAULT_BINDS)) if (Array.isArray(kb[a]) && kb[a].length) binds[a] = kb[a];
     if (localStorage.getItem('dukenutanix.gfx') === 'low') { Light.high = false; vignette.hidden = true; }
   } catch (e) { /* ignored */ }
   buildAssets();

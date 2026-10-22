@@ -55,12 +55,13 @@
       font: inherit; font-size: 10px; color: #d8dde3; background: #16201a; border: 2px solid #2e6b3a;
       padding: 10px 16px; margin: 6px; cursor: pointer; text-transform: uppercase;
     }
-    button:hover, button:focus-visible { background: #2e6b3a; color: #fff; outline: none; }
+    button:hover, button:focus { background: #2e6b3a; color: #fff; outline: none; }
     button.big { font-size: 13px; padding: 14px 24px; color: #fff; background: #7a1a0d; border-color: var(--red); }
     button.big:hover { background: var(--red); }
     table.ctl { margin: 22px auto 0; font-size: 8px; line-height: 1.9; border-collapse: collapse; text-align: left; }
     table.ctl td { padding: 2px 10px; }
     table.ctl td:first-child { color: #ffe14a; text-align: right; }
+    table.ctl button { margin: 1px 0; padding: 5px 10px; font-size: 8px; }
     table.stats { margin: 0 auto 22px; font-size: 12px; line-height: 2.2; }
     table.stats td { padding: 0 16px; }
     table.stats td:first-child { color: #9aa3ad; text-align: left; }
@@ -76,7 +77,7 @@
     button:disabled { opacity: 0.3; cursor: not-allowed; }
     button:disabled:hover { background: #16201a; color: #d8dde3; }
     @media (max-width: 560px) { .grid { grid-template-columns: repeat(5, 1fr); } }
-    .hint { font-size: 7px; color: #6b7178; margin-top: 18px; }
+    .hint { font-size: 7px; line-height: 1.9; color: #6b7178; margin-top: 18px; }
     .sens { display: block; font-size: 8px; margin-top: 16px; color: #9aa3ad; }
     .sens input { vertical-align: middle; margin-left: 8px; }
     noscript { color: #fff; }
