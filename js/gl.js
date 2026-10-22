@@ -53,7 +53,7 @@ const GLR = (() => {
   let cssW = 1, cssH = 1, dpr = 1, scale = 1, bw = 1, bh = 1;
 
   const NEAR = 0.02, FAR = 120;
-  const TAN_H = 0.8;                     // PLANE in game.js: 77 degree horizontal field of view
+  let TAN_H = 0.8;                       // PLANE in game.js: 77 degree horizontal field of view (adjustable)
   const VSTRIDE = 15;                    // pos3 uv2 nrm3 tan3 tex4 (layer base, frames, phase, kind)
   const KIND_WALL = 0, KIND_FLOOR = 1, KIND_CEIL = 2, KIND_DOOR = 3;
   const LG2 = 8;                         // lightmap texels per map cell
@@ -1939,7 +1939,7 @@ const GLR = (() => {
   // Final image: occlusion, haze, bloom, exposure, ACES, grade, lens effects.
   const COMPOSITE_FS = POST_COMMON + `
   uniform sampler2D uScene, uBloom, uAO, uVol;
-  uniform float uExposure, uBloomK, uAOK, uVolK, uTime, uHurt, uVig, uSat, uCA;
+  uniform float uExposure, uBloomK, uAOK, uVolK, uTime, uHurt, uVig, uSat, uCA, uGrain;
   uniform vec3 uLift, uGain;
   float hash(float n) { return fract(sin(n) * 43758.5453); }
   vec3 aces(vec3 c) { return clamp((c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14), 0.0, 1.0); }
@@ -1966,7 +1966,7 @@ const GLR = (() => {
     c *= 1.0 - uVig * smoothstep(0.1, 0.55, r2 * 1.6);
     c = pow(c, vec3(1.0 / 2.2));
     c += (ign(gl_FragCoord.xy + fract(uTime * 7.0) * 113.0) - 0.5) * (2.0 / 255.0);
-    c += (hash(dot(gl_FragCoord.xy, vec2(12.9898, 78.233)) + uTime) - 0.5) * 0.012;
+    c += (hash(dot(gl_FragCoord.xy, vec2(12.9898, 78.233)) + uTime) - 0.5) * 0.012 * uGrain;
     oColor = vec4(c, 1.0);
   }`;
 
@@ -2112,9 +2112,10 @@ const GLR = (() => {
     gl.uniform1f(u.uAOK, high ? 0.85 : 0);
     gl.uniform1f(u.uVolK, high ? 1 : 0);
     gl.uniform1f(u.uTime, performance.now() / 1000 % 1000);
-    gl.uniform1f(u.uHurt, P.hurtT > 0 ? P.hurtT : 0);
+    gl.uniform1f(u.uHurt, P.hurtT > 0 && !Comfort.reduced ? P.hurtT : 0);
     gl.uniform1f(u.uVig, high ? 0.42 : 0.3);
-    gl.uniform1f(u.uCA, high ? 0.012 : 0);
+    gl.uniform1f(u.uCA, high && !Comfort.reduced ? 0.012 : 0);
+    gl.uniform1f(u.uGrain, Comfort.reduced ? 0 : 1);
     gl.uniform1f(u.uSat, gr.sat);
     gl.uniform3fv(u.uGain, gr.gain); gl.uniform3fv(u.uLift, gr.lift);
     quad();
@@ -2263,6 +2264,8 @@ const GLR = (() => {
     get ok() { return ok; },
     get hdr() { return hdr; },
     stats,
+    // horizontal field of view, in degrees (comfort options)
+    setFov(deg) { TAN_H = Math.tan(deg * Math.PI / 360); },
     get canvas() { return cv; },
     onLost: null,
   };

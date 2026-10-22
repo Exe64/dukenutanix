@@ -22,14 +22,6 @@ Préparation, coup/tir et retour pour tous les monstres qui attaquent, dans les 
 
 ---
 
-### [Issue: #16] Options de confort et d'accessibilité [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
-
-Plan : [`16-comfort-options.md`](16-comfort-options.md)
-
-Réglage du champ de vision, balancement de caméra désactivable, mode « effets réduits » (flashes, aberration, grain).
-
----
-
 ### [Issue: #17] Temps de référence, records et rang [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
 
 Plan : [`17-level-records.md`](17-level-records.md)
@@ -157,6 +149,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`14-gamepad-remap.md`](done/14-gamepad-remap.md)
 - **[Issue: #15] `#15` — Visée libre en MODERN** (2026-10-22) 🔵 — visée libre en MODERN GPU (tir instantané et projectiles suivent le pitch), option AIM: AUTO dans la pause
   [`15-modern-free-aim.md`](done/15-modern-free-aim.md)
+- **[Issue: #16] `#16` — Options de confort et d'accessibilité** (2026-10-22) 🔵 — options de confort dans la pause : champ de vision (MODERN), balancement, effets réduits (photosensibilité), sauvegardées
+  [`16-comfort-options.md`](done/16-comfort-options.md)
 
 ---
 

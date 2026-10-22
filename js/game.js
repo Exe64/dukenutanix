@@ -400,6 +400,10 @@ function msg(text) {
 const keys = {};
 let mouseDX = 0, mouseDY = 0, firing = false, showMap = false;
 let sensitivity = 1;
+// Comfort options (pause menu, saved): field of view (MODERN on the GPU), head bob, and
+// reduced effects (no flashes, shake, damage glitch, chromatic aberration or film grain).
+const Comfort = { fov: 77, bob: true, reduced: false };
+function saveComfort() { try { localStorage.setItem('dukenutanix.comfort', JSON.stringify(Comfort)); } catch (e) { /* ignored */ } }
 // MODERN on the GPU can look up and down: shots then go where the crosshair points
 // (free aim). AUTO keeps Doom's automatic aiming in height, as in RETRO.
 let aimMode = 'free';
@@ -532,6 +536,7 @@ function updatePlayer(dt) {
     P.bobPhase += dt * (run ? 11 : 8);
     P.bobAmt = Math.min(1, P.bobAmt + dt * 4);
   } else P.bobAmt = Math.max(0, P.bobAmt - dt * 4);
+  if (!Comfort.bob) P.bobAmt = 0;
 
   // stomping compressed enemies
   for (const e of L.enemies) {
@@ -559,7 +564,7 @@ function updatePlayer(dt) {
   P.lookT -= dt; if (P.lookT <= 0) { P.look = randi(-1, 1); P.lookT = rand(0.6, 1.8); }
   if (P.hurtT > 0) P.hurtT -= dt;
   if (P.pickT > 0) P.pickT -= dt;
-  if (P.shake > 0) P.shake = Math.max(0, P.shake - dt * 1.6);
+  if (P.shake > 0) P.shake = Comfort.reduced ? 0 : Math.max(0, P.shake - dt * 1.6);
 }
 
 function pickup(it) {
@@ -1593,7 +1598,7 @@ function drawMap(g) {
 // dt advances its particles (0 while paused).
 let glPose = null;   // the weapon pose drawn by the GPU this frame (present() adds its 2D effects)
 function renderGL(dt = 0) {
-  const sh = P.shake > 0 ? P.shake * 7 : 0;
+  const sh = P.shake > 0 && !Comfort.reduced ? P.shake * 7 : 0;
   glPose = GLR.hasWeapons ? weaponPose() : null;
   GLR.render({
     weapon: glPose,
@@ -1608,7 +1613,7 @@ function present() {
   vctx.setTransform(1, 0, 0, 1, 0, 0);
   vctx.imageSmoothingEnabled = style === 'modern';
   vctx.imageSmoothingQuality = 'high';
-  const sh = P.shake > 0 ? P.shake * 7 * K : 0;
+  const sh = P.shake > 0 && !Comfort.reduced ? P.shake * 7 * K : 0;
   if (useGL) vctx.clearRect(0, 0, W * K, VH * K);
   else {
     if (sh) { vctx.fillStyle = '#000'; vctx.fillRect(0, 0, W * K, VH * K); }
@@ -1624,11 +1629,11 @@ function present() {
   g.fillRect(W / 2 - 5, HORIZ - 0.5, 3.5, 1); g.fillRect(W / 2 + 1.5, HORIZ - 0.5, 3.5, 1);
   g.fillRect(W / 2 - 0.5, HORIZ - 5, 1, 3.5); g.fillRect(W / 2 - 0.5, HORIZ + 1.5, 1, 3.5);
   if (showMap) drawMap(g);
-  if (P.hurtT > 0) { g.fillStyle = `rgba(255,0,0,${P.hurtT * 0.8})`; g.fillRect(0, 0, W, VH); }
-  if (P.pickT > 0) { g.fillStyle = `rgba(255,230,80,${P.pickT * 0.5})`; g.fillRect(0, 0, W, VH); }
+  if (P.hurtT > 0 && !Comfort.reduced) { g.fillStyle = `rgba(255,0,0,${P.hurtT * 0.8})`; g.fillRect(0, 0, W, VH); }
+  if (P.pickT > 0 && !Comfort.reduced) { g.fillStyle = `rgba(255,230,80,${P.pickT * 0.5})`; g.fillRect(0, 0, W, VH); }
   if (P.dead) { g.fillStyle = `rgba(120,0,0,${Math.min(0.6, P.deadT * 0.4)})`; g.fillRect(0, 0, W, VH); }
   const alarm = Objectives.alarm(L);
-  if (alarm) { g.fillStyle = `rgba(255,20,10,${alarm})`; g.fillRect(0, 0, W, VH); }
+  if (alarm && !Comfort.reduced) { g.fillStyle = `rgba(255,20,10,${alarm})`; g.fillRect(0, 0, W, VH); }
   if (P.hurtT > 0 && P.hurtDir) {
     g.save(); g.translate(W / 2, HORIZ); g.rotate(P.hurtDir);
     g.fillStyle = `rgba(255,40,40,${P.hurtT * 2})`;
@@ -1850,6 +1855,11 @@ const actions = {
   restart() { INV = cloneInv(INV_START); startLevel(L.idx); },
   checkpoint() { restoreCheckpoint(); },
   controls() { showBinds(); },
+  comfortBob() { Comfort.bob = !Comfort.bob; saveComfort(); document.getElementById('cbob').textContent = `HEAD BOB: ${Comfort.bob ? 'ON' : 'OFF'}`; },
+  comfortFx() {
+    Comfort.reduced = !Comfort.reduced; saveComfort();
+    document.getElementById('cfx').textContent = `EFFECTS: ${Comfort.reduced ? 'REDUCED' : 'FULL'}`;
+  },
   aim() {
     aimMode = aimMode === 'free' ? 'auto' : 'free';
     try { localStorage.setItem('dukenutanix.aim', aimMode); } catch (e) { /* ignored */ }
@@ -1947,7 +1957,10 @@ function showPause() {
     <button id="sty">STYLE: ${style.toUpperCase()}</button>
     <button data-act="controls">CONTROLS</button>
     ${useGL ? `<button data-act="aim" id="aim">AIM: ${aimMode.toUpperCase()}</button>` : ''}
+    <button data-act="comfortBob" id="cbob">HEAD BOB: ${Comfort.bob ? 'ON' : 'OFF'}</button>
+    <button data-act="comfortFx" id="cfx">EFFECTS: ${Comfort.reduced ? 'REDUCED' : 'FULL'}</button>
     <label class="sens">Mouse sensitivity <input type="range" min="0.3" max="2.5" step="0.1" value="${sensitivity}" id="sens"></label>
+    ${useGL ? `<label class="sens">Field of view <input type="range" min="65" max="110" step="1" value="${Comfort.fov}" id="fov"> <span id="fovv">${Comfort.fov}</span></label>` : ''}
     ${CONTROLS}
   `);
   const gb = document.getElementById('gfx');
@@ -1956,6 +1969,8 @@ function showPause() {
   sb.onclick = () => { toggleStyle(); sb.textContent = `STYLE: ${style.toUpperCase()}`; drawFrame(); };
   const s = document.getElementById('sens');
   s.oninput = () => { sensitivity = +s.value; try { localStorage.setItem('dukenutanix.sens', s.value); } catch (e) { /* ignored */ } };
+  const fv = document.getElementById('fov');
+  if (fv) fv.oninput = () => { Comfort.fov = +fv.value; GLR.setFov(Comfort.fov); document.getElementById('fovv').textContent = fv.value; saveComfort(); drawFrame(); };
 }
 
 // RETRO (Doom's 320x200, 256 colors, 35 Hz) or MODERN (finer, smoothed) look.
@@ -2209,6 +2224,7 @@ function boot() {
     if (localStorage.getItem('dukenutanix.voice') === '0') voiceOn = false;
     showPerf = localStorage.getItem('dukenutanix.perf') === '1';
     if (localStorage.getItem('dukenutanix.aim') === 'auto') aimMode = 'auto';
+    Object.assign(Comfort, JSON.parse(localStorage.getItem('dukenutanix.comfort') || '{}'));
     const kb = JSON.parse(localStorage.getItem('dukenutanix.keys') || 'null');
     if (kb) for (const a of Object.keys(DEFAULT_BINDS)) if (Array.isArray(kb[a]) && kb[a].length) binds[a] = kb[a];
     if (localStorage.getItem('dukenutanix.gfx') === 'low') { Light.high = false; vignette.hidden = true; }
@@ -2218,6 +2234,7 @@ function boot() {
   let st = 'modern';
   try { st = localStorage.getItem('dukenutanix.style') || 'modern'; } catch (e) { /* ignored */ }
   setStyle(st, true);
+  GLR.setFov(Comfort.fov);
   showTitle();
   Update.check();
   requestAnimationFrame(frame);

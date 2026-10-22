@@ -433,6 +433,7 @@ const Retro = (() => {
   // Which PLAYPAL: damage reds first, then pickup gold, then the TURBO green.
   function palette() {
     if (P.dead) return Math.min(8, 2 + Math.floor(P.deadT * 4));
+    if (Comfort.reduced) return 0;   // no palette flashes
     if (P.hurtT > 0) return Math.max(1, Math.min(8, Math.ceil(P.hurtT / 0.35 * 6)));
     if (P.pickT > 0) return 8 + Math.max(1, Math.min(4, Math.ceil(P.pickT / 0.3 * 3)));
     const alarm = Objectives.alarm(L);   // fire alarm: red flashes
@@ -456,7 +457,7 @@ const Retro = (() => {
     bctx.putImageData(out, 0, 0);
     vctx.setTransform(1, 0, 0, 1, 0, 0);
     vctx.imageSmoothingEnabled = false;
-    const sh = P.shake > 0 ? P.shake * 7 * view.width / SW : 0;
+    const sh = P.shake > 0 && !Comfort.reduced ? P.shake * 7 * view.width / SW : 0;
     if (sh) { vctx.fillStyle = '#000'; vctx.fillRect(0, 0, view.width, view.height); }
     vctx.drawImage(buf, 0, 0, SW, VHR, sh ? rand(-sh, sh) : 0, sh ? rand(-sh, sh) : 0, view.width, view.height * VHR / SH);
     vctx.drawImage(buf, 0, VHR, SW, SH - VHR, 0, view.height * VHR / SH, view.width, view.height * (SH - VHR) / SH);

@@ -170,6 +170,8 @@ npx @tauri-apps/cli@2 build      # or "dev" to run it without packaging
 | Gamepad | Left stick move, right stick look, RT fire, LT run, A use, LB / RB weapons, Back map, Start pause; D-pad and A in the menus |
 
 The movement, fire, use and map keys can be remapped from the pause menu (CONTROLS); the choice is remembered.
+The pause menu also has comfort options, remembered as well: the field of view (MODERN, 65 to 110 degrees), head bob
+on or off, and reduced effects (no screen flashes, shake, damage glitch, chromatic aberration or film grain).
 
 Cheat codes: `iddqd` (root mode) and `idkfa`.
 
