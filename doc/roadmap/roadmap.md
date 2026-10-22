@@ -22,14 +22,6 @@ Préparation, coup/tir et retour pour tous les monstres qui attaquent, dans les 
 
 ---
 
-### [Issue: #10] Réduire le coût du reflet du sol [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
-
-Plan : [`10-reflection-cost.md`](10-reflection-cost.md)
-
-Le reflet redessine toute la scène : le passer à demi-résolution et le sauter quand le sol n'est pas visible. **Dépend de** : #2.
-
----
-
 ### [Issue: #11] Rebake progressif de la lightmap [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
 
 Plan : [`11-progressive-lightmap-bake.md`](11-progressive-lightmap-bake.md)
@@ -193,6 +185,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`8-version-doc.md`](done/8-version-doc.md)
 - **[Issue: #6] `#6` — Checkpoints en cours de niveau** (2026-10-22) 🔵 — checkpoint en mémoire à chaque étape d'objectif, restauré après une mort (minuteurs d'au moins 60 s)
   [`6-mid-level-checkpoints.md`](done/6-mid-level-checkpoints.md)
+- **[Issue: #10] `#10` — Réduire le coût du reflet du sol** (2026-10-22) 🔵 — passe de reflet sautée quand le sol est hors champ (la demi-résolution existait déjà)
+  [`10-reflection-cost.md`](done/10-reflection-cost.md)
 
 ---
 

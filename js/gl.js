@@ -1760,7 +1760,9 @@ const GLR = (() => {
     gl.disable(gl.CULL_FACE); gl.disable(gl.BLEND);
     gl.clearColor(0, 0, 0, 1);
 
-    reflOn = Light.high;
+    // the reflection (already at half resolution) is skipped when the floor is out of
+    // view: the lowest rays of the frustum point up once tan(pitch) passes the half height
+    reflOn = Light.high && Math.tan(P.pitch || 0) < TAN_H * bh / bw;
     if (reflOn) {
       // the scene mirrored under the floor, sampled by the floor shader
       gl.bindFramebuffer(gl.FRAMEBUFFER, reflFBO);
