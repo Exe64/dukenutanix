@@ -695,8 +695,12 @@ const GLR = (() => {
 
   /* ----------------------------------------------------------- lightmap */
   // Directional lightmap of a level (see the header): two RGBA float textures.
-  function bake(L) {
-    const t0 = performance.now();
+  // The lightmap is computed by a generator that yields after each row of cells:
+  // bake() runs it at once (level load), relight() spreads it over frames (see render).
+  function bake(L) { for (const _ of baking(L)); }
+  let pendingBake = null;
+  function* baking(L) {
+    let t0 = performance.now(), ms = 0;
     const lw = L.w * LG2, lh = L.h * LG2, n = lw * lh;
     const mood = LIGHT_MOODS[L.def.episode % LIGHT_MOODS.length];
     const R = new Float32Array(n), G = new Float32Array(n), B = new Float32Array(n);
@@ -724,6 +728,7 @@ const GLR = (() => {
       }
     }
     for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
+      if (x === 0 && y) { ms += performance.now() - t0; yield; t0 = performance.now(); }
       const i = y * L.w + x;
       if (L.map[i]) continue;
       if (L.ceil[i] === 1) point(x + 0.5, y + 0.5, 0.97, 3.6, mood.lamp[0], mood.lamp[1], mood.lamp[2], 1.0, true);
@@ -759,7 +764,7 @@ const GLR = (() => {
     };
     up(texLightA, A); up(texLightB, Bd);
     ambient = mood.amb.map((v) => v * L.def.ambient * (L.ambMul ?? 1) * 0.42);
-    stats.bakeMs = performance.now() - t0;
+    stats.bakeMs = ms + performance.now() - t0;   // compute time, even when spread over frames
   }
   let ambient = [0.3, 0.3, 0.3];
 
@@ -970,6 +975,7 @@ const GLR = (() => {
 
   function setLevel(L) {
     curL = L;
+    pendingBake = null;
     buildWorld(L);
     bake(L);
     updateCells(L, true);
@@ -1738,6 +1744,10 @@ const GLR = (() => {
     buildDoors(L, P);
     updateCells(L, false);
     warmUp(L, f.warmBudget || 4);
+    if (pendingBake) {
+      const t0 = performance.now();
+      while (performance.now() - t0 < 4) if (pendingBake.next().done) { pendingBake = null; break; }
+    }
     gatherLights(L, P, f.inv);
     gatherProps(L);
     gatherShadows(L);
@@ -2240,7 +2250,8 @@ const GLR = (() => {
     // a wall tile changed (rack migrated to Nutanix): the static geometry is rebuilt
     retile(L) { if (ok && L === curL) buildWorld(L); },
     // the lights changed (power objective): ceiling panels and lightmap rebuilt
-    relight(L) { if (ok && L === curL) { buildWorld(L); bake(L); updateCells(L, true); } },
+    // (the old lightmap stays on screen until the new one is ready, a few frames later)
+    relight(L) { if (ok && L === curL) { buildWorld(L); pendingBake = baking(L); updateCells(L, true); } },
     // finishes the background work at once (automated tests)
     flushWarm() { if (curL) warmUp(curL, 1e9); },
     // the weapon meshes (weapons.js build3D), keyed by the 2D art of each pose

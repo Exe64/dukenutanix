@@ -22,14 +22,6 @@ Préparation, coup/tir et retour pour tous les monstres qui attaquent, dans les 
 
 ---
 
-### [Issue: #11] Rebake progressif de la lightmap [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
-
-Plan : [`11-progressive-lightmap-bake.md`](11-progressive-lightmap-bake.md)
-
-Mesurer `Light.bake` au rallumage d'un panneau électrique ; s'il saccade, l'étaler sur plusieurs frames. **Dépend de** : #2.
-
----
-
 ### [Issue: #12] Démarrage plus rapide : assets construits à la demande [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
 
 Plan : [`12-lazy-asset-build.md`](12-lazy-asset-build.md)
@@ -187,6 +179,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`6-mid-level-checkpoints.md`](done/6-mid-level-checkpoints.md)
 - **[Issue: #10] `#10` — Réduire le coût du reflet du sol** (2026-10-22) 🔵 — passe de reflet sautée quand le sol est hors champ (la demi-résolution existait déjà)
   [`10-reflection-cost.md`](done/10-reflection-cost.md)
+- **[Issue: #11] `#11` — Rebake progressif de la lightmap** (2026-10-22) 🔵 — rebake GPU de la lightmap étalé sur plusieurs frames au rallumage d'un panneau (frame bloquée : 211 → 28 ms)
+  [`11-progressive-lightmap-bake.md`](done/11-progressive-lightmap-bake.md)
 
 ---
 
