@@ -1,0 +1,13 @@
+ide: auto
+issues:
+  mode: auto
+roadmap-tracking:
+  collaborative: false
+  mode: auto
+  last-calibration: 2026-10-22
+  help:
+    welcomed: true
+tests:
+  mode: autonomous
+  max_iterations: 3
+  verifier: auto

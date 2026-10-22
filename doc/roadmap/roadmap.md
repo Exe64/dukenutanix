@@ -22,14 +22,6 @@ Snapshot automatique à chaque étape d'objectif, restauré à la mort au lieu d
 
 ---
 
-### [Issue: #8] Versionner doc/ [PRIORITÉ: HAUTE] [Complexité: XS] 🟢
-
-Plan : [`8-version-doc.md`](8-version-doc.md)
-
-Suivre `doc/` (plans de roadmap) dans git ; `graft/` est déjà ignoré.
-
----
-
 ### [Issue: #1] RETRO : 3 frames d'attaque pour les monstres [PRIORITÉ: MOYENNE] [Complexité: M] 🟢
 
 Plan : [`1-retro-attack-frames.md`](1-retro-attack-frames.md)
@@ -205,6 +197,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`4-stereo-audio.md`](done/4-stereo-audio.md)
 - **[Issue: #5] `#5` — Niveaux de difficulté** (2026-10-22) 🔵 — 4 niveaux de difficulté choisis au NEW GAME (ennemis filtrés, dégâts ajustés), sauvegardés, contrôlés par validate-levels
   [`5-difficulty-levels.md`](done/5-difficulty-levels.md)
+- **[Issue: #8] `#8` — Versionner doc/** (2026-10-22) 🔵 — doc/ versionné, avec la config du workflow ; graft/ ignoré via la modification de l'autre session
+  [`8-version-doc.md`](done/8-version-doc.md)
 
 ---
 
