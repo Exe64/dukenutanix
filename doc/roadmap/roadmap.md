@@ -46,14 +46,6 @@ Suivre `doc/` (plans de roadmap) dans git ; `graft/` est déjà ignoré.
 
 ---
 
-### [Issue: #9] Actions de release sur Node 24 [PRIORITÉ: HAUTE] [Complexité: XS] 🟢
-
-Plan : [`9-release-actions-node24.md`](9-release-actions-node24.md)
-
-Mettre à jour les actions de `release.yml` vers des versions qui tournent sur Node 24.
-
----
-
 ### [Issue: #1] RETRO : 3 frames d'attaque pour les monstres [PRIORITÉ: MOYENNE] [Complexité: M] 🟢
 
 Plan : [`1-retro-attack-frames.md`](1-retro-attack-frames.md)
@@ -223,6 +215,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`3-doors-dirty-flag.md`](done/3-doors-dirty-flag.md)
 - **[Issue: #7] `#7` — CI : valider les niveaux à chaque push** (2026-10-22) 🔵 — workflow CI qui valide les 50 niveaux sur push et PR
   [`7-ci-validate-levels.md`](done/7-ci-validate-levels.md)
+- **[Issue: #9] `#9` — Actions de release sur Node 24** (2026-10-22) 🔵 — actions de release.yml passées sur des versions Node 24
+  [`9-release-actions-node24.md`](done/9-release-actions-node24.md)
 
 ---
 

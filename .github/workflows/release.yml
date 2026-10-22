@@ -35,8 +35,8 @@ jobs:
       version: ${{ steps.meta.outputs.version }}
       release: ${{ steps.meta.outputs.release }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Check the 50 levels
@@ -65,14 +65,14 @@ jobs:
           mv dist "$name"
           zip -qr "$name.zip" "$name"
           echo "ZIP=$name.zip" >> "$GITHUB_ENV"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: web
           path: ${{ env.ZIP }}
       - name: Create the draft release
         id: release
         if: steps.meta.outputs.release == 'true'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           draft: true
           tag_name: v${{ steps.meta.outputs.version }}
@@ -116,8 +116,8 @@ jobs:
             targets: ''
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - uses: dtolnay/rust-toolchain@stable
@@ -155,7 +155,7 @@ jobs:
           tauriScript: npx --yes @tauri-apps/cli@2
           args: ${{ matrix.args }}
           releaseId: ${{ needs.web.outputs.release_id }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: desktop-${{ matrix.name }}
           path: |
