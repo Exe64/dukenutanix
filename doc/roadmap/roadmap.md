@@ -22,14 +22,6 @@ Préparation, coup/tir et retour pour tous les monstres qui attaquent, dans les 
 
 ---
 
-### [Issue: #17] Temps de référence, records et rang [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
-
-Plan : [`17-level-records.md`](17-level-records.md)
-
-Temps de référence par niveau, meilleur temps et rang enregistrés et affichés en fin de niveau.
-
----
-
 ### [Issue: #18] Liste de joueurs (fondation multijoueur) [PRIORITÉ: MOYENNE] [Complexité: L] 🟢
 
 Plan : [`18-players-list-refactor.md`](18-players-list-refactor.md)
@@ -151,6 +143,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`15-modern-free-aim.md`](done/15-modern-free-aim.md)
 - **[Issue: #16] `#16` — Options de confort et d'accessibilité** (2026-10-22) 🔵 — options de confort dans la pause : champ de vision (MODERN), balancement, effets réduits (photosensibilité), sauvegardées
   [`16-comfort-options.md`](done/16-comfort-options.md)
+- **[Issue: #17] `#17` — Temps de référence, records et rang** (2026-10-22) 🔵 — temps de référence par niveau, meilleur temps et rang (S/A/B/C) à l'écran de fin et dans la sélection
+  [`17-level-records.md`](done/17-level-records.md)
 
 ---
 

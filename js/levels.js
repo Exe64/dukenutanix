@@ -259,6 +259,8 @@ function getLevel(i) {
   def.bossType = k === 9 ? EPISODES[ep].boss : null;
   def.miniType = k === 4 ? MINIBOSSES[ep] : null;
   def.objective = objective;
+  // par time: 90 s plus a share of the map's area, rounded to a quarter of a minute
+  def.par = Math.round((90 + def.map.length * def.map[0].length / 6) / 15) * 15;
   levelCache[i] = def;
   return def;
 }

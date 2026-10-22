@@ -106,7 +106,9 @@ python3 -m http.server 8000
 # then open http://localhost:8000
 ```
 
-Progress is saved locally (CONTINUE button, and a level select for unlocked levels).
+Progress is saved locally (CONTINUE button, and a level select for unlocked levels). Each level has a par time; the
+end-of-level screen shows it with your best time and a rank (S, A, B, C: one step each for beating the par, clearing
+every enemy and finding every secret), and the level select shows the best rank.
 
 A new game asks for the difficulty: **INTERN** (fewer enemies, half the damage), **SYSADMIN** (a few
 fewer enemies, three quarters of the damage), **ON-CALL** (the default) or **ROOT** (one and a half times

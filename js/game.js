@@ -1791,6 +1791,24 @@ const SAVE_KEY = 'dukenutanix.save';
 function readSave() {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || null; } catch (e) { return null; }
 }
+// Rank of a finished level: one point each for beating the par time, killing every
+// enemy and finding every secret (S = all three).
+function levelRank(L) {
+  const pts = (L.time <= L.def.par) + (L.kills >= L.totalKills) + (L.secrets >= L.totalSecrets);
+  return 'CBAS'[pts];
+}
+// Keeps the best time and the best rank of each level.
+function writeRecord(L, rank) {
+  const s = readSave() || { maxLevel: 0 };
+  const r = (s.records = s.records || {})[L.idx] || {};
+  const better = !r.time || L.time < r.time;
+  if (better) r.time = L.time;
+  if (!r.rank || 'CBAS'.indexOf(rank) > 'CBAS'.indexOf(r.rank)) r.rank = rank;
+  s.records[L.idx] = r;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) { /* storage unavailable */ }
+  return { ...r, newBest: better };
+}
+
 function writeSave(idx, inv) {
   const s = readSave() || { maxLevel: 0 };
   s.maxLevel = Math.max(s.maxLevel || 0, idx);
@@ -1914,8 +1932,9 @@ function showSelect() {
     html += `<h3>EPISODE ${e + 1}: ${ep.name}</h3><div class="grid">`;
     for (let k = 0; k < 10; k++) {
       const i = e * 10 + k;
-      const locked = i > max;
-      html += `<button ${locked ? 'disabled' : `data-act="play" data-arg="${i}"`} title="${locked ? 'Locked' : LEVEL_NAMES[i]}" class="lvl${k === 9 ? ' boss' : k === 4 ? ' mini' : ''}">${e + 1}-${k + 1}</button>`;
+      const locked = i > max, rec = s && s.records && s.records[i];
+      const tip = locked ? 'Locked' : LEVEL_NAMES[i] + (rec ? ` | best ${fmtTime(rec.time)}, rank ${rec.rank}` : '');
+      html += `<button ${locked ? 'disabled' : `data-act="play" data-arg="${i}"`} title="${tip}" class="lvl${k === 9 ? ' boss' : k === 4 ? ' mini' : ''}">${e + 1}-${k + 1}${rec ? `<span class="rank">${rec.rank}</span>` : ''}</button>`;
     }
     html += '</div>';
   });
@@ -2069,6 +2088,7 @@ function completeLevel() {
   document.exitPointerLock && document.exitPointerLock();
   const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : 'N/A';
   const lastLevel = L.idx === LEVEL_COUNT - 1;
+  const rank = levelRank(L), rec = writeRecord(L, rank);
   if (!lastLevel) {
     const next = cloneInv(INV);
     next.hp = Math.max(next.hp, 1);
@@ -2081,7 +2101,10 @@ function completeLevel() {
       <tr><td>SECRETS</td><td>${pct(L.secrets, L.totalSecrets)}</td></tr>
       <tr><td>OBJECTIVE</td><td>${Objectives.title(L, true)}</td></tr>
       <tr><td>NUTANIX MIGRATIONS</td><td>${L.migrated}/${L.totalSpecials}</td></tr>
-      <tr><td>TIME</td><td>${fmtTime(L.time)}</td></tr>
+      <tr><td>TIME</td><td>${fmtTime(L.time)}${rec.newBest ? ' <span class="ok">BEST!</span>' : ''}</td></tr>
+      <tr><td>PAR</td><td>${fmtTime(L.def.par)}</td></tr>
+      <tr><td>BEST</td><td>${fmtTime(rec.time)}</td></tr>
+      <tr><td>RANK</td><td class="ok">${rank}</td></tr>
     </table>`;
   if (lastLevel) {
     showPanel(`
