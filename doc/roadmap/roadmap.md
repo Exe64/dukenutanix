@@ -14,14 +14,6 @@ La vision d'ensemble (multijoueur) est résumée dans [`ROADMAP.md`](../../ROADM
 ---
 
 ## À faire
-### [Issue: #4] Son spatialisé (stéréo) [PRIORITÉ: HAUTE] [Complexité: S] 🟢
-
-Plan : [`4-stereo-audio.md`](4-stereo-audio.md)
-
-Ajouter un panoramique stéréo aux sons du monde pour entendre d'où viennent les monstres.
-
----
-
 ### [Issue: #5] Niveaux de difficulté [PRIORITÉ: HAUTE] [Complexité: M] 🟢
 
 Plan : [`5-difficulty-levels.md`](5-difficulty-levels.md)
@@ -217,6 +209,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`7-ci-validate-levels.md`](done/7-ci-validate-levels.md)
 - **[Issue: #9] `#9` — Actions de release sur Node 24** (2026-10-22) 🔵 — actions de release.yml passées sur des versions Node 24
   [`9-release-actions-node24.md`](done/9-release-actions-node24.md)
+- **[Issue: #4] `#4` — Son spatialisé (stéréo)** (2026-10-22) 🔵 — panoramique stéréo des sons du monde selon le côté d'où ils viennent
+  [`4-stereo-audio.md`](done/4-stereo-audio.md)
 
 ---
 

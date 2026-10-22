@@ -269,7 +269,7 @@ const Objectives = (() => {
         o.panels.forEach((p, k) => { if (p.x === x && p.y === y) for (const l of o.lamps) if (l.panel === k) L.ceil[l.i] = 1; });
         L.ambMul = 0.3 + 0.7 * o.on / o.panels.length;
         relight(L);
-        Sfx.door(0);
+        Sfx.door();
         msg(`Power restored: ${o.on}/${o.panels.length} panels`);
         if (o.on >= o.panels.length) { o.dark = false; complete(L, 'the lights are back'); }
         return true;

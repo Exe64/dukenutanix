@@ -359,7 +359,7 @@ function hitsEnemy(x, y, r) {
 function openDoor(d) {
   if (d.st === 'closed' || d.st === 'closing') {
     d.st = 'opening';
-    Sfx.door(Math.hypot(d.x + 0.5 - P.x, d.y + 0.5 - P.y));
+    Sfx.door({ x: d.x + 0.5, y: d.y + 0.5 });
   }
   d.timer = 4;
 }
@@ -377,7 +377,7 @@ function updateDoors(dt) {
     else if (d.st === 'open') {
       if (d.secret) continue;
       d.timer -= dt;
-      if (d.timer <= 0) { if (doorOccupied(d)) d.timer = 1; else { d.st = 'closing'; Sfx.door(Math.hypot(d.x + 0.5 - P.x, d.y + 0.5 - P.y)); } }
+      if (d.timer <= 0) { if (doorOccupied(d)) d.timer = 1; else { d.st = 'closing'; Sfx.door({ x: d.x + 0.5, y: d.y + 0.5 }); } }
     } else if (d.st === 'closing') {
       if (doorOccupied(d)) { d.st = 'opening'; continue; }
       d.open -= dt * 1.8;
@@ -637,7 +637,7 @@ function meleeAttack(w) {
     if (along <= 0 || along > bestD + ETYPES[e.type].radius) continue;
     if (Math.abs(ex * dy - ey * dx) < ETYPES[e.type].radius + 0.3) { best = e; bestD = along; }
   }
-  if (best) { damageEnemy(best, randi(w.dmg[0], w.dmg[1])); Sfx.melee(0); return; }
+  if (best) { damageEnemy(best, randi(w.dmg[0], w.dmg[1])); Sfx.melee(); return; }
   // keyboard hit on a rack: Nutanix migration of special racks
   castRay(P.x, P.y, dx, dy);
   if (RH.d > 1.5 || !RH.tile) return;
@@ -658,7 +658,7 @@ function meleeAttack(w) {
       quip('nutanixAll', 1, true);
     } else quip('nutanix', 0.8, true);
   } else if ('RSNC7'.includes(ch)) {
-    Sfx.melee(0);
+    Sfx.melee();
     addFx(P.x + dx * (RH.d - 0.1), P.y + dy * (RH.d - 0.1), 'spark', 0.45, 0.2);
   }
 }
@@ -695,7 +695,7 @@ function damageBarrel(b, dmg) {
 
 function explode(x, y, radius, dmg) {
   const dp = Math.hypot(P.x - x, P.y - y);
-  Sfx.bigBoom(dp);
+  Sfx.bigBoom({ x, y });
   addFx(x, y, 'bigBoom', 0.1, 0.6, 1.5);
   P.shake = Math.max(P.shake, Math.max(0, 0.9 - dp / 12));
   let kills = 0;
@@ -731,10 +731,9 @@ function updateBarrels(dt) {
 
 function killEnemy(e, how) {
   const T = ETYPES[e.type];
-  const dist = Math.hypot(e.x - P.x, e.y - P.y);
   e.state = 'dying'; e.timer = 0.5; e.shrunk = 0;
   L.kills++;
-  Sfx.enemyDeath(sndKind(e), dist);
+  Sfx.enemyDeath(sndKind(e), e);
   if (how !== 'stomp') addFx(e.x, e.y, 'boom', 0.2 + T.z, T.boss ? 1.5 : 0.5);
   if (useGL) GLR.kill(e);
   Objectives.kill(L, e);
@@ -755,13 +754,12 @@ function killEnemy(e, how) {
 
 function damageEnemy(e, dmg) {
   const T = ETYPES[e.type];
-  const dist = Math.hypot(e.x - P.x, e.y - P.y);
   e.hp -= dmg;
   e.flash = 0.08;
   e.alerted = true;
   if (e.hp <= 0) { killEnemy(e); return; }
-  if (e.state === 'idle') { e.state = 'chase'; Sfx.alert(sndKind(e), dist); }
-  if (Math.random() < T.pain) { e.painT = 0.22; Sfx.enemyPain(sndKind(e), dist); if (e.state === 'attack' && !T.boss) e.state = 'chase'; }
+  if (e.state === 'idle') { e.state = 'chase'; Sfx.alert(sndKind(e), e); }
+  if (Math.random() < T.pain) { e.painT = 0.22; Sfx.enemyPain(sndKind(e), e); if (e.state === 'attack' && !T.boss) e.state = 'chase'; }
 }
 
 function shrinkEnemy(e) {
@@ -817,13 +815,12 @@ function flowTarget(e) {
 
 function enemyFire(e) {
   const T = ETYPES[e.type];
-  const dist = Math.hypot(P.x - e.x, P.y - e.y);
   const ang = Math.atan2(P.y - e.y, P.x - e.x);
   const shoot = (a, kind, speed, scale) => {
     L.proj.push({ x: e.x + Math.cos(a) * T.radius, y: e.y + Math.sin(a) * T.radius, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, kind,
       dmg: randi(T.dmg[0], T.dmg[1]), owner: 'enemy', z: T.shotZ - scale / 2, scale, life: 5, t: 0 });
   };
-  Sfx.enemyShoot(sndKind(e), dist);
+  Sfx.enemyShoot(sndKind(e), e);
   if (T.boss) {
     const n = T.fan || (e.type === 'zeroday' ? 7 : 5);
     for (let k = 0; k < n; k++) shoot(ang + (k - (n - 1) / 2) * 0.13, T.shot, T.shotSpeed || 7.5, T.shotScale || 0.5);
@@ -868,7 +865,7 @@ function updateEnemy(e, dt) {
   }
   if (e.state === 'idle') {
     if (e.sees || e.alerted) {
-      e.state = 'chase'; e.cd = rand(0.3, T.cd); Sfx.alert(sndKind(e), dist);
+      e.state = 'chase'; e.cd = rand(0.3, T.cd); Sfx.alert(sndKind(e), e);
       if (T.boss && !L.bossSeen) { L.bossSeen = true; quip('boss', 1, true); }
     }
     return;
@@ -907,7 +904,7 @@ function updateEnemy(e, dt) {
       if (dist < T.atkRange + 0.25) {
         e.state = 'attack'; e.timer = 0.45; e.cd = T.cd; e.face = Math.atan2(dy, dx);
         damagePlayer(randi(T.dmg[0], T.dmg[1]), e.x, e.y);
-        Sfx.melee(dist);
+        Sfx.melee(e);
         return;
       }
     } else if (dist < T.atkRange) {
@@ -1049,11 +1046,11 @@ function updateHdd(p, dt) {
   const fr = Math.max(0, 1 - (p.z <= 0.06 ? 3 : 0.4) * dt);
   p.vx *= fr; p.vy *= fr;
   const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt;
-  if (blockedProj(nx, p.y)) { p.vx = -p.vx * 0.55; Sfx.bounce(Math.hypot(p.x - P.x, p.y - P.y)); } else p.x = nx;
-  if (blockedProj(p.x, ny)) { p.vy = -p.vy * 0.55; Sfx.bounce(Math.hypot(p.x - P.x, p.y - P.y)); } else p.y = ny;
+  if (blockedProj(nx, p.y)) { p.vx = -p.vx * 0.55; Sfx.bounce(p); } else p.x = nx;
+  if (blockedProj(p.x, ny)) { p.vy = -p.vy * 0.55; Sfx.bounce(p); } else p.y = ny;
   p.vz -= 6 * dt;
   p.z += p.vz * dt;
-  if (p.z < 0.05) { p.z = 0.05; if (Math.abs(p.vz) > 0.8) Sfx.bounce(Math.hypot(p.x - P.x, p.y - P.y)); p.vz = -p.vz * 0.45; }
+  if (p.z < 0.05) { p.z = 0.05; if (Math.abs(p.vz) > 0.8) Sfx.bounce(p); p.vz = -p.vz * 0.45; }
   if (p.t > 0.15) projHitsTargets(p);
 }
 function blockedProj(x, y) {
