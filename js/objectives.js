@@ -21,6 +21,8 @@
  */
 const TIMED_S = 300;
 const Objectives = (() => {
+  // is this player holding E (the local one, or the coop guest whose key state the host receives)
+  const holding = (who) => (!who || who === P ? held('use') || pad.use : !!who.use && !who.dead);
   const near = (x, y, cx, cy, r) => (x - cx) ** 2 + (y - cy) ** 2 < r * r;
   const cellsOf = (L, ch) => {
     const out = [], code = ch.charCodeAt(0);
@@ -165,7 +167,7 @@ const Objectives = (() => {
     const o = L.obj;
     if (o.done) return;
     o.done = true;
-    msg(`OBJECTIVE COMPLETE: ${text}. Reach the REBOOT terminal.`);
+    msg(`OBJECTIVE COMPLETE: ${text}. Reach the REBOOT terminal.`, true);
     Sfx.secret();
     quip('objective', 1, true);
   }
@@ -205,14 +207,14 @@ const Objectives = (() => {
         o.left -= dt;
         if (o.repair) {
           const u = o.repair;
-          if (!(held('use') || pad.use) || !near(P.x, P.y, u.x + 0.5, u.y + 0.5, 1.9)) { o.repair = null; msg('Repair interrupted!'); break; }
+          if (!holding(o.repairBy) || !near(o.repairBy.x, o.repairBy.y, u.x + 0.5, u.y + 0.5, 1.9)) { o.repair = null; msg('Repair interrupted!'); break; }
           u.prog = (u.prog || 0) + dt / 3;
           if ((u.prog * 6 | 0) !== ((u.prog - dt / 3) * 6 | 0)) Sfx.click();
           if (u.prog >= 1) {
             o.repair = null; o.fixed++;
             setTile(L, u.x, u.y, 'C');
             Sfx.key();
-            msg(`CRAC unit repaired (${o.fixed}/${o.units.length})`);
+            msg(`CRAC unit repaired (${o.fixed}/${o.units.length})`, true);
             if (o.fixed >= o.units.length) complete(L, 'the cooling is back');
           }
         }
@@ -234,7 +236,7 @@ const Objectives = (() => {
       case 'lcm': {
         const u = o.repair;
         if (u) {
-          if (!(held('use') || pad.use) || !near(P.x, P.y, u.x + 0.5, u.y + 0.5, 1.9)) { o.repair = null; msg('Upgrade interrupted!'); break; }
+          if (!holding(o.repairBy) || !near(o.repairBy.x, o.repairBy.y, u.x + 0.5, u.y + 0.5, 1.9)) { o.repair = null; msg('Upgrade interrupted!'); break; }
           u.prog = Math.min(1, u.prog + dt / 4);
           if ((u.prog * 8 | 0) !== ((u.prog - dt / 4) * 8 | 0)) Sfx.click();
           o.spawnT -= dt;
@@ -243,7 +245,7 @@ const Objectives = (() => {
             o.repair = null; o.cur++;
             setTile(L, u.x, u.y, '7');
             Sfx.nutanix();
-            msg(`Node ${o.cur}/${o.nodes.length} upgraded`);
+            msg(`Node ${o.cur}/${o.nodes.length} upgraded`, true);
             if (o.cur >= o.nodes.length) complete(L, 'the cluster runs the new AOS');
           }
         }
@@ -300,7 +302,7 @@ const Objectives = (() => {
           if (active.prog >= 1) {
             const n = o.zones.filter((z) => z.prog >= 1).length;
             Sfx.key();
-            msg(`Firmware upload ${n}/${o.zones.length} complete`);
+            msg(`Firmware upload ${n}/${o.zones.length} complete`, true);
             if (n >= o.zones.length) complete(L, 'all firmware updated');
           }
         }
@@ -324,7 +326,7 @@ const Objectives = (() => {
       e.state = 'idle';
       if (hit || dP < 7 || (e.sees = hasLOS(e.x, e.y, P.x, P.y) && dP < 14)) {
         e.fleeing = true; e.state = 'chase';
-        msg('The DATA THIEF spotted you: he is running for the exit!');
+        msg('The DATA THIEF spotted you: he is running for the exit!', true);
         quip('thief', 1, true);
       }
       return;
@@ -349,7 +351,7 @@ const Objectives = (() => {
   }
 
   // E on a wall tile; true when the objective handled it.
-  function use(L, x, y, ch) {
+  function use(L, x, y, ch, who = P) {
     const o = L.obj;
     if (!o || o.failed) return false;
     switch (ch) {
@@ -358,13 +360,13 @@ const Objectives = (() => {
         if (!o.carried) { msg(`TAPE LIBRARY: ${o.stored}/${o.total} tapes restored. Bring the LTO tapes here.`); Sfx.deny(); return true; }
         o.stored += o.carried; o.carried = 0;
         Sfx.key();
-        msg(`Tapes loaded: ${o.stored}/${o.total}`);
+        msg(`Tapes loaded: ${o.stored}/${o.total}`, true);
         if (o.stored >= o.total) complete(L, 'the backups are safe');
         return true;
       case 'O': {
         if (o.type !== 'overheat') return false;
         const u = o.units.find((k) => k.x === x && k.y === y);
-        if (u && !o.repair) { o.repair = u; msg('Repairing the CRAC unit... hold E'); }
+        if (u && !o.repair) { o.repair = u; o.repairBy = who; msg('Repairing the CRAC unit... hold E'); }
         return true;
       }
       case 'J':
@@ -375,7 +377,7 @@ const Objectives = (() => {
         L.ambMul = 0.3 + 0.7 * o.on / o.panels.length;
         relight(L);
         Sfx.door();
-        msg(`Power restored: ${o.on}/${o.panels.length} panels`);
+        msg(`Power restored: ${o.on}/${o.panels.length} panels`, true);
         if (o.on >= o.panels.length) { o.dark = false; complete(L, 'the lights are back'); }
         return true;
       case 'E':
@@ -383,7 +385,7 @@ const Objectives = (() => {
         setTile(L, x, y, 'U');
         o.cut++;
         Sfx.click(); Sfx.deny();
-        msg(`Infected rack isolated (${o.cut}/${o.racks.length})`);
+        msg(`Infected rack isolated (${o.cut}/${o.racks.length})`, true);
         if (o.cut >= o.racks.length) complete(L, 'the ransomware is contained');
         return true;
       case '8':
@@ -398,7 +400,7 @@ const Objectives = (() => {
         const k = o.nodes.findIndex((n) => n.x === x && n.y === y);
         if (k < 0) return false;
         if (k !== o.cur) { msg(`LCM: upgrade the nodes in order, node ${o.cur + 1} first.`); Sfx.deny(); return true; }
-        if (!o.repair) { o.repair = o.nodes[k]; msg('Upgrading the node... hold E'); }
+        if (!o.repair) { o.repair = o.nodes[k]; o.repairBy = who; msg('Upgrading the node... hold E'); }
         return true;
       }
       case '9':
@@ -406,7 +408,7 @@ const Objectives = (() => {
         if (!o.started && !o.done) {
           o.started = true; o.spawnT = 3;
           Sfx.alarm();
-          msg('FAILOVER STARTED: keep the PROD DB alive for 90 seconds!');
+          msg('FAILOVER STARTED: keep the PROD DB alive for 90 seconds!', true);
           quip('defend', 1, true);
         }
         return true;
@@ -418,14 +420,14 @@ const Objectives = (() => {
     const o = L.obj;
     if (it.type === 'l' && o.type === 'backup') {
       o.carried++;
-      msg(`LTO tape picked up (${o.carried} carried, ${o.stored}/${o.total} restored)`);
+      msg(`LTO tape picked up (${o.carried} carried, ${o.stored}/${o.total} restored)`, true);
       Sfx.pickup(); P.pickT = 0.25;
       return true;
     }
     if (it.type === 'h' && o.type === 'hotswap') {
       o.carry = true;
       if (INV.cur > 1) switchWeapon(INV.weapons[1] ? 1 : 0);
-      msg('SPARE disk in hand: keyboard or pistol only until it is swapped in.');
+      msg('SPARE disk in hand: keyboard or pistol only until it is swapped in.', true);
       Sfx.weaponPickup(); P.pickT = 0.3;
       return true;
     }
@@ -436,7 +438,7 @@ const Objectives = (() => {
     const o = L.obj;
     if (o && o.type === 'snapshots' && e.snap) {
       o.cleaned++;
-      msg(`Zombie snapshot deleted (${o.cleaned}/${o.total})`);
+      msg(`Zombie snapshot deleted (${o.cleaned}/${o.total})`, true);
       if (o.cleaned >= o.total) complete(L, 'the storage is clean');
     }
     if (o && o.type === 'thief' && e.type === 'thief') {

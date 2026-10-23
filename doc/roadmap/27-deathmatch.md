@@ -51,6 +51,8 @@ Item principal de ROADMAP.md : un mode multijoueur à côté de la campagne.
 
 | Décision | Choix retenu | Justification |
 |----------|-------------|---------------|
+| Relais (phase 6, Q3) | D'abord échange de codes seulement (b), relais à codes de salle dans un second temps (a), déploiement par l'utilisateur | Pas de service public déployé sans lui |
+| Limites (Q4) | Comme #26 : pas de TURN, WebKitGTK incertain, tests locaux | — |
 
 ## Tests
 

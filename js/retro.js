@@ -383,7 +383,7 @@ const Retro = (() => {
 
   function overlays() {
     const yellow = col('#ffe14a');
-    const ob = Objectives.hud(L);
+    const ob = coop && coop.role === 'guest' ? coop.hud : Objectives.hud(L);
     if (ob && !showMap && !(Objectives.urgent(L) && L.time % 0.6 < 0.2)) text(ob, 2, 2, col(L.obj.done ? '#3dff6a' : Objectives.urgent(L) ? '#ff3b3b' : '#20e8ff'));
     L.msgs.forEach((m, i) => text(m.text, 2, 10 + i * 7, yellow));
     if (L.titleT > 0 && !showMap) {

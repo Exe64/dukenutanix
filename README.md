@@ -117,6 +117,14 @@ today's date as the seed (the same levels for everyone that day), the **endless 
 a new generated level, harder and harder, and the inventory carries over; the best depth per seed is remembered.
 The pause menu shows the run's seed: share it, and **CUSTOM SEED** on the title screen replays it (a number, or any word).
 
+**Coop for 2** (COOP on the title screen): play the campaign with a second admin, peer to peer over WebRTC, no
+server. The host clicks HOST A GAME and sends the code it shows to the other player (chat, mail...); the guest clicks
+JOIN A GAME, pastes it and sends back the answer code; the host pastes it and both are in. The host plays from its own
+campaign progress and runs the level (enemies, doors, items, objectives); the guest joins with a fresh loadout, and a
+dead admin respawns at the start after 3 seconds; both can do every objective (hold E included). Limits: some strict
+networks (corporate, mobile) block direct connections, as there is no relay server; WebRTC may be missing from the Linux
+desktop app (WebKitGTK); the guest's armor does not protect it yet, and its lighting is not refreshed by the power objective.
+
 A new game asks for the difficulty: **INTERN** (fewer enemies, half the damage), **SYSADMIN** (a few
 fewer enemies, three quarters of the damage), **ON-CALL** (the default) or **ROOT** (one and a half times
 the damage). Bosses, mini-bosses and the data thief are there at every difficulty; the choice is saved with the game.
@@ -300,6 +308,7 @@ js/levels.js             episodes, level names, hand-drawn levels, difficulty se
 js/textures.js           textures, rack logos, sprites
 js/weapons.js            first-person weapon models: pre-rendered sprites and GPU meshes
 js/monsters3d.js         monsters as animated 3D models (MODERN on the GPU)
+js/net.js                peer to peer link for the coop (WebRTC, codes exchanged by copy and paste)
 js/objectives.js         level objectives: rules, timers, the data thief, HUD line and automap markers
 js/gl.js                 MODERN renderer on the GPU (WebGL2)
 js/lighting.js           lightmap baking, dynamic lights, bloom

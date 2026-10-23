@@ -294,6 +294,7 @@ function loadLevel(idx) {
   }
   for (const z of L.zones) L.floor[z.i] = 2;   // firmware upload zones
   P.x = start.x; P.y = start.y;
+  L.start = start;
   let best = 0;
   for (let k = 0; k < 4; k++) {
     const a = k * Math.PI / 2;
@@ -445,7 +446,12 @@ function updateDoors(dt) {
 
 /* ------------------------------------------------------------- messages */
 
-function msg(text) {
+// A message on screen. Shared ones (objective progress, secrets, migrations...) are world
+// events: in coop the host relays them to the guest. The others are personal feedback: while
+// the host acts for the guest (its E presses), they go to the guest only.
+function msg(text, shared = false) {
+  if (coop && coop.capture && !shared) { coop.capture.push(text); return; }
+  if (coop && coop.role === 'host' && shared) coop.relay.push(text);
   L.msgs.push({ text, t: 3.5 });
   if (L.msgs.length > 4) L.msgs.shift();
 }
@@ -513,6 +519,7 @@ function pollPad() {
 }
 
 function useAction() {
+  if (coop && coop.role === 'guest' && coop.hostPaused) { msg('The host is not playing right now'); return; }
   const dx = Math.cos(P.a), dy = Math.sin(P.a);
   // water cooler in front of the player
   for (const f of L.decor) {
@@ -521,6 +528,7 @@ function useAction() {
     if (d < 1.4 && (fx * dx + fy * dy) / d > 0.7) {
       if (INV.hp >= 100) { msg("You're not thirsty. Neither is your ego."); return; }
       if (f.uses >= 6) { msg('The water cooler is empty.'); return; }
+      if (coop && coop.role === 'guest') { coop.out.drinks.push(L.decor.indexOf(f)); Sfx.slurp(); return; }
       f.uses++; INV.hp = Math.min(100, INV.hp + 5);
       Sfx.slurp(); msg('Glug glug... +5 ego'); quip('fountain', 0.4);
       return;
@@ -530,32 +538,41 @@ function useAction() {
     const cx = (P.x + dx * s) | 0, cy = (P.y + dy * s) | 0;
     const i = cy * L.w + cx, t = L.map[i];
     if (!t) continue;
-    const d = L.doors[i];
-    if (d) {
-      if (d.st === 'open' || d.st === 'opening') { if (d.st === 'open') d.timer = 4; return; }
-      if (d.lock && !L.keys[d.lock]) {
-        Sfx.deny();
-        msg(d.lock === 'red' ? 'Access denied: RED BADGE required' : 'Access denied: BLUE BADGE required');
-        return;
-      }
-      if (d.secret) {
-        L.secrets++;
-        Sfx.secret();
-        msg('Secret area found!');
-        quip('secret', 1, true);
-      }
-      openDoor(d);
-      return;
-    }
-    const ch = String.fromCharCode(t);
-    if (ch === 'X') {
-      if (!Objectives.done(L)) { Sfx.deny(); msg(Objectives.lockedText(L)); return; }
-      completeLevel();
-      return;
-    }
-    Objectives.use(L, cx, cy, ch);
+    // a coop guest's actions are done by the host
+    if (coop && coop.role === 'guest') { coop.out.uses.push([cx, cy]); return; }
+    actOnCell(cx, cy);
     return;
   }
+}
+
+// E on the map cell (cx, cy): doors and secret walls, the REBOOT terminal, objective tiles.
+function actOnCell(cx, cy, who = P) {
+  const i = cy * L.w + cx, t = L.map[i];
+  if (!t) return;
+  const d = L.doors[i];
+  if (d) {
+    if (d.st === 'open' || d.st === 'opening') { if (d.st === 'open') d.timer = 4; return; }
+    if (d.lock && !L.keys[d.lock]) {
+      Sfx.deny();
+      msg(d.lock === 'red' ? 'Access denied: RED BADGE required' : 'Access denied: BLUE BADGE required');
+      return;
+    }
+    if (d.secret) {
+      L.secrets++;
+      Sfx.secret();
+      msg('Secret area found!', true);
+      quip('secret', 1, true);
+    }
+    openDoor(d);
+    return;
+  }
+  const ch = String.fromCharCode(t);
+  if (ch === 'X') {
+    if (!Objectives.done(L)) { Sfx.deny(); msg(Objectives.lockedText(L)); return; }
+    completeLevel();
+    return;
+  }
+  Objectives.use(L, cx, cy, ch, who);
 }
 
 function switchWeapon(i) {
@@ -598,6 +615,7 @@ function updatePlayer(dt) {
   for (const e of L.enemies) {
     if (!alive(e) || e.shrunk <= 0) continue;
     if ((e.x - P.x) ** 2 + (e.y - P.y) ** 2 < 0.45 * 0.45) {
+      if (coop && coop.role === 'guest') { coop.out.stomps.push(L.enemies.indexOf(e)); continue; }
       e.hp = 0; killEnemy(e, 'stomp'); count('stomp', 10, 'stomper');
       Sfx.squish(); msg('SPLAT!'); quip('stomp', 0.8, true);
     }
@@ -605,7 +623,15 @@ function updatePlayer(dt) {
 
   for (const it of L.items) {
     if (it.taken) continue;
-    if ((it.x - P.x) ** 2 + (it.y - P.y) ** 2 < 0.36 && pickup(it)) { it.taken = true; if (!it.drop && !it.obj) L.itemsGot++; }
+    if (it.obj && coop && coop.role === 'guest') continue;
+    const hp0 = INV.hp;
+    if ((it.x - P.x) ** 2 + (it.y - P.y) ** 2 < 0.36 && pickup(it)) {
+      it.taken = true; if (!it.drop && !it.obj) L.itemsGot++;
+      if (coop && coop.role === 'guest') {
+        coop.out.picks.push([L.items.indexOf(it), Math.max(0, INV.hp - hp0)]);
+        INV.hp = hp0;   // the host applies the heal with the pick
+      }
+    }
   }
 
   P.fireCd -= dt;
@@ -673,6 +699,7 @@ function pickup(it) {
 }
 
 function fire() {
+  if (coop && coop.role === 'guest' && coop.hostPaused) return;
   const w = WEAPONS[INV.cur];
   if (!hasAmmo(INV.cur)) {
     Sfx.click();
@@ -684,26 +711,33 @@ function fire() {
   if (w.ammo) INV.ammo[w.ammo] -= (w.use || 1);
   P.fireCd = w.rate;
   P.wAnim = 1;
-  if (w.melee) { Sfx.fist(); meleeAttack(w); return; }
+  if (w.melee) { Sfx.fist(); if (coop && coop.role === 'guest') coop.out.shots.push([INV.cur, r2(P.a)]); else meleeAttack(w); return; }
   if (w.proj !== 'hdd' && w.proj !== 'zip') P.flashT = 0.07;
   if (w.proj === 'sfp') P.shake = Math.max(P.shake, 0.25);
   if (useGL) GLR.shot(INV.cur, P);
   Sfx[w.sfx]();
-  // the noise wakes enemies up
+  // a coop guest's shots are fired by the host, from the guest's admin
+  if (coop && coop.role === 'guest') { coop.out.shots.push([INV.cur, r2(P.a)]); return; }
+  shoot(w, P, P.a);
+}
+
+// A shot of weapon w by a player (the local one, or the coop guest's admin on the host):
+// the noise wakes the enemies nearby, then a projectile flies or the pellets are traced.
+function shoot(w, from, a0) {
   for (const e of L.enemies) {
     if (e.state !== 'idle') continue;
-    const d = Math.hypot(e.x - P.x, e.y - P.y);
-    if (d < 7 || (d < 16 && hasLOS(e.x, e.y, P.x, P.y))) e.alerted = true;
+    const d = Math.hypot(e.x - from.x, e.y - from.y);
+    if (d < 7 || (d < 16 && hasLOS(e.x, e.y, from.x, from.y))) e.alerted = true;
   }
   if (w.proj) {
-    const a = P.a + (Math.random() - 0.5) * 2 * w.spread;
+    const a = a0 + (Math.random() - 0.5) * 2 * w.spread;
     const dx = Math.cos(a), dy = Math.sin(a);
-    const p = { x: P.x + dx * 0.3, y: P.y + dy * 0.3, vx: dx * w.speed, vy: dy * w.speed, kind: w.proj, dmg: randi(w.dmg[0], w.dmg[1]), owner: 'player', z: 0.3, life: 4, t: 0 };
+    const p = { x: from.x + dx * 0.3, y: from.y + dy * 0.3, vx: dx * w.speed, vy: dy * w.speed, kind: w.proj, dmg: randi(w.dmg[0], w.dmg[1]), owner: 'player', z: 0.3, life: 4, t: 0 };
     if (w.proj === 'nut') { p.scale = 0.2; p.z = 0.3; }
     if (w.proj === 'sfp') { p.scale = 0.3; p.z = 0.25; }
     if (w.proj === 'zip') { p.scale = 0.3; }
     if (w.proj === 'hdd') { p.scale = 0.22; p.z = 0.45; p.vz = 1.6; p.fuse = 1.7; p.life = 10; }
-    if (freeAim()) {
+    if (from === P && freeAim()) {
       // from eye height along the crosshair (the hard drive is thrown higher or lower)
       const slope = Math.tan(P.pitch);
       if (w.proj === 'hdd') p.vz += slope * w.speed;
@@ -712,7 +746,7 @@ function fire() {
     L.proj.push(p);
     return;
   }
-  for (let i = 0; i < w.pellets; i++) hitscan(P.a + (Math.random() - 0.5) * 2 * w.spread, randi(w.dmg[0], w.dmg[1]));
+  for (let i = 0; i < w.pellets; i++) hitscan(a0 + (Math.random() - 0.5) * 2 * w.spread, randi(w.dmg[0], w.dmg[1]), from);
 }
 
 function hitscan(a, dmg, from = P) {
@@ -750,19 +784,19 @@ function hitscan(a, dmg, from = P) {
   }
 }
 
-function meleeAttack(w) {
-  const dx = Math.cos(P.a), dy = Math.sin(P.a);
+function meleeAttack(w, from = P) {
+  const dx = Math.cos(from.a), dy = Math.sin(from.a);
   let best = null, bestD = w.range;
   for (const e of L.enemies) {
     if (!alive(e)) continue;
-    const ex = e.x - P.x, ey = e.y - P.y;
+    const ex = e.x - from.x, ey = e.y - from.y;
     const along = ex * dx + ey * dy;
     if (along <= 0 || along > bestD + ETYPES[e.type].radius) continue;
     if (Math.abs(ex * dy - ey * dx) < ETYPES[e.type].radius + 0.3) { best = e; bestD = along; }
   }
   if (best) { damageEnemy(best, randi(w.dmg[0], w.dmg[1])); Sfx.melee(); return; }
   // keyboard hit on a rack: Nutanix migration of special racks
-  castRay(P.x, P.y, dx, dy);
+  castRay(from.x, from.y, dx, dy);
   if (RH.d > 1.5 || !RH.tile) return;
   const ch = String.fromCharCode(RH.tile);
   const i = RH.my * L.w + RH.mx;
@@ -771,19 +805,18 @@ function meleeAttack(w) {
     if (useGL) GLR.retile(L);
     L.migrated++;
     Sfx.nutanix();
-    count('migrated', 25, 'cloudNative');
-    const hx = P.x + dx * (RH.d - 0.1), hy = P.y + dy * (RH.d - 0.1);
+    const hx = from.x + dx * (RH.d - 0.1), hy = from.y + dy * (RH.d - 0.1);
     addFx(hx, hy, 'nutanix', 0.55, 0.7, 0.5);
-    P.pickT = 0.2;
-    msg(`${SPECIAL_NAMES[ch]} rack migrated to NUTANIX! (${L.migrated}/${L.totalSpecials})`);
+    if (from === P) { count('migrated', 25, 'cloudNative'); P.pickT = 0.2; }
+    msg(`${SPECIAL_NAMES[ch]} rack migrated to NUTANIX! (${L.migrated}/${L.totalSpecials})`, true);
     if (L.migrated === L.totalSpecials) {
-      msg('100% NUTANIX DATACENTER! Bonus: +50 armor');
+      msg('100% NUTANIX DATACENTER! Bonus: +50 armor', true);
       INV.armor = Math.min(200, INV.armor + 50);
       quip('nutanixAll', 1, true);
     } else quip('nutanix', 0.8, true);
   } else if ('RSNC7'.includes(ch)) {
     Sfx.melee();
-    addFx(P.x + dx * (RH.d - 0.1), P.y + dy * (RH.d - 0.1), 'spark', 0.45, 0.2);
+    addFx(from.x + dx * (RH.d - 0.1), from.y + dy * (RH.d - 0.1), 'spark', 0.45, 0.2);
   }
 }
 
@@ -979,7 +1012,7 @@ function spawnMinions(boss) {
       }
     }
   }
-  msg(`${ETYPES[boss.type].name} calls for reinforcements!`);
+  msg(`${ETYPES[boss.type].name} calls for reinforcements!`, true);
 }
 
 function updateEnemy(e, dt) {
@@ -1580,7 +1613,7 @@ function drawHud(g) {
 
 function drawOverlayText(g) {
   // the level objective, on top of the messages; it blinks when time runs out
-  const ob = Objectives.hud(L);
+  const ob = coop && coop.role === 'guest' ? coop.hud : Objectives.hud(L);
   if (ob && !showMap && !(Objectives.urgent(L) && L.time % 0.6 < 0.2)) {
     g.font = `5px ${FONT}`; g.textAlign = 'left';
     g.fillStyle = '#000'; g.fillText(ob, 7, 11);
@@ -1764,6 +1797,7 @@ function update(dt) {
   L.time += dt;
   animClock += dt;
   if (animClock > 0.45) { animClock = 0; animFrame = (animFrame + 1) & 1; }
+  if (coop && coop.role === 'guest') { updatePlayer(dt); updateMsgs(dt); return; }
   updatePlayer(dt);
   updateDoors(dt);
   L.flowT -= dt;
@@ -1776,7 +1810,9 @@ function update(dt) {
   Objectives.update(L, dt);
   checkpointCheck();
   updateMsgs(dt);
-  if (P.dead && P.deadT > 1.6 && state === 'playing') showDeath();
+  if (P.dead && P.deadT > 1.6 && state === 'playing') {
+    if (coop && !L.failReason) { if (P.deadT > 3) respawnHost(); } else showDeath();
+  }
 }
 
 // Draws the current frame in the active style (also used by the pause menu).
@@ -1819,6 +1855,7 @@ function step(ts) {
     steps++;
   }
   if (!playing) { P.px = P.x; P.py = P.y; P.pbob = P.bobPhase; }
+  if (coop) coopTick(raw);
   if (style === 'retro') {
     if (n && shown && (steps >> 1) !== ((steps - n) >> 1)) { Retro.frame(); if (showPerf) drawPerf(); }
     requestAnimationFrame(frame);
@@ -1934,6 +1971,66 @@ const actions = {
   endless() { startRun(Math.floor(Math.random() * 1e9), false); },
   retryRun() { startRun(run.seed, run.daily); },
   achievements() { showAchievements(); },
+  coop() { showCoop(); },
+  async coopHost() {
+    showPanel('<h2>HOST A GAME</h2><p class="story">Preparing the connection code...</p>');
+    Net.on('open', () => coopBegin('host'));
+    Net.on('close', coopFailed);
+    let code;
+    try { code = await Net.host(); } catch (e) { return; }   // cancelled meanwhile
+    showPanel(`
+      <h2>HOST A GAME</h2>
+      <p class="story">1. Send this code to the other admin:</p>
+      <textarea id="offer" class="code" readonly>${code}</textarea><br><button data-act="copyCode" data-arg="offer">COPY</button>
+      <p class="story">2. Paste the answer code they send back:</p>
+      <textarea id="answer" class="code"></textarea><br>
+      <button data-act="coopConnect" class="big">CONNECT</button> <button data-act="coopCancel">CANCEL</button>
+      <p class="hint" id="cstat"></p>
+    `);
+  },
+  async coopConnect() {
+    const st = document.getElementById('cstat'), btn = document.querySelector('#panel [data-act="coopConnect"]');
+    if (btn) btn.disabled = true;
+    try { await Net.accept(document.getElementById('answer').value); st.textContent = 'Connecting...'; } catch (e) {
+      if (btn) btn.disabled = false;
+      st.textContent = e.message === 'no session' ? 'This session is closed: CANCEL and host a new game.'
+        : e.name === 'InvalidStateError' ? 'Already connecting...' : 'This answer code is not valid.';
+    }
+  },
+  coopJoin() {
+    showPanel(`
+      <h2>JOIN A GAME</h2>
+      <p class="story">Paste the code the host sent you:</p>
+      <textarea id="offer" class="code"></textarea><br>
+      <button data-act="coopAnswer" class="big">JOIN</button> <button data-act="coopCancel">CANCEL</button>
+      <p class="hint" id="cstat"></p>
+    `);
+  },
+  async coopAnswer() {
+    Net.on('open', () => coopBegin('guest'));
+    Net.on('close', coopFailed);
+    const st = document.getElementById('cstat');
+    if (st) st.textContent = 'Preparing the answer code...';
+    let code;
+    try { code = await Net.join(document.getElementById('offer').value); } catch (e) {
+      const st2 = document.getElementById('cstat');
+      if (st2 && e.message !== 'cancelled') st2.textContent = 'This code is not valid.';
+      return;
+    }
+    showPanel(`
+      <h2>JOIN A GAME</h2>
+      <p class="story">Send this answer code back to the host:</p>
+      <textarea id="answer" class="code" readonly>${code}</textarea><br><button data-act="copyCode" data-arg="answer">COPY</button>
+      <p class="hint" id="cstat">Waiting for the host to connect...</p>
+      <button data-act="coopCancel">CANCEL</button>
+    `);
+  },
+  copyCode(id) {
+    const el = document.getElementById(id);
+    el.select();
+    if (navigator.clipboard) navigator.clipboard.writeText(el.value).catch(() => {});
+  },
+  coopCancel() { Net.close(); showCoop(); },
   customSeed() {
     showPanel(`
       <h2>CUSTOM SEED</h2>
@@ -1992,6 +2089,7 @@ const actions = {
 
 function showTitle() {
   state = 'title';
+  if (coop) { Net.close(); coop = null; players = [P]; }
   document.exitPointerLock && document.exitPointerLock();
   if (window.speechSynthesis) speechSynthesis.cancel();
   vctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -2011,6 +2109,7 @@ function showTitle() {
     <br><button data-act="daily">DAILY RUN</button>
     <button data-act="endless">ENDLESS RUN</button>
     <button data-act="customSeed">CUSTOM SEED</button>
+    <button data-act="coop">COOP</button>
     <button data-act="achievements">ACHIEVEMENTS</button>
     <p class="hint">Daily run: today's seed, the same for everyone${readRuns()[dailySeed()] ? ` (your best: depth ${readRuns()[dailySeed()]})` : ''}. Endless: a new seed each time. One life, as deep as you can go.</p>
     <button data-act="style" id="tsty">STYLE: ${style.toUpperCase()}</button>
@@ -2132,7 +2231,8 @@ function showSelect() {
 function startLevel(idx) {
   loadLevel(idx);
   INV_START = cloneInv(INV);
-  if (!run) writeSave(idx, INV_START);
+  if (!run && !(coop && coop.role === 'guest')) writeSave(idx, INV_START);
+  if (coop) coopLevelStart();
   if (!INV.weapons[INV.cur]) INV.cur = 1;
   state = 'briefing';
   drawFrame();
@@ -2157,7 +2257,7 @@ function showPause() {
     <p class="story">${L.def.name}${run ? `<br>Run seed: <b>${run.seed}</b>` : ''}<br>Enemies ${L.kills}/${L.totalKills} | Items ${L.itemsGot}/${L.totalItems} | Secrets ${L.secrets}/${L.totalSecrets}<br>
     Nutanix migrations ${L.migrated}/${L.totalSpecials} | ${fmtTime(L.time)}</p>
     <button data-act="resume" class="big">RESUME</button>
-    <button data-act="restart">RESTART LEVEL</button>
+    ${coop && coop.role === 'guest' ? '' : '<button data-act="restart">RESTART LEVEL</button>'}
     <button data-act="title">MAIN MENU</button>
     <button id="gfx">GRAPHICS: ${Light.high ? 'HIGH' : 'LOW'}</button>
     <button id="sty">STYLE: ${style.toUpperCase()}</button>
@@ -2235,13 +2335,275 @@ function resumeGame() {
   lockPointer();
 }
 
+/* ------------------------------------------------------------------- coop */
+
+// Two-player coop over Net (js/net.js). The host runs the level as usual, with the guest's
+// admin in its players list (coop.remote: the enemies hunt it, the host fires its shots);
+// the guest only moves its own admin, sends its pose and actions 20 times per second and
+// draws the world from the host's snapshots. Objectives, doors and items are the host's;
+// a dead admin respawns at the start after 3 s (an objective failure ends the level).
+let coop = null;   // { role, remote, out, sendT, hud, map0, respawns, started }
+const r2 = (v) => Math.round(v * 100) / 100;
+const newOutbox = () => ({ shots: [], uses: [], picks: [], stomps: [], drinks: [] });
+const isInt = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+
+function showCoop() {
+  state = 'select';
+  showPanel(`
+    <h2>COOP: 2 ADMINS</h2>
+    <p class="story">Play the campaign with a second admin, peer to peer (no server). The host plays from its own
+    progress; the guest joins with a fresh loadout. Codes are exchanged by copy and paste (chat, mail...).</p>
+    <button data-act="coopHost" class="big">HOST A GAME</button>
+    <button data-act="coopJoin">JOIN A GAME</button>
+    <p class="hint">Some strict networks (corporate, mobile) block direct connections.</p>
+    <button data-act="title">BACK</button>
+  `);
+}
+
+// the connection attempt failed before the session started
+function coopFailed() {
+  const st = document.getElementById('cstat');
+  if (st) st.textContent = 'The connection failed (strict network, or the other side left). CANCEL and try again.';
+}
+
+function coopBegin(role) {
+  coop = { role, remote: null, out: newOutbox(), sendT: 0, hud: '', map0: null, respawns: 0, started: false, relay: [], capture: null, items0: 0 };
+  Net.on('msg', coopMsg);
+  Net.on('close', () => {
+    if (!coop) return;
+    const was = coop.role, R = coop.remote;
+    coop = null;
+    players = players.filter((p) => !p.remote);
+    if (R) { R.use = false; if (L && L.obj && L.obj.repairBy === R) L.obj.repair = null; }
+    if (was === 'host') { if (L) msg('The other admin left the session'); return; }
+    // the guest's level only lives through the host: back to the menu
+    state = 'select';
+    firing = false;
+    document.exitPointerLock && document.exitPointerLock();
+    showPanel('<h2>SESSION CLOSED</h2><p class="story">The host left the session or the connection was lost.</p><button data-act="title" class="big">MAIN MENU</button>');
+  });
+  Sfx.init();
+  run = null;
+  if (role === 'host') {
+    const s = readSave();
+    INV = s && s.inv ? cloneInv(s.inv) : newInventory();
+    skill = s && s.skill !== undefined ? s.skill : SKILL_DEFAULT;
+    startLevel(s ? s.level : 0);
+  } else showPanel('<h2>CONNECTED</h2><p class="story">Waiting for the host to start the level...</p>');
+}
+
+// a level starts (startLevel): the second admin appears next to the first one
+function coopLevelStart() {
+  coop.map0 = L.map.slice();
+  coop.items0 = L.items.length;
+  coop.relay = [];
+  // a free cell next to the first admin (not the one of the live migration's VM)
+  const vm = L.obj && L.obj.vm;
+  let sx = P.x, sy = P.y;
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const cx = (P.x | 0) + dx, cy = (P.y | 0) + dy, i = cy * L.w + cx;
+    if (vm && (vm.x | 0) === cx && (vm.y | 0) === cy) continue;
+    if (!L.map[i] && !L.block[i]) { sx = cx + 0.5; sy = cy + 0.5; break; }
+  }
+  L.start2 = { x: sx, y: sy };
+  const body = (x, y) => ({ x, y, a: P.a, hp: 100, dead: false, deadT: 0, hurtT: 0, bobPhase: 0, remote: true, respawns: coop.respawns });
+  if (coop.role === 'host') {
+    coop.remote = body(sx, sy);
+    Net.send({ t: 'start', idx: L.idx, skill });
+  } else {
+    coop.remote = body(L.start.x, L.start.y);   // the host's admin
+    P.x = sx; P.y = sy;
+  }
+  players.push(coop.remote);
+}
+
+// the host's own admin back at the start
+function respawnHost() {
+  Object.assign(P, { dead: false, deadT: 0, x: L.start.x, y: L.start.y, hurtT: 0 });
+  INV.hp = 100;
+  msg('Respawned at the start');
+}
+
+// the host fires a shot of the guest's admin
+function coopShot(R, wi, a) {
+  const w = WEAPONS[wi];
+  if (!w) return;
+  if (w.melee) { R.a = a; meleeAttack(w, R); } else shoot(w, R, a);
+}
+
+// every frame: the guest's respawn timer on the host, then 20 messages per second
+function coopTick(dt) {
+  if (!coop || !L || !Net.open) return;
+  const R = coop.remote;
+  if (coop.role === 'host' && R) {
+    R.hurtT = Math.max(0, R.hurtT - dt);
+    if (R.dead && state === 'playing' && (R.deadT += dt) > 3) { Object.assign(R, { dead: false, hp: 100, deadT: 0, x: L.start2.x, y: L.start2.y }); R.respawns = ++coop.respawns; }
+  }
+  if ((coop.sendT -= dt) > 0) return;
+  coop.sendT = 0.05;
+  if (coop.role === 'guest') {
+    Net.send({ t: 'in', p: [r2(P.x), r2(P.y), r2(P.a)], rs: coop.respawns, hold: held('use') || pad.use, ...coop.out });
+    coop.out = newOutbox();
+    return;
+  }
+  if (!R || !['playing', 'paused', 'briefing'].includes(state)) return;
+  const ti = [];
+  for (let i = 0; i < L.map.length; i++) if (L.map[i] !== coop.map0[i]) ti.push(i, L.map[i]);
+  Net.send({
+    t: 'snap', time: r2(L.time),
+    host: [r2(P.x), r2(P.y), r2(P.a), P.dead ? 1 : 0, P.hurtT > 0.15 ? 1 : 0],
+    me: [Math.max(0, Math.round(R.hp)), R.dead ? 1 : 0, R.respawns],
+    en: L.enemies.map((e) => [e.type, r2(e.x), r2(e.y), r2(e.face || 0), e.state, Math.round(e.hp), r2(e.shrunk), e.flash > 0 ? 1 : 0, r2(e.animT), r2(e.timer), r2(e.painT)]),
+    pr: L.proj.map((p) => [p.kind, r2(p.x), r2(p.y), r2(p.z), p.scale || 0, r2(p.t)]),
+    fx: L.fx.map((f) => [f.kind, r2(f.x), r2(f.y), r2(f.z), r2(f.t), f.dur, f.scale]),
+    dr: L.doorList.map((d) => r2(d.open)),
+    it: L.items.map((it) => (it.taken ? 1 : 0)).join(''),
+    ti, br: L.barrels.map((b) => (b.dead ? 1 : b.fuse >= 0 ? 2 : 0)),
+    hud: Objectives.hud(L), done: L.obj.done ? 1 : 0, keys: [L.keys.red ? 1 : 0, L.keys.blue ? 1 : 0], k: [L.kills, L.totalKills],
+    ix: L.items.slice(coop.items0).map((it) => [it.type, r2(it.x), r2(it.y)]),
+    vm: L.obj.vm ? [r2(L.obj.vm.x), r2(L.obj.vm.y), Math.round(L.obj.vm.hp), L.decor.includes(L.obj.vm) ? 1 : 0] : null,
+    left: isNum(L.obj.left) ? r2(L.obj.left) : null, paused: state !== 'playing' ? 1 : 0, ms: coop.relay.splice(0),
+    fu: L.decor.filter((d) => d.type === 'f').map((d) => d.uses),
+  });
+}
+
+function coopMsg(m) {
+  if (!coop || !m || typeof m !== 'object') return;
+  const guest = coop.role === 'guest';
+  if (m.t === 'start' && guest) {
+    // the host starts a level (the first one gives the guest its loadout)
+    if (!isInt(m.idx, 0, LEVEL_COUNT - 1) || !isInt(m.skill, 0, SKILLS.length - 1)) return;
+    if (!coop.started) { INV = m.idx ? defaultLoadout(m.idx) : newInventory(); coop.started = true; }
+    skill = m.skill;
+    INV.hp = Math.max(INV.hp, 1);
+    startLevel(m.idx);
+    return;
+  }
+  if (m.t === 'done' && guest) {
+    state = 'intermission';
+    firing = false;
+    document.exitPointerLock && document.exitPointerLock();
+    showPanel(m.last
+      ? '<h1 class="logo">REBOOT COMPLETE</h1><h2>THE DATACENTER IS SAVED</h2><p class="story">Two admins, one datacenter, zero ransomware.</p><button data-act="title" class="big">MAIN MENU</button>'
+      : `<h2>${L.def.name}<br><span class="ok">REBOOTED</span></h2><p class="story">The host rebooted the room. Next room in a moment...</p><button data-act="title">LEAVE THE SESSION</button>`);
+    return;
+  }
+  if (m.t === 'fail' && guest) {
+    state = 'dead';
+    firing = false;
+    document.exitPointerLock && document.exitPointerLock();
+    const p = document.createElement('p'); p.className = 'story'; p.textContent = String(m.reason).slice(0, 200);
+    showPanel(`<h1 class="dead">OBJECTIVE FAILED</h1>${p.outerHTML}<p class="hint">Waiting for the host to restart the level...</p><button data-act="title">LEAVE THE SESSION</button>`);
+    return;
+  }
+  if (m.t === 'msg' && guest && Array.isArray(m.list)) { if (L) m.list.slice(0, 8).forEach((t) => msg(String(t).slice(0, 120))); return; }
+  if (m.t === 'in' && !guest) { coopInput(m); return; }
+  if (m.t === 'snap' && guest && L) coopApply(m);
+}
+
+// host: the guest's pose and actions (validated: the peer is not trusted blindly)
+function coopInput(m) {
+  const R = coop.remote;
+  if (!R || !L || !Array.isArray(m.p)) return;
+  const [x, y, a] = m.p;
+  // poses sent before the guest saw its last respawn are stale (it was still dead there)
+  if (!R.dead && m.rs === coop.respawns && isNum(x) && isNum(y) && isNum(a) && x > 0 && y > 0 && x < L.w && y < L.h) {
+    R.x = x; R.y = y; R.a = a; R.bobPhase += 0.4;
+  }
+  R.use = !!m.hold;
+  const fresh = !R.dead && m.rs === coop.respawns;   // not a message from before the last respawn
+  for (const pk of Array.isArray(m.picks) ? m.picks.slice(0, 16) : []) {
+    const [i, heal] = Array.isArray(pk) ? pk : [];
+    const it = isInt(i, 0, L.items.length - 1) ? L.items[i] : null;
+    if (!it || it.taken || it.obj) continue;
+    it.taken = true;
+    if (!it.drop) L.itemsGot++;
+    if (it.type === 'r') L.keys.red = true;
+    if (it.type === 'u') L.keys.blue = true;
+    if (fresh && isNum(heal) && heal > 0) R.hp = Math.min(200, R.hp + Math.min(heal, 100));
+  }
+  for (const i of Array.isArray(m.drinks) ? m.drinks.slice(0, 4) : []) {
+    const f = isInt(i, 0, L.decor.length - 1) ? L.decor[i] : null;
+    if (!f || f.type !== 'f' || !fresh || f.uses >= 6 || R.hp >= 100 || Math.hypot(f.x - R.x, f.y - R.y) > 2) continue;
+    f.uses++; R.hp = Math.min(100, R.hp + 5);
+  }
+  if (state !== 'playing' || R.dead) return;   // (the guest does not fire nor act while the host is not playing)
+  for (const s of Array.isArray(m.shots) ? m.shots.slice(0, 8) : []) if (Array.isArray(s) && isInt(s[0], 0, WEAPONS.length - 1) && isNum(s[1])) coopShot(R, s[0], s[1]);
+  for (const i of Array.isArray(m.stomps) ? m.stomps.slice(0, 8) : []) {
+    const e = isInt(i, 0, L.enemies.length - 1) ? L.enemies[i] : null;
+    if (e && alive(e) && e.shrunk > 0 && (e.x - R.x) ** 2 + (e.y - R.y) ** 2 < 0.6 * 0.6) { e.hp = 0; killEnemy(e, 'stomp'); }
+  }
+  for (const u of Array.isArray(m.uses) ? m.uses.slice(0, 4) : []) {
+    if (!Array.isArray(u) || !isInt(u[0], 0, L.w - 1) || !isInt(u[1], 0, L.h - 1)) continue;
+    if (Math.hypot(u[0] + 0.5 - R.x, u[1] + 0.5 - R.y) > 3.2) continue;   // within reach of the guest's admin (useAction: 1.8 + a cell + latency)
+    // the feedback of the guest's own actions (access denied...) goes to the guest only
+    coop.capture = [];
+    actOnCell(u[0], u[1], R);
+    const fb = coop ? coop.capture : [];
+    if (coop) coop.capture = null;
+    if (fb.length) Net.send({ t: 'msg', list: fb });
+  }
+}
+
+// guest: the world as the host sees it
+function coopApply(m) {
+  L.time = m.time;
+  const H = coop.remote;
+  if (H) { [H.x, H.y, H.a] = m.host; H.dead = !!m.host[3]; H.hurtT = m.host[4] ? 0.3 : 0; H.bobPhase += 0.4; }
+  const [hp, dead, respawns] = m.me;
+  if (respawns !== coop.respawns) {
+    coop.respawns = respawns;
+    Object.assign(P, { dead: false, deadT: 0, x: L.start2.x, y: L.start2.y });
+    INV.hp = hp;
+    msg('Respawned at the start');
+  } else {
+    if (hp < INV.hp && !P.dead) { P.hurtT = 0.35; P.faceMood = 'ouch'; P.faceT = 0.6; Sfx.hurt(); }
+    INV.hp = hp;
+    if (dead && !P.dead) { P.dead = true; P.deadT = 0; firing = false; Sfx.playerDeath(); }
+  }
+  while (L.enemies.length < m.en.length) { const r = m.en[L.enemies.length]; spawnEnemy(r[0], r[1], r[2]); }
+  L.enemies.length = m.en.length;
+  m.en.forEach((r, k) => Object.assign(L.enemies[k], { type: r[0], x: r[1], y: r[2], face: r[3], state: r[4], hp: r[5], shrunk: r[6], flash: r[7] ? 0.05 : 0, animT: r[8], timer: r[9], painT: r[10] }));
+  L.proj = m.pr.map(([kind, x, y, z, scale, t]) => ({ kind, x, y, z, scale: scale || undefined, t, owner: 'enemy', vx: 0, vy: 0, life: 1 }));
+  L.fx = m.fx.map(([kind, x, y, z, t, dur, scale]) => ({ kind, x, y, z, t, dur, scale }));
+  m.dr.forEach((v, k) => { const d = L.doorList[k]; if (d) { d.open = v; d.st = v >= 1 ? 'open' : v <= 0 ? 'closed' : 'opening'; } });
+  // items the host's level added since its start (drops), then the taken flags
+  for (let k = L.items.length - coop.items0; k < m.ix.length; k++) { const [type, x, y] = m.ix[k]; L.items.push({ x, y, type, taken: false, drop: true }); }
+  for (let k = 0; k < L.items.length && k < m.it.length; k++) if (m.it[k] === '1') L.items[k].taken = true;
+  let changed = false;
+  for (let k = 0; k < m.ti.length; k += 2) if (L.map[m.ti[k]] !== m.ti[k + 1]) { L.map[m.ti[k]] = m.ti[k + 1]; changed = true; }
+  if (changed && useGL) GLR.retile(L);
+  m.br.forEach((v, k) => {
+    const b = L.barrels[k];
+    if (!b) return;
+    if (v === 1 && !b.dead) L.block[(b.y | 0) * L.w + (b.x | 0)] = 0;   // a blown battery no longer blocks
+    b.dead = v === 1; b.fuse = v === 2 ? 1 : -1;
+  });
+  // the live migration's VM moves on the host only
+  const vm = L.obj && L.obj.vm;
+  if (vm && m.vm) {
+    [vm.x, vm.y, vm.hp] = m.vm;
+    if (!m.vm[3] && L.decor.includes(vm)) { L.decor.splice(L.decor.indexOf(vm), 1); players = players.filter((p) => p !== vm); }
+  }
+  if (L.obj && m.left !== null) L.obj.left = m.left;
+  (m.ms || []).forEach((t) => msg(t));
+  coop.hostPaused = !!m.paused;
+  coop.hud = m.hud + (m.paused ? '  (host paused)' : '');
+  const fountains = L.decor.filter((d) => d.type === 'f');
+  (m.fu || []).forEach((u, k) => { if (fountains[k]) fountains[k].uses = u; });
+  if (L.obj) L.obj.done = !!m.done;
+  L.keys.red = !!m.keys[0]; L.keys.blue = !!m.keys[1];
+  [L.kills, L.totalKills] = m.k;
+}
+
 /* ----------------------------------------------------------- checkpoints */
 
 // Each objective step (Objectives.progress going up) saves the level, the player and
 // the inventory in memory; after a death the player can restart from there.
 let checkpoint = null;
 function checkpointCheck() {
-  if (P.dead || L.obj.failed) return;
+  if (coop || P.dead || L.obj.failed) return;
   const p = Objectives.progress(L);
   if (p <= L.cpProgress) return;
   L.cpProgress = p;
@@ -2263,6 +2625,7 @@ function restoreCheckpoint() {
 function showDeath() {
   state = 'dead';
   document.exitPointerLock && document.exitPointerLock();
+  if (coop && coop.role === 'host') Net.send({ t: 'fail', reason: L.failReason || 'The host is down.' });
   if (run) {
     // a seeded run ends with the first death
     const best = writeRunScore(run.depth - 1);
@@ -2292,6 +2655,7 @@ function completeLevel() {
   document.exitPointerLock && document.exitPointerLock();
   const pct = (a, b) => b ? Math.round(a / b * 100) + '%' : 'N/A';
   const achHtml = levelAchievements(L);
+  if (coop) Net.send({ t: 'done', last: L.idx === LEVEL_COUNT - 1 });
   if (run) {
     // seeded run: on to the next depth, the inventory carried over
     const best = writeRunScore(run.depth);
@@ -2371,7 +2735,8 @@ function onCheat(k) {
 
 window.addEventListener('keydown', (e) => {
   // typing in a text field (custom seed): Enter plays, everything else goes to the field
-  if (e.target.id === 'seed') { if (e.code === 'Enter') actions.playSeed(); return; }
+  // typing in a text field (custom seed, coop codes): everything goes to the field
+  if (e.target.id === 'seed' || e.target.tagName === 'TEXTAREA') { if (e.target.id === 'seed' && e.code === 'Enter') actions.playSeed(); return; }
   if (rebinding) {
     e.preventDefault();
     if (e.code !== 'Escape') { binds[rebinding] = [e.code]; saveBinds(); }
@@ -2485,7 +2850,7 @@ function boot() {
   Update.check();
   requestAnimationFrame(frame);
   // debug hook for automated tests
-  window.__duke = { get L() { return L; }, P, get players() { return players; }, addBot, get INV() { return INV; }, get state() { return state; }, actions, keys, castRay, perf, get showPerf() { return showPerf; } };
+  window.__duke = { get L() { return L; }, P, get players() { return players; }, addBot, get coop() { return coop; }, get INV() { return INV; }, get state() { return state; }, actions, keys, castRay, perf, get showPerf() { return showPerf; } };
 }
 
 if (document.fonts && document.fonts.load) {
