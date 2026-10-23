@@ -255,6 +255,8 @@ Also featured:
 - secret areas behind fake walls;
 - water coolers and energy drinks (turbo);
 - the admin's one-liners, shown as subtitles and spoken by speech synthesis.
+- procedural music, synthesized like the sound effects: a tracker-style loop per episode and a boss theme once the boss
+  is engaged (MUSIC ON / OFF and its volume in the pause menu).
 
 ## Levels
 

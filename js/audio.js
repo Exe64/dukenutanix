@@ -79,6 +79,69 @@ const Sfx = (() => {
     o.start(t); o.stop(t + dur + 0.05);
   }
 
+  /* ---------------------------------------------------------------- music */
+  // A small tracker: 16 steps per bar, a bass line, an arpeggio over a chord
+  // progression and a drum pattern per theme, all synthesized. Notes are scheduled
+  // a little ahead on the audio clock, so the tempo stays steady whatever the frame
+  // rate. The music has its own volume (musicGain) under the master (N mutes both).
+  // Theme: bpm, root (MIDI note), minor or major scale degrees, chord roots (one per
+  // bar, in scale degrees), bass rhythm, arpeggio rhythm, kick / snare / hat patterns.
+  const MIN = [0, 2, 3, 5, 7, 8, 10], MAJ = [0, 2, 4, 5, 7, 9, 11];
+  const THEMES = {
+    ep0: { bpm: 112, root: 45, scale: MIN, chords: [0, 5, 3, 4], bass: 'x.x.x.xxx.x.x.x.', arp: 'x.xx.xx.x.xx.xx.', kick: 'x...x...x...x...', snare: '....x.......x...', hat: '..x...x...x...x.' },
+    ep1: { bpm: 100, root: 43, scale: MIN, chords: [0, 3, 5, 4], bass: 'x..x..x.x..x..x.', arp: 'x.x.x.x.x.x.x.x.', kick: 'x.....x.x.......', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.' },
+    ep2: { bpm: 128, root: 47, scale: MIN, chords: [0, 0, 5, 6], bass: 'xxx.xxx.xxx.x.x.', arp: 'xxxxxxxxxxxxxxxx', kick: 'x...x...x...x...', snare: '....x.......x..x', hat: '.xxx.xxx.xxx.xxx' },
+    ep3: { bpm: 88, root: 40, scale: MIN, chords: [0, 5, 6, 4], bass: 'x.......x.x.....', arp: 'x...x...x...x...', kick: 'x.......x.......', snare: '........x.......', hat: '....x.......x...' },
+    ep4: { bpm: 120, root: 48, scale: MAJ, chords: [0, 4, 5, 3], bass: 'x.x.x.x.x.x.x.x.', arp: 'x.xxx.xxx.xxx.xx', kick: 'x..x..x.x..x..x.', snare: '....x.......x...', hat: 'xxxxxxxxxxxxxxxx' },
+    boss: { bpm: 140, root: 38, scale: MIN, chords: [0, 1, 0, 6], bass: 'xxxxxxxxxxxxxxxx', arp: 'x.x.xx.xx.x.xx.x', kick: 'x.x.x.x.x.x.x.x.', snare: '....x..x....x..x', hat: '.x.x.x.x.x.x.x.x' },
+  };
+  const midi = (n) => 440 * 2 ** ((n - 69) / 12);
+  let musicGain = null, musicVol = 0.35, musicOn = true, theme = null, themeName = null, step = 0, nextT = 0, timer = null;
+  const notesPlayed = { n: 0 };   // for the automated tests
+  function mtone(type, f, t, dur, vol, cut) {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    if (cut) { const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = cut; o.connect(lp); lp.connect(g); } else o.connect(g);
+    g.connect(musicGain); o.start(t); o.stop(t + dur + 0.02);
+    notesPlayed.n++;
+  }
+  function mnoise(t, dur, vol, type, f) {
+    const src = ac.createBufferSource(), flt = ac.createBiquadFilter(), g = ac.createGain();
+    src.buffer = noiseBuf; flt.type = type; flt.frequency.value = f;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(flt); flt.connect(g); g.connect(musicGain); src.start(t, Math.random()); src.stop(t + dur + 0.02);
+    notesPlayed.n++;
+  }
+  function playStep(t) {
+    const th = theme, s = step % 16, bar = Math.floor(step / 16) % th.chords.length;
+    const deg = th.chords[bar], sc = th.scale, note = (d) => th.root + sc[((d % 7) + 7) % 7] + 12 * Math.floor(d / 7);
+    const sixteenth = 60 / th.bpm / 4;
+    if (th.bass[s] === 'x') mtone('sawtooth', midi(note(deg) - 12), t, sixteenth * 1.6, 0.22, 700);
+    if (th.arp[s] === 'x') mtone('square', midi(note(deg + [0, 2, 4, 7][s % 4]) + 12), t, sixteenth * 0.9, 0.06, 2600);
+    if (th.kick[s] === 'x') { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.12);
+      g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16); o.connect(g); g.connect(musicGain); o.start(t); o.stop(t + 0.2); notesPlayed.n++; }
+    if (th.snare[s] === 'x') mnoise(t, 0.14, 0.22, 'bandpass', 1800);
+    if (th.hat[s] === 'x') mnoise(t, 0.04, 0.08, 'highpass', 7000);
+  }
+  function schedule() {
+    if (!theme || !ac) return;
+    while (nextT < ac.currentTime + 0.12) { playStep(nextT); nextT += 60 / theme.bpm / 4; step++; }
+  }
+  // music(name): a theme of THEMES (ep0..ep4, boss), or null to stop; same name = no restart
+  function music(name) {
+    if (!ac || name === themeName) return;
+    themeName = name; theme = name ? THEMES[name] : null; step = 0; nextT = ac.currentTime + 0.05;
+    if (!musicGain) { musicGain = ac.createGain(); musicGain.connect(master); }
+    musicGain.gain.value = musicOn ? musicVol : 0;
+    if (theme && !timer) timer = setInterval(schedule, 25);
+    if (!theme && timer) { clearInterval(timer); timer = null; }
+  }
+  function setMusic(on, vol) {
+    musicOn = on; if (vol !== undefined) musicVol = vol;
+    if (musicGain) musicGain.gain.value = musicOn ? musicVol : 0;
+  }
+
   // A sound from point p ({x, y}, or none: at the player) gets [volume, pan]: the
   // volume falls off with distance, the pan follows the side it comes from
   // (screen right is the player's angle + 90 degrees); close sounds stay centered.
@@ -89,7 +152,8 @@ const Sfx = (() => {
   }
 
   return {
-    init,
+    init, music, setMusic,
+    get musicState() { return { theme: themeName, on: musicOn, vol: musicVol, gain: musicGain ? musicGain.gain.value : null, notes: notesPlayed.n }; },
     toggleMute() {
       muted = !muted;
       if (master) master.gain.value = muted ? 0 : 0.55;

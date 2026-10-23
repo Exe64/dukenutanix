@@ -457,6 +457,7 @@ let sensitivity = 1;
 // Comfort options (pause menu, saved): field of view (MODERN on the GPU), head bob, and
 // reduced effects (no flashes, shake, damage glitch, chromatic aberration or film grain).
 const Comfort = { fov: 77, bob: true, reduced: false };
+function saveMusic() { try { localStorage.setItem('dukenutanix.music', JSON.stringify({ on: Sfx.musicState.on, vol: Sfx.musicState.vol })); } catch (e) { /* ignored */ } }
 function saveComfort() { try { localStorage.setItem('dukenutanix.comfort', JSON.stringify(Comfort)); } catch (e) { /* ignored */ } }
 // MODERN on the GPU can look up and down: shots then go where the crosshair points
 // (free aim). AUTO keeps Doom's automatic aiming in height, as in RETRO.
@@ -1750,6 +1751,14 @@ function applyLook(dt) {
   mouseDX = 0; mouseDY = 0;
 }
 
+// The music follows the game: the episode's theme while playing, the boss theme once a
+// boss or mini-boss is engaged, silence in the menus and after the end of a level.
+function updateMusic() {
+  if (state !== 'playing' && state !== 'paused') { Sfx.music(null); return; }
+  const boss = L.enemies.some((e) => ETYPES[e.type].boss && alive(e) && e.state !== 'idle');
+  Sfx.music(boss ? 'boss' : 'ep' + (L.def.episode % 5));
+}
+
 function update(dt) {
   L.time += dt;
   animClock += dt;
@@ -1798,6 +1807,7 @@ function step(ts) {
   last = ts;
   const shown = L && state !== 'title' && state !== 'loading' && state !== 'select';
   pollPad();
+  if (L) updateMusic();
   const playing = state === 'playing';
   if (playing) applyLook(raw);
   acc += raw;
@@ -1958,6 +1968,10 @@ const actions = {
   restart() { INV = cloneInv(INV_START); startLevel(L.idx); },
   checkpoint() { restoreCheckpoint(); },
   controls() { showBinds(); },
+  musicOnOff() {
+    Sfx.setMusic(!Sfx.musicState.on); saveMusic();
+    document.getElementById('mus').textContent = `MUSIC: ${Sfx.musicState.on ? 'ON' : 'OFF'}`;
+  },
   comfortBob() { Comfort.bob = !Comfort.bob; saveComfort(); document.getElementById('cbob').textContent = `HEAD BOB: ${Comfort.bob ? 'ON' : 'OFF'}`; },
   comfortFx() {
     Comfort.reduced = !Comfort.reduced; saveComfort();
@@ -2150,6 +2164,8 @@ function showPause() {
     ${useGL ? `<button data-act="aim" id="aim">AIM: ${aimMode.toUpperCase()}</button>` : ''}
     <button data-act="comfortBob" id="cbob">HEAD BOB: ${Comfort.bob ? 'ON' : 'OFF'}</button>
     <button data-act="comfortFx" id="cfx">EFFECTS: ${Comfort.reduced ? 'REDUCED' : 'FULL'}</button>
+    <button data-act="musicOnOff" id="mus">MUSIC: ${Sfx.musicState.on ? 'ON' : 'OFF'}</button>
+    <label class="sens">Music volume <input type="range" min="0" max="1" step="0.05" value="${Sfx.musicState.vol}" id="musv"></label>
     <label class="sens">Mouse sensitivity <input type="range" min="0.3" max="2.5" step="0.1" value="${sensitivity}" id="sens"></label>
     ${useGL ? `<label class="sens">Field of view <input type="range" min="65" max="110" step="1" value="${Comfort.fov}" id="fov"> <span id="fovv">${Comfort.fov}</span></label>` : ''}
     ${CONTROLS}
@@ -2160,6 +2176,8 @@ function showPause() {
   sb.onclick = () => { toggleStyle(); sb.textContent = `STYLE: ${style.toUpperCase()}`; drawFrame(); };
   const s = document.getElementById('sens');
   s.oninput = () => { sensitivity = +s.value; try { localStorage.setItem('dukenutanix.sens', s.value); } catch (e) { /* ignored */ } };
+  const mv = document.getElementById('musv');
+  mv.oninput = () => { Sfx.setMusic(Sfx.musicState.on, +mv.value); saveMusic(); };
   const fv = document.getElementById('fov');
   if (fv) fv.oninput = () => { Comfort.fov = +fv.value; GLR.setFov(Comfort.fov); document.getElementById('fovv').textContent = fv.value; saveComfort(); drawFrame(); };
 }
@@ -2449,6 +2467,8 @@ function boot() {
     showPerf = localStorage.getItem('dukenutanix.perf') === '1';
     if (localStorage.getItem('dukenutanix.aim') === 'auto') aimMode = 'auto';
     Object.assign(Comfort, JSON.parse(localStorage.getItem('dukenutanix.comfort') || '{}'));
+    const mu = JSON.parse(localStorage.getItem('dukenutanix.music') || 'null');
+    if (mu) Sfx.setMusic(mu.on, mu.vol);
     const kb = JSON.parse(localStorage.getItem('dukenutanix.keys') || 'null');
     if (kb) for (const a of Object.keys(DEFAULT_BINDS)) if (Array.isArray(kb[a]) && kb[a].length) binds[a] = kb[a];
     if (localStorage.getItem('dukenutanix.gfx') === 'low') { Light.high = false; vignette.hidden = true; }

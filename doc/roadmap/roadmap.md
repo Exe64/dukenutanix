@@ -30,14 +30,6 @@ Mesurer le chargement et les fps sur plusieurs machines réelles et consigner le
 
 ---
 
-### [Issue: #23] Musique procédurale [PRIORITÉ: BASSE] [Complexité: L] 🟢
-
-Plan : [`23-procedural-music.md`](23-procedural-music.md)
-
-Séquenceur Web Audio façon tracker, un thème par épisode et un thème de boss, sans fichier audio.
-
----
-
 ### [Issue: #25] Nouveaux objectifs Nutanix [PRIORITÉ: BASSE] [Complexité: L] 🟢
 
 Plan : [`25-nutanix-objectives.md`](25-nutanix-objectives.md)
@@ -115,6 +107,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`24-achievements.md`](done/24-achievements.md)
 - **[Issue: #18] `#18` — Liste de joueurs (fondation multijoueur)** (2026-10-22) 🔵 — liste de joueurs (P/INV alias du joueur local), IA ciblant le joueur le plus proche, dégâts et projectiles pour tous, bots de test
   [`18-players-list-refactor.md`](done/18-players-list-refactor.md)
+- **[Issue: #23] `#23` — Musique procédurale** (2026-10-22) 🔵 — musique procédurale façon tracker : un thème par épisode et un thème de boss, volume et bouton dans la pause
+  [`23-procedural-music.md`](done/23-procedural-music.md)
 
 ---
 
