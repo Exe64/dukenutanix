@@ -22,14 +22,6 @@ Préparation, coup/tir et retour pour tous les monstres qui attaquent, dans les 
 
 ---
 
-### [Issue: #18] Liste de joueurs (fondation multijoueur) [PRIORITÉ: MOYENNE] [Complexité: L] 🟢
-
-Plan : [`18-players-list-refactor.md`](18-players-list-refactor.md)
-
-Transformer `P` et `INV` en liste de joueurs, testée avec des bots locaux ; fondation du coop et du deathmatch. **Dépend de** : #13.
-
----
-
 ### [Issue: #22] Mesurer MODERN sur du vrai matériel [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
 
 Plan : [`22-modern-real-hw-benchmark.md`](22-modern-real-hw-benchmark.md)
@@ -121,6 +113,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`21-custom-seed.md`](done/21-custom-seed.md)
 - **[Issue: #24] `#24` — Succès** (2026-10-22) 🔵 — 10 succès stockés localement, annoncés en jeu et sur l'écran de fin, listés depuis l'écran titre
   [`24-achievements.md`](done/24-achievements.md)
+- **[Issue: #18] `#18` — Liste de joueurs (fondation multijoueur)** (2026-10-22) 🔵 — liste de joueurs (P/INV alias du joueur local), IA ciblant le joueur le plus proche, dégâts et projectiles pour tous, bots de test
+  [`18-players-list-refactor.md`](done/18-players-list-refactor.md)
 
 ---
 

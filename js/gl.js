@@ -1682,7 +1682,7 @@ const GLR = (() => {
     const u = progMon.u, t = performance.now() / 1000;
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, monAtlas); gl.uniform1i(u.uAtlas, 0);
     gl.bindVertexArray(monVAO);
-    for (const e of L.enemies) {
+    for (const e of drawnBodies()) {   // the enemies and the other players
       if (!alive(e)) continue;
       const mdl = monModels[e.type], T = ETYPES[e.type];
       if (!mdl) continue;

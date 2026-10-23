@@ -170,6 +170,59 @@ let god = false;
 let skill = SKILL_DEFAULT;   // difficulty (SKILLS in levels.js), kept in the save
 let animFrame = 0, animClock = 0;
 const P = { x: 0, y: 0, a: 0 };
+// Every player in the level: P (with INV) is the local one and stays players[0]; the
+// others are { x, y, a, hp, dead, ... } (local test bots for now, see addBot). Enemies
+// hunt the nearest visible one, and every one of them can be hit.
+let players = [P];
+const others = () => players.filter((p) => p !== P);
+const livePlayers = () => players.filter((p) => !p.dead);
+// hurts any player: the local one through damagePlayer, the others directly
+function hurtPlayer(pl, dmg, fromX, fromY) {
+  if (pl === P) { damagePlayer(dmg, fromX, fromY); return; }
+  if (pl.dead) return;
+  pl.hp -= Math.round(dmg * SKILLS[skill].dmg); pl.hurtT = 0.3;
+  if (pl.hp <= 0) { pl.hp = 0; pl.dead = true; pl.deadT = 0; }
+}
+// A local test bot (window.__duke.addBot): wanders, turns at walls, and shoots the
+// enemies it sees with a cage nut pistol. Not a game feature: it exercises the players list.
+function addBot(x, y) {
+  const b = { x, y, a: Math.random() * Math.PI * 2, hp: 100, dead: false, deadT: 0, hurtT: 0, cd: 0, bobPhase: 0, bot: true };
+  players.push(b);
+  return b;
+}
+function updateBot(b, dt) {
+  if (b.dead) { b.deadT += dt; return; }
+  b.hurtT = Math.max(0, b.hurtT - dt); b.cd -= dt;
+  let foe = null, fd = 10;
+  for (const e of L.enemies) {
+    if (!alive(e)) continue;
+    const d = Math.hypot(e.x - b.x, e.y - b.y);
+    if (d < fd && hasLOS(b.x, b.y, e.x, e.y)) { foe = e; fd = d; }
+  }
+  if (foe) {
+    b.a = Math.atan2(foe.y - b.y, foe.x - b.x);
+    if (b.cd <= 0) { hitscan(b.a + rand(-0.04, 0.04), randi(8, 14), b); b.cd = 0.5; }
+    return;
+  }
+  const ox = b.x, oy = b.y;
+  moveEntity(b, Math.cos(b.a) * 2.5 * dt, Math.sin(b.a) * 2.5 * dt, 0.28, false);
+  b.bobPhase += dt * 8;
+  if (Math.abs(b.x - ox) + Math.abs(b.y - oy) < 0.01) b.a += rand(1, 2.5);
+}
+// what the other players look like: drawn as enemy-like bodies (the "admin" look of the thief)
+function playerBody(p) {
+  return { type: 'thief', x: p.x, y: p.y, face: p.a, state: p.dead ? 'dead' : 'chase', animT: p.bobPhase / 8,
+    flash: p.hurtT > 0.15 ? 1 : 0, painT: 0, shrunk: 0, timer: 0 };
+}
+// the enemies plus the other players' bodies, for the renderers
+const drawnBodies = () => (players.length > 1 ? L.enemies.concat(others().map(playerBody)) : L.enemies);
+
+// the nearest living player to a point (the enemies' target)
+function nearestPlayer(x, y) {
+  let best = P, bd = Infinity;
+  for (const p of players) { if (p.dead) continue; const d = (p.x - x) ** 2 + (p.y - y) ** 2; if (d < bd) { bd = d; best = p; } }
+  return best;
+}
 
 function newInventory() {
   return { hp: 100, armor: 0, ammo: { nuts: 60, shells: 0, sfp: 0, hdd: 0, cells: 0 }, weapons: [true, true, false, false, false, false, false, false], cur: 1 };
@@ -249,6 +302,7 @@ function loadLevel(idx) {
   }
   Object.assign(P, { bobPhase: 0, bobAmt: 0, wAnim: 0, fireCd: 0, raise: 1, flashT: 0, hurtT: 0, pickT: 0, dead: false, deadT: 0, spin: 0,
     faceMood: '', faceT: 0, look: 0, lookT: 0, hurtDir: 0, shake: 0, boostT: 0, nutT: 0, pitch: 0 });
+  players = [P];
   computeFlow();
   Objectives.init(L);
   Light.bake(L);
@@ -659,16 +713,16 @@ function fire() {
   for (let i = 0; i < w.pellets; i++) hitscan(P.a + (Math.random() - 0.5) * 2 * w.spread, randi(w.dmg[0], w.dmg[1]));
 }
 
-function hitscan(a, dmg) {
+function hitscan(a, dmg, from = P) {
   const dx = Math.cos(a), dy = Math.sin(a);
-  castRay(P.x, P.y, dx, dy);
+  castRay(from.x, from.y, dx, dy);
   // free aim: the ray climbs or drops with the pitch from eye height (0.5) and stops at
   // the floor or the ceiling; targets are hit only within their height
-  const slope = freeAim() ? Math.tan(P.pitch) : 0, zAt = (d) => 0.5 + slope * d;
+  const slope = from === P && freeAim() ? Math.tan(P.pitch) : 0, zAt = (d) => 0.5 + slope * d;
   const wallD = slope ? Math.min(RH.d, 0.5 / Math.abs(slope)) : RH.d;
   let best = null, bestD = wallD, barrel = null;
   const test = (ox, oy, r, span) => {
-    const ex = ox - P.x, ey = oy - P.y, along = ex * dx + ey * dy;
+    const ex = ox - from.x, ey = oy - from.y, along = ex * dx + ey * dy;
     if (!(along > 0 && along < bestD && Math.abs(ex * dy - ey * dx) < r)) return -1;
     const z = zAt(along);
     return !slope || (z > span[0] - 0.08 && z < span[1] + 0.08) ? along : -1;
@@ -685,12 +739,12 @@ function hitscan(a, dmg) {
     if (al > 0) { barrel = b; best = null; bestD = al; }
   }
   if (best) {
-    addFx(P.x + dx * (bestD - 0.2), P.y + dy * (bestD - 0.2), 'spark', slope ? zAt(bestD) - 0.1 : 0.35 + ETYPES[best.type].z, 0.25);
+    addFx(from.x + dx * (bestD - 0.2), from.y + dy * (bestD - 0.2), 'spark', slope ? zAt(bestD) - 0.1 : 0.35 + ETYPES[best.type].z, 0.25);
     damageEnemy(best, dmg);
   } else if (barrel) {
     damageBarrel(barrel, dmg);
   } else if (wallD < 60) {
-    addFx(P.x + dx * (wallD - 0.05), P.y + dy * (wallD - 0.05), 'spark', slope ? Math.max(0, Math.min(0.9, zAt(wallD) - 0.1)) : 0.3 + Math.random() * 0.3, 0.2);
+    addFx(from.x + dx * (wallD - 0.05), from.y + dy * (wallD - 0.05), 'spark', slope ? Math.max(0, Math.min(0.9, zAt(wallD) - 0.1)) : 0.3 + Math.random() * 0.3, 0.2);
   }
 }
 
@@ -777,7 +831,10 @@ function explode(x, y, radius, dmg) {
       if (!alive(e)) kills++;
     }
   }
-  if (dp < radius && hasLOS(x, y, P.x, P.y)) damagePlayer(dmg * 0.5 * (1 - dp / radius), x, y);
+  for (const pl of players) {
+    const d = Math.hypot(pl.x - x, pl.y - y);
+    if (d < radius && hasLOS(x, y, pl.x, pl.y)) hurtPlayer(pl, dmg * 0.5 * (1 - d / radius), x, y);
+  }
   for (const b of L.barrels) {
     if (b.dead || b.fuse >= 0) continue;
     if (Math.hypot(b.x - x, b.y - y) < radius) b.fuse = rand(0.1, 0.25);
@@ -852,9 +909,11 @@ function computeFlow() {
   const w = L.w;
   if (flowQueue.length < L.w * L.h) flowQueue = new Int32Array(L.w * L.h);
   const q = flowQueue;
-  const s = (P.y | 0) * w + (P.x | 0);
   let qh = 0, qt = 0;
-  f[s] = 0; q[qt++] = s;
+  for (const p of livePlayers().length ? livePlayers() : [P]) {
+    const s = (p.y | 0) * w + (p.x | 0);
+    if (f[s] < 0) { f[s] = 0; q[qt++] = s; }
+  }
   while (qh < qt) {
     const c = q[qh++], cx = c % w, cy = (c / w) | 0;
     for (let k = 0; k < 4; k++) {
@@ -884,8 +943,8 @@ function flowTarget(e) {
 }
 
 function enemyFire(e) {
-  const T = ETYPES[e.type];
-  const ang = Math.atan2(P.y - e.y, P.x - e.x);
+  const T = ETYPES[e.type], tg = e.target || P;
+  const ang = Math.atan2(tg.y - e.y, tg.x - e.x);
   const shoot = (a, kind, speed, scale) => {
     L.proj.push({ x: e.x + Math.cos(a) * T.radius, y: e.y + Math.sin(a) * T.radius, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, kind,
       dmg: randi(T.dmg[0], T.dmg[1]), owner: 'enemy', z: T.shotZ - scale / 2, scale, life: 5, t: 0 });
@@ -927,10 +986,12 @@ function updateEnemy(e, dt) {
   if (e.state === 'dead') return;
   if (e.state === 'dying') { e.timer -= dt; if (e.timer <= 0) e.state = 'dead'; return; }
   if (T.flee) { Objectives.thief(L, e, dt); return; }
-  const dx = P.x - e.x, dy = P.y - e.y, dist = Math.hypot(dx, dy) || 0.001;
+  // the target: the nearest living player
+  const tg = e.target = nearestPlayer(e.x, e.y);
+  const dx = tg.x - e.x, dy = tg.y - e.y, dist = Math.hypot(dx, dy) || 0.001;
   e.losT -= dt;
   if (e.losT <= 0) {
-    e.sees = !P.dead && dist < T.sight && hasLOS(e.x, e.y, P.x, P.y);
+    e.sees = !tg.dead && dist < T.sight && hasLOS(e.x, e.y, tg.x, tg.y);
     e.losT = rand(0.12, 0.25);
   }
   if (e.state === 'idle') {
@@ -947,18 +1008,18 @@ function updateEnemy(e, dt) {
   e.cd -= dt;
   if (e.state === 'attack') {
     e.timer -= dt;
-    if (e.shots > 0) { e.shotT -= dt; if (e.shotT <= 0) { if (!P.dead) enemyFire(e); e.shots--; e.shotT = 0.17; } }
+    if (e.shots > 0) { e.shotT -= dt; if (e.shotT <= 0) { if (!tg.dead) enemyFire(e); e.shots--; e.shotT = 0.17; } }
     if (e.timer <= 0) e.state = 'chase';
     return;
   }
-  if (P.dead) return;
+  if (tg.dead) return;
 
   if (T.teleport && e.sees && (e.tpT -= dt) <= 0) {
-    // Shadow IT vanishes and reappears somewhere around the player
+    // Shadow IT vanishes and reappears somewhere around its target
     for (let tries = 0; tries < 16; tries++) {
       const a = Math.random() * Math.PI * 2, r = rand(3, 6);
-      const x = P.x + Math.cos(a) * r, y = P.y + Math.sin(a) * r;
-      if (!blocked(x, y, T.radius) && hasLOS(x, y, P.x, P.y)) {
+      const x = tg.x + Math.cos(a) * r, y = tg.y + Math.sin(a) * r;
+      if (!blocked(x, y, T.radius) && hasLOS(x, y, tg.x, tg.y)) {
         addFx(e.x, e.y, 'plasmaHit', 0.5, 0.4, 1.2);
         e.x = x; e.y = y;
         addFx(x, y, 'plasmaHit', 0.5, 0.4, 1.2);
@@ -973,7 +1034,7 @@ function updateEnemy(e, dt) {
     if (T.melee) {
       if (dist < T.atkRange + 0.25) {
         e.state = 'attack'; e.timer = 0.45; e.cd = T.cd; e.face = Math.atan2(dy, dx);
-        damagePlayer(randi(T.dmg[0], T.dmg[1]), e.x, e.y);
+        hurtPlayer(tg, randi(T.dmg[0], T.dmg[1]), e.x, e.y);
         Sfx.melee(e);
         return;
       }
@@ -994,7 +1055,7 @@ function updateEnemy(e, dt) {
   } else {
     const keep = T.melee ? 0 : (T.boss ? 3.5 : 3);
     if (e.sees) {
-      if (dist > keep) { tx = P.x; ty = P.y; }
+      if (dist > keep) { tx = tg.x; ty = tg.y; }
       else { tx = e.x - (dy / dist) * e.strafe; ty = e.y + (dx / dist) * e.strafe; }
     } else {
       const t = flowTarget(e);
@@ -1010,7 +1071,7 @@ function updateEnemy(e, dt) {
   e.face = Math.atan2(mdy, mdx);
   moveEntity(e, mdx / md * sp, mdy / md * sp, r, false);
   const pr = r + 0.28;
-  if (!shrunk && (e.x - P.x) ** 2 + (e.y - P.y) ** 2 < pr * pr) { e.x = ox; e.y = oy; }
+  if (!shrunk && players.some((pl) => !pl.dead && (e.x - pl.x) ** 2 + (e.y - pl.y) ** 2 < pr * pr)) { e.x = ox; e.y = oy; }
   if (Math.abs(e.x - ox) + Math.abs(e.y - oy) < sp * 0.3) e.strafe = -e.strafe;
   if (Math.random() < dt * 0.3) e.strafe = -e.strafe;
 }
@@ -1077,9 +1138,10 @@ function updateProjectiles(dt) {
       }
       if (projHitsWall(p.x, p.y)) { projImpact(p); break; }
       if (p.owner === 'enemy') {
-        if (!P.dead && (p.x - P.x) ** 2 + (p.y - P.y) ** 2 < 0.35 * 0.35) {
+        const hit = players.find((pl) => !pl.dead && (p.x - pl.x) ** 2 + (p.y - pl.y) ** 2 < 0.35 * 0.35);
+        if (hit) {
           p.dead = true;
-          damagePlayer(p.dmg, p.x - p.vx, p.y - p.vy);
+          hurtPlayer(hit, p.dmg, p.x - p.vx, p.y - p.vy);
           addFx(p.x, p.y, 'boom', p.z, 0.2);
         }
         continue;
@@ -1292,7 +1354,7 @@ function collectSprites(add, retro, gpu) {
     const floaty = 'ruFMKGYL'.includes(it.type);
     add(it.x, it.y, Assets.items[it.type], 0.5, floaty ? 0.05 + Math.sin(bobT + it.x) * 0.03 : 0, 0, it.type === 'r' || it.type === 'u');
   }
-  for (const e of L.enemies) {
+  for (const e of drawnBodies()) {
     if (gpu && alive(e) && GLR.hasMonsters) continue;   // drawn as 3D models by gl.js
     const T = ETYPES[e.type], S = Assets.enemies[e.type];
     const R = !alive(e) ? S : gpu ? hiRotation(S, enemyRot(e)) : retro ? buildRotations(S)[enemyRot(e)] : S;
@@ -1696,6 +1758,7 @@ function update(dt) {
   updateDoors(dt);
   L.flowT -= dt;
   if (L.flowT <= 0) { computeFlow(); L.flowT = 0.3; }
+  for (const b of players) if (b !== P) updateBot(b, dt);
   for (const e of L.enemies) updateEnemy(e, dt);
   separateEnemies();
   updateProjectiles(dt);
@@ -2400,7 +2463,7 @@ function boot() {
   Update.check();
   requestAnimationFrame(frame);
   // debug hook for automated tests
-  window.__duke = { get L() { return L; }, P, get INV() { return INV; }, get state() { return state; }, actions, keys, castRay, perf, get showPerf() { return showPerf; } };
+  window.__duke = { get L() { return L; }, P, get players() { return players; }, addBot, get INV() { return INV; }, get state() { return state; }, actions, keys, castRay, perf, get showPerf() { return showPerf; } };
 }
 
 if (document.fonts && document.fonts.load) {
