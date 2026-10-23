@@ -201,8 +201,11 @@ automap (Tab).
 | Firmware update | Stand in the 3 upload zones on the floor until each upload completes, while monsters keep coming |
 | Fire evacuation | The gas suppression system is armed: reach the REBOOT terminal within 5 minutes |
 | Data thief | A thief runs for the exit with a stolen disk as soon as he spots you, opening every door: stop him first |
+| LCM upgrade | Upgrade the 4 nodes in order: hold E at each one for 4 seconds, they become Nutanix nodes (monsters come) |
+| Zombie snapshots | Hunt down and delete the 6 zombie snapshots eating the storage |
+| Live migration | Escort the VM (a rolling pallet of servers) to the Nutanix host: it only moves while you are close, and the monsters go for it |
 
-The x5 levels have their mini-boss and the x10 levels their boss as the objective. Failing an objective
+The last three (the Nutanix objectives) show up on one level of each of the episodes 2 to 5 and in seeded runs. The x5 levels have their mini-boss and the x10 levels their boss as the objective. Failing an objective
 (time out, PROD DB destroyed, thief escaped) ends the level like a death. Each objective step (a tape loaded, a CRAC
 repaired, a panel switched on...) saves a checkpoint: after a death, restore it or restart the level. A restored
 countdown always leaves at least one minute.

@@ -69,12 +69,71 @@ const Objectives = (() => {
       case 'hotswap': o.server = cellsOf(L, '8')[0]; o.carry = false; break;
       case 'defend': o.rack = cellsOf(L, '9')[0]; o.started = false; o.hp = 100; o.left = 90; o.spawnT = 0; break;
       case 'firmware': o.zones = L.zones.map((z) => ({ ...z, prog: 0 })); o.spawnT = 0; o.beep = 0; break;
+      case 'lcm':
+        o.nodes = (LevelGen.pickRacks(L.def.map, 4) || []).map((c) => ({ ...c, i: c.y * L.w + c.x, prog: 0 }));
+        o.cur = 0; o.repair = null; o.spawnT = 0;
+        break;
+      case 'snapshots': {
+        // 6 zombie snapshots (ghostly drones) lurking far from the start, spread out
+        o.total = 6; o.cleaned = 0;
+        const cells = [];
+        for (let i = 0; i < L.map.length; i++) if (!L.map[i] && !L.block[i] && L.flow[i] > 8) cells.push(i);
+        const picked = [];
+        for (let k = 0; k < o.total && cells.length; k++) {
+          let best = cells[0], bs = -1;
+          for (const c of cells) {
+            const s = Math.min(L.flow[c], ...picked.map((p) => Math.hypot(p % L.w - c % L.w, ((p / L.w) | 0) - ((c / L.w) | 0))));
+            if (s > bs) { bs = s; best = c; }
+          }
+          picked.push(best);
+          const e = spawnEnemy('drone', best % L.w + 0.5, ((best / L.w) | 0) + 0.5);
+          e.snap = true; e.hp = 70;
+        }
+        o.total = picked.length;
+        break;
+      }
+      case 'migrate': {
+        // the VM: a pallet of servers that rolls to the host while the player is close; it is
+        // also a player for the enemies (they go for it) and its hit points are the objective's
+        const host = (LevelGen.pickRacks(L.def.map, 1) || [])[0];
+        o.host = host ? { ...host, i: host.y * L.w + host.x } : null;
+        o.field = o.host ? hostField(L, o.host) : null;
+        let vx = P.x, vy = P.y;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const i = ((P.y | 0) + dy) * L.w + (P.x | 0) + dx;
+          if (!L.map[i] && !L.block[i]) { vx = (P.x | 0) + dx + 0.5; vy = (P.y | 0) + dy + 0.5; break; }
+        }
+        o.vm = { type: 'x', x: vx, y: vy, a: 0, face: 0, uses: 0, hp: 100, dead: false, deadT: 0, hurtT: 0, vm: true, bobPhase: 0 };
+        L.decor.push(o.vm);
+        o.dist0 = o.field ? Math.max(1, o.field[(vy | 0) * L.w + (vx | 0)]) : 1;
+        break;
+      }
       case 'thief':
         o.thief = L.enemies.find((e) => e.type === 'thief');
         o.field = exitField(L);
         break;
       default: break;
     }
+  }
+
+  // Distance (in cells) to the host rack of the live migration, through doors.
+  function hostField(L, host) {
+    const f = new Int16Array(L.w * L.h).fill(-1), q = [];
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const n = (host.y + dy) * L.w + host.x + dx;
+      if (!L.map[n] && !L.block[n]) { f[n] = 0; q.push(n); }
+    }
+    for (let h = 0; h < q.length; h++) {
+      const c = q[h], cx = c % L.w, cy = (c / L.w) | 0;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cx + dx, ny = cy + dy;
+        if (nx < 0 || ny < 0 || nx >= L.w || ny >= L.h) continue;
+        const n = ny * L.w + nx;
+        if (f[n] >= 0 || L.block[n] || (L.map[n] && !L.doors[n])) continue;
+        f[n] = f[c] + 1; q.push(n);
+      }
+    }
+    return f;
   }
 
   // Distance (in cells) to the exit for the thief, who has keys to every door.
@@ -172,6 +231,52 @@ const Objectives = (() => {
         if (o.sirenT <= 0) { Sfx.alarm(); o.sirenT = o.left < 60 ? 1 : 2.5; }
         if (o.left <= 0) fail(L, 'GAS RELEASED: the fire suppression system did its job. On you.');
         break;
+      case 'lcm': {
+        const u = o.repair;
+        if (u) {
+          if (!(held('use') || pad.use) || !near(P.x, P.y, u.x + 0.5, u.y + 0.5, 1.9)) { o.repair = null; msg('Upgrade interrupted!'); break; }
+          u.prog = Math.min(1, u.prog + dt / 4);
+          if ((u.prog * 8 | 0) !== ((u.prog - dt / 4) * 8 | 0)) Sfx.click();
+          o.spawnT -= dt;
+          if (o.spawnT <= 0) { spawnAround(L, u.x + 0.5, u.y + 0.5, 1); o.spawnT = 3.5; }
+          if (u.prog >= 1) {
+            o.repair = null; o.cur++;
+            setTile(L, u.x, u.y, '7');
+            Sfx.nutanix();
+            msg(`Node ${o.cur}/${o.nodes.length} upgraded`);
+            if (o.cur >= o.nodes.length) complete(L, 'the cluster runs the new AOS');
+          }
+        }
+        break;
+      }
+      case 'migrate': {
+        const v = o.vm;
+        if (!v || !o.field) break;
+        v.hurtT = Math.max(0, v.hurtT - dt);
+        if (v.dead) { fail(L, 'MIGRATION FAILED: the VM crashed in transit.'); break; }
+        const here = (v.y | 0) * L.w + (v.x | 0), d = o.field[here];
+        if (d === 0) {
+          // arrived next to the host: the rack becomes a Nutanix node
+          setTile(L, o.host.x, o.host.y, '7');
+          L.decor.splice(L.decor.indexOf(v), 1);
+          players = players.filter((p) => p !== v);
+          complete(L, 'the VM migrated live to Nutanix');
+          break;
+        }
+        if (!near(P.x, P.y, v.x, v.y, 5)) break;   // the VM waits for its escort
+        let best = -1, bd = d;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const n = here + dy * L.w + dx;
+          if (o.field[n] >= 0 && o.field[n] < bd) { bd = o.field[n]; best = n; }
+        }
+        if (best < 0) break;
+        const tx = best % L.w + 0.5, ty = ((best / L.w) | 0) + 0.5, mx = tx - v.x, my = ty - v.y, md = Math.hypot(mx, my) || 1;
+        const sp = Math.min(md, 1.3 * dt), nx = v.x + mx / md * sp, ny = v.y + my / md * sp;
+        // it never rolls through a player standing in its way
+        if (players.some((p) => p !== v && !p.dead && Math.hypot(p.x - nx, p.y - ny) < 1 && Math.hypot(p.x - nx, p.y - ny) < Math.hypot(p.x - v.x, p.y - v.y))) break;
+        v.x = nx; v.y = ny; v.face = v.a = Math.atan2(my, mx);
+        break;
+      }
       case 'defend': {
         if (!o.started) break;
         o.left -= dt;
@@ -288,6 +393,14 @@ const Objectives = (() => {
         setTile(L, x, y, 'R');
         complete(L, 'disk hot-swapped, the RAID is rebuilding');
         return true;
+      case 'R': case 'S': case 'N': {
+        if (o.type !== 'lcm' || o.done) return false;
+        const k = o.nodes.findIndex((n) => n.x === x && n.y === y);
+        if (k < 0) return false;
+        if (k !== o.cur) { msg(`LCM: upgrade the nodes in order, node ${o.cur + 1} first.`); Sfx.deny(); return true; }
+        if (!o.repair) { o.repair = o.nodes[k]; msg('Upgrading the node... hold E'); }
+        return true;
+      }
       case '9':
         if (o.type !== 'defend') return false;
         if (!o.started && !o.done) {
@@ -321,6 +434,11 @@ const Objectives = (() => {
 
   function kill(L, e) {
     const o = L.obj;
+    if (o && o.type === 'snapshots' && e.snap) {
+      o.cleaned++;
+      msg(`Zombie snapshot deleted (${o.cleaned}/${o.total})`);
+      if (o.cleaned >= o.total) complete(L, 'the storage is clean');
+    }
     if (o && o.type === 'thief' && e.type === 'thief') {
       L.items.push({ x: e.x, y: e.y, type: 'w', taken: false, drop: true });
       complete(L, 'the data thief is down, the disk is back');
@@ -362,6 +480,9 @@ const Objectives = (() => {
       }
       case 'evac': return `EVACUATE! Gas suppression in ${fmt(o.left)}`;
       case 'thief': return o.thief && o.thief.fleeing ? 'STOP THE DATA THIEF before he reaches the exit!' : 'Find the DATA THIEF';
+      case 'lcm': return `LCM UPGRADE: nodes ${o.cur}/${o.nodes.length}${o.repair ? ` (${Math.round(o.repair.prog * 100)}%)` : ''}`;
+      case 'snapshots': return `SNAPSHOT CLEANUP: ${o.cleaned}/${o.total} zombie snapshots deleted`;
+      case 'migrate': return o.vm ? `LIVE MIGRATION: VM ${Math.max(0, Math.round(o.vm.hp))}%  ${o.field ? Math.max(0, o.field[(o.vm.y | 0) * L.w + (o.vm.x | 0)]) : '?'} m to the host${near(P.x, P.y, o.vm.x, o.vm.y, 5) ? '' : '  (stay close!)'}` : '';
       case 'miniboss': case 'boss': return L.bossAlive ? 'Destroy the guardian of the REBOOT terminal' : 'OBJECTIVE COMPLETE: reach the REBOOT terminal';
       default: return '';
     }
@@ -376,6 +497,9 @@ const Objectives = (() => {
     firmware: ['Stand in the 3 upload zones until each firmware upload completes', 'Firmware updated'],
     evac: ['Fire alarm: reach the REBOOT terminal before the gas is released (5 min)', 'Evacuated'],
     thief: ['Stop the data thief before he reaches the exit with the disk', 'Data thief stopped'],
+    lcm: ['LCM upgrade: upgrade the 4 nodes in order (hold E at each)', 'Cluster upgraded'],
+    snapshots: ['Delete the 6 zombie snapshots eating the storage', 'Storage cleaned'],
+    migrate: ['Live migration: escort the VM to the Nutanix host without a crash', 'VM migrated'],
     miniboss: ['Destroy the mini-boss guarding the REBOOT terminal', 'Mini-boss destroyed'],
     boss: ['Destroy the boss guarding the REBOOT terminal', 'Boss destroyed'],
   };
@@ -407,6 +531,9 @@ const Objectives = (() => {
       case 'defend': if (o.rack) wall(o.rack, '#3dff6a'); break;
       case 'firmware': for (const z of o.zones) if (z.prog < 1) out.push([z.x, z.y, '#20e8ff']); break;
       case 'thief': if (o.thief && alive(o.thief)) out.push([o.thief.x, o.thief.y, '#ff9a1a']); break;
+      case 'lcm': o.nodes.forEach((n, k) => { if (k >= o.cur) wall(n, k === o.cur ? '#ffe14a' : '#9aa3ad'); }); break;
+      case 'snapshots': for (const e of L.enemies) if (e.snap && alive(e)) out.push([e.x, e.y, '#b6a4ff']); break;
+      case 'migrate': if (o.vm) out.push([o.vm.x, o.vm.y, '#20e8ff']); if (o.host) wall(o.host, '#3dff6a'); break;
       default: break;
     }
     return out;
@@ -417,7 +544,8 @@ const Objectives = (() => {
   // saves a checkpoint each time it goes up.
   function progress(L) {
     const o = L.obj;
-    return (o.stored || 0) + (o.fixed || 0) + (o.on || 0) + (o.cut || 0) + (o.carry ? 1 : 0) + (o.started ? 1 : 0)
+    const mig = o.type === 'migrate' && o.vm && o.field ? Math.floor(4 * (1 - Math.max(0, o.field[(o.vm.y | 0) * L.w + (o.vm.x | 0)]) / o.dist0)) : 0;
+    return (o.stored || 0) + (o.fixed || 0) + (o.on || 0) + (o.cut || 0) + (o.carry ? 1 : 0) + (o.started ? 1 : 0) + (o.cur || 0) + (o.cleaned || 0) + mig
       + (o.zones ? o.zones.filter((z) => z.prog >= 1).length : 0) + (o.done ? 1 : 0);
   }
 
@@ -427,5 +555,8 @@ const Objectives = (() => {
     if (['overheat', 'ransom', 'evac'].includes(o.type)) o.left = Math.max(o.left, 60);
   }
 
-  return { init, update, thief, use, pickup, kill, canHold, done, lockedText, hud, urgent, markers, title, alarm, progress, restored, TIMED_S };
+  // players besides the local one that the objective brings (the VM of the live migration)
+  const extraPlayers = (L) => (L.obj && L.obj.vm && L.decor.includes(L.obj.vm) ? [L.obj.vm] : []);
+
+  return { init, update, thief, use, pickup, kill, canHold, done, lockedText, hud, urgent, markers, title, alarm, progress, restored, extraPlayers, TIMED_S };
 })();

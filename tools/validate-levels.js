@@ -24,6 +24,8 @@ for (let i = 0; i < LEVEL_COUNT; i++) {
     if (n(ch) !== cnt) { r.ok = false; r.errors.push(`objective ${def.objective}: expected ${cnt} x ${ch}, found ${n(ch)}`); }
   }
   if (def.objective === prevObj) { r.ok = false; r.errors.push(`same objective as the previous level: ${def.objective}`); }
+  const racks = { lcm: 4, migrate: 1 }[def.objective];
+  if (racks && !LevelGen.pickRacks(def.map, racks)) { r.ok = false; r.errors.push(`objective ${def.objective}: needs ${racks} reachable racks`); }
   prevObj = def.objective;
   console.log(`${def.code.padEnd(6)} ${String(def.map[0].length).padStart(2)}x${String(def.map.length).padEnd(2)} enemies ${String(enemies).padStart(2)} (${String(easy).padStart(2)} ${SKILLS[0].name.toLowerCase()})  secret ${n('?')}  badge doors ${n('1') + n('2')}  ${(def.objective === 'boss' ? 'boss ' + def.bossType : def.objective === 'miniboss' ? 'mini-boss ' + def.miniType : def.objective).padEnd(20)} ${r.ok ? 'OK' : 'ERROR'}`);
   if (!r.ok) { ok = false; r.errors.slice(0, 5).forEach((e) => console.log('   ' + e)); }

@@ -215,7 +215,7 @@ function playerBody(p) {
     flash: p.hurtT > 0.15 ? 1 : 0, painT: 0, shrunk: 0, timer: 0 };
 }
 // the enemies plus the other players' bodies, for the renderers
-const drawnBodies = () => (players.length > 1 ? L.enemies.concat(others().map(playerBody)) : L.enemies);
+const drawnBodies = () => (players.length > 1 ? L.enemies.concat(others().filter((p) => !p.vm).map(playerBody)) : L.enemies);
 
 // the nearest living player to a point (the enemies' target)
 function nearestPlayer(x, y) {
@@ -305,6 +305,7 @@ function loadLevel(idx) {
   players = [P];
   computeFlow();
   Objectives.init(L);
+  players = [P, ...Objectives.extraPlayers(L)];
   Light.bake(L);
   checkpoint = null; L.cpProgress = Objectives.progress(L);
 }
@@ -1767,7 +1768,7 @@ function update(dt) {
   updateDoors(dt);
   L.flowT -= dt;
   if (L.flowT <= 0) { computeFlow(); L.flowT = 0.3; }
-  for (const b of players) if (b !== P) updateBot(b, dt);
+  for (const b of players) if (b !== P && b.bot) updateBot(b, dt);
   for (const e of L.enemies) updateEnemy(e, dt);
   separateEnemies();
   updateProjectiles(dt);
@@ -2252,6 +2253,7 @@ function restoreCheckpoint() {
   Object.assign(P, checkpoint.P);
   INV = cloneInv(checkpoint.INV);
   Objectives.restored(L);
+  players = [P, ...Objectives.extraPlayers(L)];
   computeFlow();
   Light.bake(L);
   hidePanel(); state = 'playing'; lockPointer();

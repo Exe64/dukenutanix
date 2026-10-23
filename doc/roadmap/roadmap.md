@@ -30,14 +30,6 @@ Mesurer le chargement et les fps sur plusieurs machines réelles et consigner le
 
 ---
 
-### [Issue: #25] Nouveaux objectifs Nutanix [PRIORITÉ: BASSE] [Complexité: L] 🟢
-
-Plan : [`25-nutanix-objectives.md`](25-nutanix-objectives.md)
-
-Trois objectifs : live migration d'une VM à escorter, mise à jour LCM nœud par nœud, snapshots zombies.
-
----
-
 ### [Issue: #26] Campagne en coop à 2 [PRIORITÉ: BASSE] [Complexité: XL] 🟢
 
 Plan : [`26-coop-2p.md`](26-coop-2p.md)
@@ -109,6 +101,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
   [`18-players-list-refactor.md`](done/18-players-list-refactor.md)
 - **[Issue: #23] `#23` — Musique procédurale** (2026-10-22) 🔵 — musique procédurale façon tracker : un thème par épisode et un thème de boss, volume et bouton dans la pause
   [`23-procedural-music.md`](done/23-procedural-music.md)
+- **[Issue: #25] `#25` — Nouveaux objectifs Nutanix** (2026-10-22) 🔵 — 3 objectifs Nutanix (mise à jour LCM, snapshots zombies, migration à chaud d'une VM) sur 4 niveaux de campagne et dans les parties à graine
+  [`25-nutanix-objectives.md`](done/25-nutanix-objectives.md)
 
 ---
 

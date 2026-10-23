@@ -57,7 +57,17 @@ const LEVEL_OBJECTIVES = (() => {
   }
   return out;
 })();
+// Nutanix objectives: in seeded runs, and on one level of each of the episodes 2 to 5 (the
+// rest of the campaign keeps its rotation, so its maps do not change).
+const NUTANIX_OBJECTIVES = ['lcm', 'snapshots', 'migrate'];
+const NUTANIX_LEVELS = { 12: 'lcm', 26: 'snapshots', 31: 'migrate', 47: 'lcm' };
+for (const [i, t] of Object.entries(NUTANIX_LEVELS)) LEVEL_OBJECTIVES[i] = t;
+const RUN_OBJECTIVES = OBJECTIVE_TYPES.concat(NUTANIX_OBJECTIVES);
+
 const OBJECTIVE_INTRO = {
+  lcm: 'Upgrade day: LCM rolls the new AOS out to 4 nodes. Upgrade them one by one, in order, by holding E at each node.',
+  snapshots: 'Zombie snapshots are eating the storage: hunt down and delete every one of them.',
+  migrate: 'Live migration! Escort the VM (the moving pallet) to the Nutanix host. It only moves while you are close, and it must not crash.',
   backup: 'The backups are scattered all over the floor: bring the 5 LTO tapes back to the TAPE LIBRARY.',
   overheat: 'The air conditioning is failing: repair the 3 broken CRAC units before the room hits thermal shutdown (5 minutes).',
   power: 'Power is out. Find the 3 MAIN POWER panels in the dark and switch them back on.',
@@ -276,8 +286,11 @@ function seedLevel(seed, depth) {
   if (t % 10 === 4 || t % 10 === 9) t--;
   const spec = levelSpec(t), ep = Math.floor(t / 10);
   spec.seed = (seed * 31 + depth * 977) % 1e9;
-  spec.objective = OBJECTIVE_TYPES[Math.floor(R() * OBJECTIVE_TYPES.length)];
+  spec.objective = RUN_OBJECTIVES[Math.floor(R() * RUN_OBJECTIVES.length)];
   const map = LevelGen.generate(spec).map;
+  // the Nutanix objectives need racks on the map (LCM nodes, migration host)
+  const racks = { lcm: 4, migrate: 1 }[spec.objective];
+  if (racks && !LevelGen.pickRacks(map, racks)) spec.objective = 'evac';
   return {
     map, index: t, code: `D${depth}`, episode: ep, name: `DEPTH ${depth} : ${LEVEL_NAMES[t]}`,
     intro: `Run ${seed}, depth ${depth}. ${OBJECTIVE_INTRO[spec.objective] || ''}`,

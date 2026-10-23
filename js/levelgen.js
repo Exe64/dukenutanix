@@ -497,7 +497,31 @@ const LevelGen = (() => {
     return seen;
   }
 
-  return { generate, validate, placeSpecials, placeObjective, rng, SPECIALS, OBJ_NEEDS };
+  // Rack cells (R, S, N) facing the reachable floor, picked far from the start and from
+  // each other: the nodes of the LCM objective, the target host of the VM live migration.
+  function pickRacks(map, n) {
+    const reach = reachable(map, '?'), h = map.length, w = map[0].length;
+    let sx = 0, sy = 0;
+    map.forEach((r, y) => { const x = r.indexOf('P'); if (x >= 0) { sx = x; sy = y; } });
+    const cands = [];
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+      if ('RSN'.includes(map[y][x]) && [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => reach.has((x + dx) + ',' + (y + dy)))) cands.push({ x, y });
+    }
+    const out = [];
+    for (let k = 0; k < n; k++) {
+      let best = null, bs = -1;
+      for (const c of cands) {
+        if (out.includes(c)) continue;
+        const s = Math.min(Math.hypot(c.x - sx, c.y - sy), ...out.map((o) => Math.hypot(o.x - c.x, o.y - c.y)));
+        if (s > bs) { bs = s; best = c; }
+      }
+      if (!best) return null;
+      out.push(best);
+    }
+    return out;
+  }
+
+  return { generate, validate, placeSpecials, placeObjective, pickRacks, rng, SPECIALS, OBJ_NEEDS };
 })();
 
 if (typeof module !== 'undefined') module.exports = LevelGen;
