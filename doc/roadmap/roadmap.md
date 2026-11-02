@@ -14,6 +14,14 @@ La vision d'ensemble (multijoueur) est résumée dans [`ROADMAP.md`](../../ROADM
 ---
 
 ## À faire
+### [Issue: #30] Mod OVHCLOUD SPECIAL [PRIORITÉ: HAUTE] [Complexité: XL] 🟢
+
+Plan : [`30-ovhcloud-special-mod.md`](30-ovhcloud-special-mod.md)
+
+5 niveaux dans des datacenters OVHcloud (dont GRA d'après le plan réel), monstres et missions dédiés, boss THE OVH FOUNDER qui passe en métalleux invincible.
+
+---
+
 ### [Issue: #29] Avatar du HUD d'après la vraie tête [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
 
 Plan : [`29-hud-avatar-real-face.md`](29-hud-avatar-real-face.md)
