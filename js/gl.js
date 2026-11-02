@@ -996,7 +996,7 @@ const GLR = (() => {
     if (warmTypes.has(type)) return;
     warmTypes.add(type);
     const S = Assets.enemies[type];
-    warm.push(() => { S.walk.forEach(spriteLayer); spriteLayer(S.atk); return true; });
+    warm.push(() => { S.walk.forEach(spriteLayer); spriteLayer(S.atk[1]); return true; });
     warm.push(() => warmRotations(S, spriteLayer));
     warm.push(() => { S.die.forEach(spriteLayer); spriteLayer(S.dead); return true; });
   }

@@ -466,8 +466,9 @@ function ell(g, x, y, rx, ry, col) { g.fillStyle = col; g.beginPath(); g.ellipse
 function ln(g, x0, y0, x1, y1, col, w) { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.stroke(); }
 
 // Bug: neon-green glitch insect
-// Enemy draw functions take (g, phase, atk, v, dir): v is the RETRO rotation view
-// (0 front, 1 front three-quarter, 2 profile, 3 back three-quarter, 4 back) and dir
+// Enemy draw functions take (g, phase, atk, v, dir): atk is the attack pose (0 none,
+// 1 wind-up, 2 strike or shot, 3 recovery; MODERN only uses 2), v is the RETRO rotation
+// view (0 front, 1 front three-quarter, 2 profile, 3 back three-quarter, 4 back) and dir
 // the side it turns to (+1 right, -1 left). See rotSprite().
 const FACE_SHIFT = [0, 5, 11, 0, 0];
 // Eyes of a creature seen from view v: both from the front, the near one in profile, none from behind.
@@ -499,10 +500,10 @@ function drawBug(g, phase, atk, v = 0, dir = 1) {
   g.fillStyle = '#ff00ff'; g.fillRect(16, 38 + phase * 3, 6, 2);
   g.fillStyle = '#00ffff'; g.fillRect(42, 50 - phase * 2, 5, 2);
   eyes(v, dir, 27 + f, 37 + f, (x) => { ell(g, x, 30, 3, 3, '#ff2a2a'); g.fillStyle = '#ffd0d0'; g.fillRect(x - 1, 29, 1, 1); });
-  const m = atk ? 7 : 2;
+  const m = [2, 10, 7, 4][atk];   // mandibles spread wide, bite, close
   if (!back) {
     ln(g, 28 + f, 38, 24 - m + f, 44, '#0f2e13', 3); ln(g, 36 + f, 38, 40 + m + f, 44, '#0f2e13', 3);
-    if (atk) ell(g, 32 + f, 41, 4, 3, '#600');
+    if (atk >= 2) ell(g, 32 + f, 41, 4, atk === 2 ? 3 : 2, '#600');
   }
   ln(g, 28 + f * 0.5, 24, 20 + f, 12 + phase * 2, '#23702b', 2); ln(g, 36 + f * 0.5, 24, 44 + f, 12 - phase * 2, '#23702b', 2);
 }
@@ -514,14 +515,14 @@ function drawDrone(g, phase, atk, v = 0, dir = 1) {
     const a = i / 12 * Math.PI * 2 + phase * 0.13;
     const x1 = cx + Math.cos(a) * 25, y1 = cy + Math.sin(a) * 25;
     ln(g, cx + Math.cos(a) * 15, cy + Math.sin(a) * 15, x1, y1, '#7a1f5c', 3);
-    ell(g, x1, y1, 3.5, 3.5, atk ? '#ffcc00' : '#d93a8f');
+    ell(g, x1, y1, 3.5, 3.5, ['#d93a8f', '#ff8a4a', '#ffcc00', '#e86a6a'][atk]);
   }
   ell(g, cx, cy, 18, 18, '#8d2468');
   ell(g, cx - 4, cy - 5, 11, 10, '#b3368a');
   if (v < 3) {
     const ex = cx + f, ew = v === 2 ? 5 : 9;
     ell(g, ex, cy, ew, 9, '#f2f2f2');
-    ell(g, ex + (v ? dir : 0), cy, ew * 0.55, 5, atk ? '#ffee00' : '#ff1a1a');
+    ell(g, ex + (v ? dir : 0), cy, ew * 0.55, 5, ['#ff1a1a', '#ff8800', '#ffee00', '#ff1a1a'][atk]);
     ell(g, ex + (v ? dir * 2 : 0), cy, 2, 2, '#000');
     g.fillStyle = '#fff'; g.fillRect(ex - 4, cy - 5, 2, 2);
   } else {
@@ -548,7 +549,9 @@ function drawBot(g, phase, atk, v = 0, dir = 1) {
   // arms + gun
   g.fillStyle = '#3c4148'; g.fillRect(10, 26, 7, 16); g.fillRect(47, 26, 7, 12);
   g.fillStyle = '#222'; g.fillRect(44, 36, 16, 6); g.fillRect(52, 34, 4, 2);
-  if (atk) { ell(g, 60, 39, 5, 5, '#ffee55'); ell(g, 60, 39, 2.5, 2.5, '#fff'); }
+  if (atk === 1) ell(g, 60, 39, 2.5, 2.5, '#ff8a2a');
+  else if (atk === 2) { ell(g, 60, 39, 5, 5, '#ffee55'); ell(g, 60, 39, 2.5, 2.5, '#fff'); }
+  else if (atk === 3) ell(g, 61, 36, 3, 2, 'rgba(170,170,170,0.6)');
   // BSOD monitor head (from behind: the casing and its vents)
   g.fillStyle = '#2b2f35'; g.fillRect(16, 2, 32, 22);
   if (back) {
@@ -591,11 +594,13 @@ function drawBoss(pal) {
     // arm cannons
     g.fillStyle = pal.dark; g.fillRect(0, 28, 10, 20); g.fillRect(54, 28, 10, 20);
     g.fillStyle = '#111'; g.fillRect(1, 46, 8, 6); g.fillRect(55, 46, 8, 6);
-    if (atk) { ell(g, 5, 55, 5, 5, pal.shot); ell(g, 59, 55, 5, 5, pal.shot); ell(g, 5, 55, 2, 2, '#fff'); ell(g, 59, 55, 2, 2, '#fff'); }
+    if (atk === 1) { ell(g, 5, 55, 2.5, 2.5, pal.shot); ell(g, 59, 55, 2.5, 2.5, pal.shot); }
+    else if (atk === 2) { ell(g, 5, 55, 5, 5, pal.shot); ell(g, 59, 55, 5, 5, pal.shot); ell(g, 5, 55, 2, 2, '#fff'); ell(g, 59, 55, 2, 2, '#fff'); }
+    else if (atk === 3) { ell(g, 5, 53, 3, 2, 'rgba(170,170,170,0.6)'); ell(g, 59, 53, 3, 2, 'rgba(170,170,170,0.6)'); }
     // skull
     ell(g, 32, 14, 16, 14, pal.head);
     g.fillStyle = pal.head; g.fillRect(22, 18, 20, 10);
-    eyes(v, dir, 25 + f, 39 + f, (x) => { ell(g, x, 13, 5, 5, '#000'); ell(g, x, 13, 2, 2, atk ? '#fff' : pal.eye); });
+    eyes(v, dir, 25 + f, 39 + f, (x) => { ell(g, x, 13, 5, 5, '#000'); ell(g, x, 13, 2, 2, atk === 2 ? '#fff' : pal.eye); });
     if (back) { g.fillStyle = pal.light; g.fillRect(30, 4, 4, 22); }
     else {
       g.fillStyle = '#000'; g.beginPath(); g.moveTo(32 + f, 17); g.lineTo(29 + f, 22); g.lineTo(35 + f, 22); g.fill();
@@ -615,8 +620,8 @@ function drawTroll(g, phase, atk, v = 0, dir = 1) {
   g.fillStyle = '#5a3a1a'; g.fillRect(12, 48, 40, 6);
   // arms + club (a broken ergonomic keyboard)
   ell(g, 11, 36, 6, 9, '#5f8a3a'); ell(g, 53, 36, 6, 9, '#5f8a3a');
-  const cx = atk ? 60 : 56, cy = atk ? 8 : 16;
-  g.save(); g.translate(cx, cy); g.rotate(atk ? 0.9 : 0.2);
+  const [cx, cy, ca] = [[56, 16, 0.2], [57, 10, -0.5], [60, 8, 0.9], [58, 12, 0.5]][atk];
+  g.save(); g.translate(cx, cy); g.rotate(ca);
   g.fillStyle = '#2c3038'; g.fillRect(-4, -2, 8, 30);
   g.fillStyle = '#d9dde2'; for (let y = 0; y < 26; y += 4) g.fillRect(-3, y, 6, 2);
   g.restore();
@@ -633,7 +638,7 @@ function drawTroll(g, phase, atk, v = 0, dir = 1) {
   });
   if (back) { g.fillStyle = '#4a6a2a'; for (let x = 24; x < 41; x += 4) g.fillRect(x, 8, 2, 14); }
   else {
-    g.fillStyle = '#2a1a0a'; g.fillRect(27 + f, 23, 11, atk ? 5 : 2);
+    g.fillStyle = '#2a1a0a'; g.fillRect(27 + f, 23, 11, [2, 3, 5, 3][atk]);
     g.fillStyle = '#f2f2e0'; g.fillRect(28 + f, 23, 2, 3); g.fillRect(35 + f, 23, 2, 3);
   }
   ell(g, 20 + f * 0.3, 12, 3, 5, '#6f9a44'); ell(g, 44 + f * 0.3, 12, 3, 5, '#6f9a44');
@@ -656,8 +661,8 @@ function drawSpammer(g, phase, atk, v = 0, dir = 1) {
   }
   // eyes + mouth
   eyes(v, dir, 24 + f, 40 + f, (x) => { const y = x < 32 + f ? 30 : 34; ell(g, x, y, 4, 4, '#fff'); ell(g, x + (v ? dir : 0), y, 2, 2, '#000'); });
-  if (!back) ell(g, 32 + f, 44, 7, atk ? 5 : 2, '#600');
-  g.fillStyle = atk ? '#ffe14a' : '#e8741a'; g.font = 'bold 10px monospace';
+  if (!back) ell(g, 32 + f, 44, 7, [2, 3, 5, 3][atk], '#600');
+  g.fillStyle = ['#e8741a', '#f0a030', '#ffe14a', '#e8741a'][atk]; g.font = 'bold 10px monospace';
   g.fillText('@', 2, 14 + phase * 2); g.fillText('@', 52, 12 - phase * 2);
   if (!back) { g.fillStyle = '#e8c21a'; g.font = 'bold 5px monospace'; g.fillText('SPAM', 14 + f * 0.5, 26); }
 }
@@ -690,8 +695,8 @@ function debrisFrame(colors, seed) {
 }
 
 function buildEnemySprites(drawFn, debrisCols, seed) {
-  const walk = [0, 1].map((p) => makeSprite((g) => drawFn(g, p, false), true, true));
-  const atk = makeSprite((g) => drawFn(g, 0, true), true);
+  const walk = [0, 1].map((p) => makeSprite((g) => drawFn(g, p, 0), true, true));
+  const atk = [1, 2, 3].map((p) => makeSprite((g) => drawFn(g, 0, p), true));   // wind-up, strike, recovery
   const die = [glitchFrame(walk[0].canvas, 6), glitchFrame(walk[1].canvas, 14)];
   for (const w of walk) w.canvas = null;   // only needed to derive the death frames
   return { walk, atk, die, dead: debrisFrame(debrisCols, seed), draw: drawFn, debris: debrisCols };
@@ -714,26 +719,27 @@ function rotSprite(drawFn, phase, atk, r, size = TEX) {
     }
   }, true, false, size, size !== TEX);
 }
-// rot[r] = {walk: [2 frames], atk} for the 8 rotations (walk[0..1] and atk at TEX size).
+// rot[r] = {walk: [2 frames], atk: [3 frames]} for the 8 rotations, at TEX size.
 function buildRotations(S) {
   if (S.rot) return S.rot;
   S.rot = ROT_VIEW.map((_, r) => ({
-    walk: [0, 1].map((p) => rotSprite(S.draw, p, false, r)),
-    atk: rotSprite(S.draw, 0, true, r),
+    walk: [0, 1].map((p) => rotSprite(S.draw, p, 0, r)),
+    atk: [1, 2, 3].map((p) => rotSprite(S.draw, 0, p, r)),
   }));
   return S.rot;
 }
 
 // The GPU renderer's rotations, at SPR_HI. They cost too much to draw at once, so
 // warmRotations() adds one frame per call (onSprite gets it); until all three
-// frames of a view exist, hiRotation() falls back to the front sprites.
+// frames of a view exist, hiRotation() falls back to the front sprites. MODERN keeps
+// one attack frame here, the strike (atk is a single sprite).
 function warmRotations(S, onSprite) {
   if (!S.rotHi) S.rotHi = ROT_VIEW.map(() => ({ walk: [null, null], atk: null }));
   for (let r = 0; r < 8; r++) {
     const R = S.rotHi[r];
     for (let k = 0; k < 3; k++) {
       if (k < 2 ? R.walk[k] : R.atk) continue;
-      const spr = rotSprite(S.draw, k < 2 ? k : 0, k === 2, r, SPR_HI);
+      const spr = rotSprite(S.draw, k < 2 ? k : 0, k === 2 ? 2 : 0, r, SPR_HI);
       if (k < 2) R.walk[k] = spr; else R.atk = spr;
       if (onSprite) onSprite(spr);
       return false;
@@ -856,12 +862,12 @@ function drawSpaghetti(g, phase, atk, v = 0, dir = 1) {
     cable(g, [p0, pc, p2], cols[k % cols.length], 1.8);
   }
   // arms ending with RJ45 plugs
-  const ay = atk ? 6 : 16;
+  const ay = [16, 20, 6, 11][atk];   // plugs pulled back, lashing out, coming back
   cable(g, [[16, 30], [4, 26], [5, ay]], '#2a7de1', 2.2); rj45(g, 5, ay - 2, '#2a7de1');
   cable(g, [[48, 30], [60, 26], [59, ay + 2]], '#e8741a', 2.2); rj45(g, 59, ay, '#e8741a');
   eyes(v, dir, 25 + f, 39 + f, (x) => { ell(g, x, 26, 6.5, 6.5, '#fff'); ell(g, x + 1 + phase + (v ? dir : 0), 26.5, 2.8, 2.8, '#c00'); });
   if (v < 3) {
-    g.fillStyle = '#300'; g.fillRect(24 + f, 36, 16, atk ? 6 : 3);
+    g.fillStyle = '#300'; g.fillRect(24 + f, 36, 16, [3, 4, 6, 4][atk]);
     g.fillStyle = '#e8e8e8'; for (let x = 25; x < 40; x += 3) g.fillRect(x + f, 36, 1.6, 2);
   }
 }
@@ -882,9 +888,9 @@ function drawHotspot(g, phase, atk, v = 0, dir = 1) {
   g.save(); g.translate(fs, 0);
   if (v < 3 && (v !== 2 || dir < 0)) { g.fillStyle = '#2a0800'; g.beginPath(); g.moveTo(20, 30); g.lineTo(30, 34); g.lineTo(21, 37); g.fill(); }
   if (v < 3 && (v !== 2 || dir > 0)) { g.fillStyle = '#2a0800'; g.beginPath(); g.moveTo(44, 30); g.lineTo(34, 34); g.lineTo(43, 37); g.fill(); }
-  g.fillStyle = atk ? '#fff' : '#ffe14a';
+  g.fillStyle = ['#ffe14a', '#fff2a0', '#fff', '#ffe14a'][atk];
   eyes(v, dir, 23, 38, (x) => g.fillRect(x, 34, 3, 1.5));
-  g.fillStyle = '#2a0800'; if (v < 3) g.fillRect(26, 43, 12, atk ? 6 : 3);
+  g.fillStyle = '#2a0800'; if (v < 3) g.fillRect(26, 43, 12, [3, 4, 6, 4][atk]);
   g.restore();
   if (v >= 3) return;   // the thermometer hangs on its front
   // thermometer
@@ -899,12 +905,12 @@ function drawStorm(g, phase, atk, v = 0, dir = 1) {
   const R = rng(5 + phase);
   for (let i = 0; i < 7; i++) pk(6 + R() * 48, 40 + R() * 20);
   // lightning
-  g.fillStyle = atk ? '#fff6b0' : '#ffe14a';
+  g.fillStyle = ['#ffe14a', '#fff0a0', '#fff6b0', '#ffe14a'][atk];
   g.beginPath(); g.moveTo(28, 34); g.lineTo(22, 50); g.lineTo(28, 49); g.lineTo(24, 63); g.lineTo(36, 44); g.lineTo(30, 45); g.lineTo(34, 34); g.fill();
   // cloud
   for (const [x, y, r, c] of [[18, 26, 11, '#3a3f4a'], [32, 20, 14, '#454b58'], [46, 26, 11, '#3a3f4a'], [26, 30, 11, '#4e5563'], [40, 31, 11, '#4e5563'], [32, 16, 9, '#5a6070']]) ell(g, x, y, r, r * 0.8, c);
   const fs = FACE_SHIFT[v] * dir;
-  eyes(v, dir, 26 + fs, 38 + fs, (x) => ell(g, x, 26, 3.5, 2.5, atk ? '#fff' : '#ff3030'));
+  eyes(v, dir, 26 + fs, 38 + fs, (x) => ell(g, x, 26, 3.5, 2.5, ['#ff3030', '#ff9090', '#fff', '#ff3030'][atk]));
   g.fillStyle = '#ffe14a'; g.font = 'bold 6px monospace'; g.fillText('SYN SYN SYN', 8 + phase * 2, 8);
 }
 
@@ -920,12 +926,13 @@ function drawBitrot(g, phase, atk, v = 0, dir = 1) {
   lto(18, 46 + Math.min(0, lo), 10, 18); lto(36, 46 - Math.max(0, lo), 10, 18);
   lto(14, 26, 36, 22);
   // magnetic tape arms
-  cable(g, [[14, 30], [4, atk ? 14 : 40], [8, atk ? 6 : 52]], '#5a3a1a', 3);
-  cable(g, [[50, 30], [60, atk ? 14 : 40], [56, atk ? 6 : 52]], '#5a3a1a', 3);
+  const [ay1, ay2] = [[40, 52], [24, 18], [14, 6], [30, 40]][atk];   // raised, lashing, falling back
+  cable(g, [[14, 30], [4, ay1], [8, ay2]], '#5a3a1a', 3);
+  cable(g, [[50, 30], [60, ay1], [56, ay2]], '#5a3a1a', 3);
   lto(20, 8, 24, 18);
   // reel eyes
   const fs = FACE_SHIFT[v] * dir * 0.6;
-  eyes(v, dir, 27 + fs, 37 + fs, (x) => { ell(g, x, 16, 4, 4, '#c9cdd1'); ell(g, x, 16, 1.5, 1.5, atk ? '#ffe14a' : '#c00'); ln(g, x - 3, 16, x + 3, 16, '#555', 0.6); });
+  eyes(v, dir, 27 + fs, 37 + fs, (x) => { ell(g, x, 16, 4, 4, '#c9cdd1'); ell(g, x, 16, 1.5, 1.5, ['#c00', '#ff8a2a', '#ffe14a', '#c00'][atk]); ln(g, x - 3, 16, x + 3, 16, '#555', 0.6); });
   // mold
   const R = rng(9);
   for (let i = 0; i < 16; i++) ell(g, 16 + R() * 32, 10 + R() * 50, 1.5 + R() * 3, 1 + R() * 2, i % 2 ? '#4a7a2a' : '#6a9a3a');
@@ -953,7 +960,8 @@ function drawShadowIT(g, phase, atk, v = 0, dir = 1) {
   g.fillStyle = '#111'; g.font = 'bold 4px monospace'; g.fillText('SaaS', 17, 43);
   }
   // credit card
-  g.save(); g.translate(atk ? 54 : 48, atk ? 26 : 38); g.rotate(atk ? -0.6 : 0.2);
+  const [kx, ky, ka] = [[48, 38, 0.2], [44, 30, 0.6], [54, 26, -0.6], [51, 32, -0.2]][atk];   // card drawn back, thrown, back
+  g.save(); g.translate(kx, ky); g.rotate(ka);
   g.fillStyle = '#e8c21a'; g.fillRect(-6, -4, 12, 8); g.fillStyle = '#222'; g.fillRect(-6, -2, 12, 2);
   g.restore();
 }

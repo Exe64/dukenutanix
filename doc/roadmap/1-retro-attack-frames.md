@@ -3,7 +3,7 @@ plan:
   id: '1'
   name: 1-retro-attack-frames.md
   link: https://github.com/Exe64/dukenutanix/blob/main/doc/roadmap/1-retro-attack-frames.md
-status: active
+status: in-progress
 date: 2026-10-22
 description: >
   RETRO : 3 frames d'attaque (préparation, coup/tir, retour) pour tous les monstres qui attaquent, dans les 8 rotations.
@@ -44,10 +44,10 @@ En RETRO, un monstre affiche une seule frame d'attaque pendant toute l'attaque. 
 
 ## Étapes
 
-- [ ] Étape 1 — `js/textures.js` : `atk` devient une pose (0 aucune, 1 préparation, 2 coup, 3 retour) dans les fonctions de dessin ; `atk: [3 frames]` dans `buildEnemySprites` / `buildRotations` ; MODERN garde la frame « coup » (M · standard → Sonnet)
-- [ ] Étape 2 — `js/game.js` : choisir la frame d'attaque selon `e.timer`, `e.shotT`, `e.shots` dans `collectSprites` (S · standard → Sonnet)
-- [ ] Étape 3 — Retirer l'item de `ROADMAP.md` (XS · standard → Sonnet)
-- [ ] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
+- [x] Étape 1 — `js/textures.js` : `atk` devient une pose (0 aucune, 1 préparation, 2 coup, 3 retour) dans les fonctions de dessin ; `atk: [3 frames]` dans `buildEnemySprites` / `buildRotations` ; MODERN garde la frame « coup » (M · standard → Sonnet)
+- [x] Étape 2 — `js/game.js` : choisir la frame d'attaque selon `e.timer`, `e.shotT`, `e.shots` dans `collectSprites` (S · standard → Sonnet)
+- [x] Étape 3 — Retirer l'item de `ROADMAP.md` (XS · standard → Sonnet)
+- [x] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
 - [ ] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
 
 ## Décisions techniques
@@ -65,22 +65,33 @@ En RETRO, un monstre affiche une seule frame d'attaque pendant toute l'attaque. 
 ### Prérequis pour les tests
 
 ```bash
+node --version   # Node 18+
 ```
 
 ### Procédure de test
 
 ```bash
+for f in js/game.js js/gl.js js/textures.js; do node --check $f; done
+node tools/validate-levels.js
+node tools/smoke-test.js          # needs playwright + a browser able to start
+# Visual check (human): RETRO style, real 60 Hz screen, watch a troll/bug (melee),
+# a bot (burst of 3) and a boss attack from several angles.
 ```
 
 **Résultats attendus :**
+- Syntaxe OK, 50 niveaux + 72 niveaux de runs valides.
+- RETRO : préparation → coup/tir → retour lisibles, dans les 8 rotations ; mêlée : le coup s'affiche quand les dégâts tombent ; rafale : une frame de tir par tir.
+- MODERN : inchangé (frame « coup »).
 
 ### Résultats joués et vérifiés
 
 | Date | Test | Attendu | Observé | Verdict |
 |------|------|---------|---------|---------|
+| 2026-11-02 | `node --check` (3 fichiers) | OK | OK | ✅ |
+| 2026-11-02 | `validate-levels.js` | PASS | 50 niveaux + 72 runs OK | ✅ |
+| 2026-11-02 | Simulation des timers IA à 35 fps | séquences cohérentes | mêlée `0111…222`, bot ×3 `000*11 00*11 00*1112222` | ✅ |
+| 2026-11-02 | Relecture appelants / consommateurs de `.atk` | aucun appelant cassé | game.js, gl.js:999 (`atk[1]`), retro.js OK | ✅ |
+| 2026-11-02 | `smoke-test.js` | PASS | non joué : Playwright absent sur l'hôte | ⏳ |
+| — | Vérif à l'œil RETRO 60 Hz | frames lisibles, pas de saccade | à faire par l'utilisateur | ⏳ |
 
-## Journal de session
-
-### Session 2026-10-22
-- ✅ Fait : cadrage, création de l'issue #1 et du plan
-- 📋 Prochain : étape 1
+Limite connue : en coop, l'invité ne reçoit pas `shots`/`shotT` → attaques à distance sans préparation chez lui (coup puis retour).

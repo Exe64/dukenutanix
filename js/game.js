@@ -1396,7 +1396,7 @@ function collectSprites(add, retro, gpu) {
     let spr;
     if (e.state === 'dead') spr = S.dead;
     else if (e.state === 'dying') spr = S.die[e.timer > 0.25 ? 0 : 1];
-    else if (e.state === 'attack') spr = R.atk;
+    else if (e.state === 'attack') spr = Array.isArray(R.atk) ? R.atk[retro ? attackFrame(e, T) : 1] : R.atk;   // MODERN: the strike
     else if (e.state === 'idle') spr = R.walk[0];
     else spr = R.walk[((e.animT * (e.type === 'drone' ? 6 : e.shrunk > 0 ? 10 : 4)) | 0) % 2];
     let z = T.z;
@@ -1413,6 +1413,19 @@ function collectSprites(add, retro, gpu) {
     const i = Math.min(fr.length - 1, (f.t / f.dur * fr.length) | 0);
     add(f.x, f.y, fr[i], f.scale, f.z - f.scale / 2 + (f.kind === 'smoke' ? f.t * 0.4 : 0), false, true);
   }
+}
+
+// RETRO attack frame (index into atk: 0 wind-up, 1 strike or shot, 2 recovery), from the
+// attack timers of updateEnemy, which it reads without changing anything. Melee splits its
+// 0.45 s; the damage lands at the start (unchanged), so the wind-up only flashes for 0.03 s
+// and the strike shows as the hit lands. A ranged attack winds up until its
+// first shot, shows the shot frame for 0.1 s after each shot of the burst, then recovers.
+// A coop guest gets no shots/shotT in the snapshots: its monsters keep shots at 0 and
+// only use the timer (shot, then recovery).
+function attackFrame(e, T) {
+  if (T.melee) return e.timer > 0.42 ? 0 : e.timer > 0.25 ? 1 : 2;
+  if (e.shots > 0) return e.shots < (T.burst || 1) && e.shotT > 0.07 ? 1 : 0;
+  return e.timer > 0.12 ? 1 : 2;
 }
 
 // Rotation (0-7) under which the player sees a monster: 0 when it faces the player,
