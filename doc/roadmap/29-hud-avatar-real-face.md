@@ -3,7 +3,7 @@ plan:
   id: '29'
   name: 29-hud-avatar-real-face.md
   link: https://github.com/Exe64/dukenutanix/blob/main/doc/roadmap/29-hud-avatar-real-face.md
-status: active
+status: in-progress
 date: 2026-11-02
 description: >
   Avatar du HUD redessiné en pixel-art stylisé d'après la vraie tête de l'auteur (photo de référence).
@@ -42,8 +42,8 @@ barbe courte châtain, t-shirt noir, sourire en coin.
 
 ## Étapes
 
-- [ ] Étape 1 — Redessiner `drawFace` d'après la photo, toutes humeurs conservées (S · standard → Sonnet)
-- [ ] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
+- [x] Étape 1 — Redessiner `drawFace` d'après la photo, toutes humeurs conservées (S · standard → Sonnet)
+- [x] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
 - [ ] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
 
 ## Décisions techniques
@@ -59,16 +59,28 @@ barbe courte châtain, t-shirt noir, sourire en coin.
 ### Prérequis pour les tests
 
 ```bash
+# Playwright 1.64.1 + Chromium libs extracted locally (EL10 without root), see the session memory recipe
+export LD_LIBRARY_PATH=$SCRATCH/libs/usr/lib64 NODE_PATH=$SCRATCH/pw/node_modules
 ```
 
 ### Procédure de test
 
 ```bash
+node tools/validate-levels.js
+node tools/smoke-test.js
+node $SCRATCH/avatar/render.js        # drawFace taken from js/game.js, every mood at 1x and 8x -> sheet.png, retro-sheet.png
+# Human: look at the HUD face in game (MODERN and RETRO), take damage, pick up god mode, die.
 ```
 
 **Résultats attendus :**
+- Lunettes carrées à verres miroir bleus, barbe courte, front dégagé, t-shirt noir : reconnaissable à 1x.
+- Humeurs : normal (sourire en coin), regard gauche/droite, grin, dieu (reflets dorés), aïe, PV < 60 et < 30 (marques, pâleur), mort (yeux en x).
 
 ### Résultats joués et vérifiés
 
 | Date | Test | Attendu | Observé | Verdict |
 |------|------|---------|---------|---------|
+| 2026-11-02 | `validate-levels.js` | PASS | 50 niveaux + 72 runs OK | ✅ |
+| 2026-11-02 | `smoke-test.js` | PASS | modern OK, retro OK | ✅ |
+| 2026-11-02 | Planche des 9 humeurs (8x et 1x, MODERN et RETRO) | toutes présentes, ressemblance | relue par un agent « directeur artistique » (6/10 → 10 corrections appliquées), vérifiée à l'œil | ✅ |
+| — | Vérif en jeu par l'utilisateur | ressemblance validée | à faire | ⏳ |

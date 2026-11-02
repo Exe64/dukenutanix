@@ -1561,30 +1561,56 @@ function weaponPose() {
 
 /* ------------------------------------------------------------------- HUD */
 
-// The admin's Duke-style face: blond flat-top, shades, smirk.
+// The admin's face: short dark hair, blue mirror shades, trimmed beard, black tee.
 function drawFace(g, cx, cy) {
   const hp = INV.hp;
   const mood = P.dead ? 'dead' : P.faceMood;
-  g.fillStyle = hp > 60 ? '#e0a877' : hp > 30 ? '#d0966a' : '#c0845e';
-  g.fillRect(cx - 12, cy - 8, 24, 22);                        // square jaw
-  g.fillRect(cx - 10, cy + 14, 20, 3);
-  g.fillStyle = '#e8c23a'; g.fillRect(cx - 13, cy - 16, 26, 9); // blond flat-top
-  g.fillStyle = '#c9a020'; for (let x = cx - 12; x < cx + 13; x += 3) g.fillRect(x, cy - 16, 1, 8);
-  g.fillStyle = '#e8c23a'; g.fillRect(cx - 13, cy - 8, 3, 6); g.fillRect(cx + 10, cy - 8, 3, 6);
-  // shades
+  const skin = hp > 60 ? '#eebb96' : hp > 30 ? '#e6c2a6' : '#d8c6b6';  // paler as hp drops
+  // black crew-neck tee
+  g.fillStyle = '#202020'; g.fillRect(cx - 13, cy + 13, 26, 4); g.fillRect(cx - 10, cy + 12, 20, 1);
+  // head: oval-ish, wide forehead, ears
+  g.fillStyle = skin;
+  g.fillRect(cx - 10, cy - 13, 20, 21); g.fillRect(cx - 11, cy - 10, 22, 14);
+  g.fillRect(cx - 9, cy + 8, 18, 2); g.fillRect(cx - 6, cy + 10, 12, 2);
+  g.fillRect(cx - 12, cy - 3, 1, 5); g.fillRect(cx + 11, cy - 3, 1, 5);
+  g.fillStyle = 'rgba(255,255,255,0.22)'; g.fillRect(cx - 5, cy - 11, 8, 3); // forehead shine
+  // short dark-brown hair, soft rounded hairline lowest in the middle, receding temples
+  g.fillStyle = '#2e1f15';
+  g.fillRect(cx - 7, cy - 16, 14, 1); g.fillRect(cx - 9, cy - 15, 18, 2); g.fillRect(cx - 10, cy - 13, 20, 1);
+  g.fillRect(cx - 6, cy - 12, 12, 1);
+  g.fillRect(cx - 11, cy - 13, 2, 7); g.fillRect(cx + 9, cy - 13, 2, 7);  // sides over the ears
+  g.fillStyle = '#3d2a1c'; g.fillRect(cx - 3, cy - 16, 1, 1); g.fillRect(cx - 6, cy - 15, 1, 1); g.fillRect(cx + 3, cy - 15, 1, 1);
+  // trimmed beard along the jaw and chin, sideburns joining it to the hair
+  g.fillStyle = '#7a5538';
+  g.fillRect(cx - 11, cy + 1, 2, 4); g.fillRect(cx + 9, cy + 1, 2, 4);
+  g.fillRect(cx - 10, cy + 4, 20, 4); g.fillRect(cx - 9, cy + 8, 18, 2); g.fillRect(cx - 6, cy + 10, 12, 2);
+  g.fillStyle = skin; g.fillRect(cx - 7, cy + 2, 14, 2); g.fillRect(cx - 8, cy + 4, 3, 1); g.fillRect(cx + 5, cy + 4, 3, 1);
+  g.fillStyle = '#5c3e28'; g.fillRect(cx - 6, cy + 4, 12, 3);        // moustache, one block under the nose
+  for (let x = cx - 8; x < cx + 8; x += 3) g.fillRect(x, cy + 8 + (x & 1), 1, 1);
+  g.fillStyle = '#c38f70'; g.fillRect(cx - 1, cy + 2, 3, 1); g.fillRect(cx + 1, cy, 1, 2);  // long nose
+  g.fillStyle = '#a8735a'; g.fillRect(cx - 1, cy + 2, 1, 1); g.fillRect(cx + 1, cy + 2, 1, 1);
+  // neck and crew-neck collar
+  g.fillStyle = '#c99a7c'; g.fillRect(cx - 4, cy + 12, 8, 1);
+  g.fillStyle = '#383838'; g.fillRect(cx - 5, cy + 13, 10, 1); g.fillRect(cx - 6, cy + 12, 1, 1); g.fillRect(cx + 5, cy + 12, 1, 1);
+  // shades (the temple bar stays when dead, as a brow line)
+  g.fillStyle = '#0a0a0a'; g.fillRect(cx - 12, cy - 6, 24, 2);
   if (mood === 'dead') {
-    g.fillStyle = '#000'; g.font = '6px monospace'; g.fillText('x', cx - 8, cy + 1); g.fillText('x', cx + 3, cy + 1);
+    g.fillStyle = '#000';
+    for (const ex of [cx - 7, cx + 4]) for (let i = 0; i < 3; i++) { g.fillRect(ex + i, cy - 4 + i, 1, 1); g.fillRect(ex + 2 - i, cy - 4 + i, 1, 1); }
   } else {
-    g.fillStyle = '#0a0a0a'; g.fillRect(cx - 12, cy - 5, 11, 6); g.fillRect(cx + 1, cy - 5, 11, 6); g.fillRect(cx - 1, cy - 4, 2, 2);
-    g.fillStyle = god ? '#ffd700' : 'rgba(120,180,255,0.6)'; g.fillRect(cx - 10 + P.look, cy - 4, 3, 1); g.fillRect(cx + 3 + P.look, cy - 4, 3, 1);
+    g.fillRect(cx - 11, cy - 4, 10, 5); g.fillRect(cx + 1, cy - 4, 10, 5);
+    g.fillStyle = '#4fc3ff'; g.fillRect(cx - 10, cy - 4, 8, 2); g.fillRect(cx + 2, cy - 4, 8, 2);  // blue mirror
+    g.fillStyle = '#1f5fb8'; g.fillRect(cx - 10, cy - 2, 8, 2); g.fillRect(cx + 2, cy - 2, 8, 2);
+    g.fillStyle = god ? '#ffd700' : '#d8f4ff'; g.fillRect(cx - 8 + P.look, cy - 4, 3, 1); g.fillRect(cx + 4 + P.look, cy - 4, 3, 1);
   }
-  // mouth
+  g.fillStyle = '#7a5538'; g.fillRect(cx - 11, cy - 3, 1, 5); g.fillRect(cx + 10, cy - 3, 1, 5);  // sideburns
+  // mouth: closed half smile in the beard, right corner up
   g.fillStyle = '#5a1a1a';
-  if (mood === 'ouch' || mood === 'dead') ell(g, cx, cy + 9, 3, 3, '#5a1a1a');
-  else if (mood === 'grin' || god) { g.fillRect(cx - 6, cy + 7, 12, 3); g.fillStyle = '#fff'; g.fillRect(cx - 5, cy + 7, 10, 1); }
-  else { g.fillRect(cx - 2, cy + 9, 8, 2); g.fillRect(cx + 5, cy + 7, 2, 2); }  // smirk
-  if (hp < 60) { g.fillStyle = '#b01515'; g.fillRect(cx + 7, cy + 2, 2, 6); }
-  if (hp < 30) { g.fillRect(cx - 9, cy + 4, 2, 8); g.fillRect(cx + 3, cy + 12, 5, 2); }
+  if (mood === 'ouch' || mood === 'dead') ell(g, cx, cy + 8, 3, 2.5, '#5a1a1a');
+  else if (mood === 'grin' || god) { g.fillRect(cx - 5, cy + 6, 10, 3); g.fillStyle = '#fff'; g.fillRect(cx - 4, cy + 6, 8, 1); }
+  else { g.fillStyle = '#2e140c'; g.fillRect(cx - 3, cy + 7, 6, 1); g.fillRect(cx + 3, cy + 6, 2, 1); g.fillStyle = '#b9786a'; g.fillRect(cx - 2, cy + 8, 4, 1); }
+  if (hp < 60) { g.fillStyle = '#b01515'; g.fillRect(cx + 7, cy - 10, 2, 5); }
+  if (hp < 30) { g.fillRect(cx - 7, cy - 11, 2, 4); g.fillRect(cx - 9, cy + 2, 2, 3); }
 }
 
 function drawHud(g) {
