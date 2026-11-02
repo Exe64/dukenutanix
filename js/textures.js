@@ -373,6 +373,27 @@ function drawBreaker(on) {
   };
 }
 
+// VAC anti-DDoS terminal (OVHCLOUD SPECIAL, THE 1 TBPS level): the mitigation state on a
+// screen, the traffic graph and the big switch, down and red (I) or up and green (0).
+function drawVac(on) {
+  return (g, R, led, L) => {
+    noiseFill(g, R, 0, 0, 64, 64, 150, 156, 162, 8);
+    g.fillStyle = '#000e9c'; g.fillRect(4, 4, 56, 56);
+    drawOvhLogo(g, 8, 8, 7, false);
+    g.fillStyle = '#fff'; g.font = 'bold 9px monospace'; g.textAlign = 'left'; g.fillText('VAC', 23, 15);
+    g.font = 'bold 4px monospace'; g.fillText('ANTI-DDoS', 23, 20);
+    const c = on ? '#3dff6a' : '#ff2a2a';
+    led(8, 23, 48, 17, '#020814');
+    for (let k = 0; k < 11; k++) { const h = on ? 1.5 + L() * 2 : 3 + L() * 4; led(10 + k * 4, 38 - h, 2.5, h, on ? '#1f6fe0' : '#c01010'); }
+    g.fillStyle = c; g.font = 'bold 4.5px monospace'; g.textAlign = 'center';
+    g.fillText(on ? 'MITIGATION ON' : 'MITIGATION OFF', 32, 29);
+    g.textAlign = 'left';
+    g.fillStyle = '#2b2f35'; g.fillRect(26, 43, 12, 14);
+    g.fillStyle = c; g.fillRect(29, on ? 44 : 50, 6, 6);
+    led(44, 47, 4, 4, on || L() < 0.6 ? c : '#400808');
+  };
+}
+
 // Rack being encrypted by the ransomware: a red screen with a padlock and a progress bar.
 function drawInfected(g, R, led, L) {
   drawRack('R')(g, R, led, L);
@@ -1051,6 +1072,195 @@ function drawThief(g, phase, atk, v = 0, dir = 1) {
   if (atk) { g.fillStyle = '#ffe14a'; g.font = 'bold 6px monospace'; g.fillText('$$$', 4, 10); }
 }
 
+/* ----------------------------------------- OVHCLOUD SPECIAL monsters */
+
+// Gravelines seagull: a herring gull, wings spread, yellow beak with its red spot. It flies
+// (enemyZ in game.js): the sprite is the bird alone.
+function drawGull(g, phase, atk, v = 0, dir = 1) {
+  const f = FACE_SHIFT[v] * dir, back = v >= 3, prof = v === 2, hx = 32 + f;
+  const up = [phase ? -9 : 5, -14, 10, 2][atk];   // wing tips: flapping, raised, swept down on the strike, gliding
+  const wing = (s) => {
+    const tx = prof ? 32 - dir * 12 : 32 + s * (30 - v * 3), ty = (prof ? 24 : 36) + up;
+    g.fillStyle = '#9aa3ad';
+    g.beginPath(); g.moveTo(32 + s * 3, 35); g.lineTo(tx, ty); g.lineTo((32 + tx) / 2, 43 + up * 0.3); g.lineTo(32 + s * 3, 44); g.fill();
+    g.fillStyle = '#16181c';
+    g.beginPath(); g.moveTo(tx, ty); g.lineTo(tx + (32 - tx) * 0.25, ty + (35 - ty) * 0.25 - 1); g.lineTo(tx + (32 - tx) * 0.2, ty + 5); g.fill();
+    ell(g, tx + (32 - tx) * 0.12, ty + 2, 1, 1, '#fff');
+  };
+  if (prof) wing(-dir); else { wing(-1); wing(1); }
+  // legs: tucked in flight, talons out on the strike
+  const claw = atk === 2 ? 7 : 2;
+  for (const s of prof ? [0] : [-1, 1]) ln(g, 32 + s * 3, 48, 32 + s * (3 + claw) + (prof ? dir * claw : 0), 53 + claw * 0.6, '#e8a040', 1.6);
+  // body, tail, grey mantle
+  if (prof) { g.fillStyle = '#e8ecef'; g.beginPath(); g.moveTo(32 - dir * 9, 40); g.lineTo(32 - dir * 20, 38); g.lineTo(32 - dir * 18, 45); g.fill(); }
+  ell(g, 32, 43, prof ? 13 : 9, 8, '#f4f4f4');
+  ell(g, 32, 46, prof ? 10 : 7, 4, '#dde2e6');
+  if (back) ell(g, 32, 40, 9, 6, '#9aa3ad');
+  else if (prof) ell(g, 32 - dir * 3, 39, 9, 3.5, '#9aa3ad');
+  // head and its beak (an angry glare)
+  ell(g, hx, 33, 6.5, 6, '#fafafa');
+  if (!back) {
+    const open = atk === 2 ? 3 : atk === 1 ? 1.5 : 0;
+    if (prof || v === 1) {
+      const bx = hx + dir * 5;
+      g.fillStyle = '#f2c21a'; g.beginPath(); g.moveTo(bx, 32); g.lineTo(bx + dir * 9, 34 - open); g.lineTo(bx, 35); g.fill();
+      g.beginPath(); g.moveTo(bx, 35); g.lineTo(bx + dir * 8, 35 + open); g.lineTo(bx, 37); g.fill();
+      ell(g, bx + dir * 6, 35.5 + open * 0.5, 1, 0.9, '#e02020');
+    } else {
+      g.fillStyle = '#f2c21a'; g.beginPath(); g.moveTo(hx - 2, 34); g.lineTo(hx + 2, 34); g.lineTo(hx, 41 + open); g.fill();
+      ell(g, hx, 38.5 + open * 0.5, 1, 1, '#e02020');
+    }
+  }
+  eyes(v, dir, hx - 3, hx + 3, (x) => {
+    ell(g, x, 31.5, 1.5, 1.5, '#ffe14a'); ell(g, x, 31.5, 0.7, 0.7, '#000');
+    ln(g, x - 2, 29.5 + (x < hx ? 0 : 1), x + 2, 29.5 + (x < hx ? 1 : 0), '#333', 0.8);
+  });
+}
+
+// Watercooling blob: a lump of leaked coolant gel, its quick-connect fittings and the cold
+// (blue) and hot (red) hoses still stuck in it. Rises up, then slams down.
+function drawBlob(g, phase, atk, v = 0, dir = 1) {
+  const f = FACE_SHIFT[v] * dir, back = v >= 3;
+  const [w, h] = [[24 + phase * 2, 25 - phase * 2], [19, 33], [30, 18], [25, 23]][atk];
+  const top = 64 - h * 1.8;
+  ell(g, 32, 62, w + 5, 3, 'rgba(40,140,255,0.5)');
+  if (atk === 2) for (const s of [-1, 1]) { ell(g, 32 + s * (w + 4), 52, 2, 3, '#4aa8ff'); ell(g, 32 + s * (w + 9), 56, 1.5, 2, '#4aa8ff'); }
+  cable(g, [[30, top + 4], [22, top - 6], [12, top - 2]], '#1f6fe0', 3);
+  cable(g, [[36, top + 4], [44, top - 4], [52, top]], '#d02828', 3);
+  for (const x of [12, 52]) { g.fillStyle = '#c9cdd1'; g.fillRect(x - 2, top - 4, 4, 4); }
+  ell(g, 32, 64 - h * 0.8, w, h, '#1f86e8');
+  ell(g, 30, 64 - h * 0.95, w * 0.75, h * 0.7, '#3aa0ff');
+  ell(g, 32 - w * 0.5, top + h * 0.35, 2.5, 4.5, 'rgba(230,245,255,0.85)');
+  const R = rng(9 + phase);
+  for (let i = 0; i < 7; i++) ell(g, 32 + (R() - 0.5) * w * 1.4, 64 - R() * h * 1.2, 1 + R() * 1.2, 1 + R() * 1.2, 'rgba(210,240,255,0.7)');
+  if (back) return;
+  const ey = top + h * 0.6;
+  eyes(v, dir, 26 + f, 38 + f, (x) => { ell(g, x, ey, 3.5, 4, '#f2fbff'); ell(g, x + f * 0.15, ey + 0.5, 1.6, 2, '#06204a'); });
+  ell(g, 32 + f, ey + 8, 5, [1.5, 2.5, 4, 2.5][atk], '#06306a');
+}
+
+// Mirai IoT camera: a cheap bullet camera with the factory password still on its sticker,
+// walking on its mounting bracket. Fires bursts of junk packets from its lens.
+function drawMirai(g, phase, atk, v = 0, dir = 1) {
+  const back = v >= 3, prof = v === 2, f = FACE_SHIFT[v] * dir;
+  const lo = phase ? 3 : -3;
+  // legs (the bracket) and the router-like body
+  g.fillStyle = '#9aa1a8'; g.fillRect(25, 44, 4, 18 + lo); g.fillRect(35, 44, 4, 18 - lo);
+  g.fillStyle = '#2b2f35'; g.fillRect(22, 61 + lo, 9, 3 - Math.max(0, lo)); g.fillRect(33, 61 - lo, 9, 3 - Math.max(0, -lo));
+  g.fillStyle = '#e8e8e8'; g.fillRect(19, 32, 26, 14);
+  g.fillStyle = '#c9cdd1'; g.fillRect(19, 44, 26, 2);
+  ln(g, 21, 32, 17, 20, '#222', 1.5); ln(g, 43, 32, 47, 20, '#222', 1.5);
+  if (!back) {
+    for (let k = 0; k < 4; k++) { g.fillStyle = (k + phase) % 3 ? '#3dff6a' : '#ffb52e'; g.fillRect(23 + k * 4, 41, 2, 1.5); }
+    g.fillStyle = '#fff'; g.fillRect(24 + f * 0.4, 34, 16, 5);
+    g.fillStyle = '#c21d1d'; g.font = 'bold 3px monospace'; g.fillText('admin/admin', 24.5 + f * 0.4, 37.8);
+  }
+  g.fillStyle = '#9aa1a8'; g.fillRect(30, 26, 4, 7);
+  // the camera housing, its sunshield, the lens with its IR LEDs
+  if (prof) {
+    g.fillStyle = '#f2f2f2'; g.fillRect(14, 12, 36, 14);
+    g.fillStyle = '#d9dde2'; g.fillRect(12, 9, 40, 3);
+    g.fillStyle = '#1a1c20'; g.fillRect(dir > 0 ? 50 : 10, 13, 4, 12);
+    if (atk === 2) ell(g, dir > 0 ? 56 : 8, 19, 5, 5, '#fff');
+  } else if (back) {
+    g.fillStyle = '#e8e8e8'; ell(g, 32, 18, 14, 9, '#e8e8e8');
+    g.fillStyle = '#d9dde2'; g.fillRect(17, 8, 30, 3);
+    cable(g, [[32, 20], [36, 28], [32, 32]], '#222', 1.5);
+  } else {
+    const cx = 32 + f * 0.5;
+    ell(g, cx, 18, 14, 9, '#f2f2f2');
+    g.fillStyle = '#d9dde2'; g.fillRect(16 + f * 0.5, 8, 32, 3);
+    ell(g, cx, 19, 7, 7, '#1a1c20');
+    ell(g, cx, 19, 4, 4, ['#2040c0', '#5070ff', '#fff', '#2040c0'][atk]);
+    ell(g, cx - 1.3, 17.7, 1.2, 1.2, 'rgba(255,255,255,0.7)');
+    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; ell(g, cx + Math.cos(a) * 5.6, 19 + Math.sin(a) * 5.6, 0.7, 0.7, atk === 1 ? '#ff6a6a' : '#a01010'); }
+    ell(g, cx + 9, 14, 1, 1, phase ? '#ff2020' : '#600');
+    if (atk === 3) ell(g, cx, 12, 4, 2.5, 'rgba(170,170,170,0.6)');
+  }
+}
+
+// Zombie support ticket: a stale ticket risen from the queue, PENDING for years, arms out.
+function drawTicket(g, phase, atk, v = 0, dir = 1) {
+  const f = FACE_SHIFT[v] * dir, back = v >= 3;
+  const lo = phase ? 3 : -3;
+  g.fillStyle = '#4a5a3a'; g.fillRect(23, 50, 5, 14 + Math.min(0, lo)); g.fillRect(36, 50, 5, 14 - Math.max(0, lo));
+  // arms reaching out (raised on the attack)
+  const ay = [0, -6, -10, -3][atk];
+  g.fillStyle = '#7a9a5a'; g.fillRect(4, 28 + ay + phase, 12, 5); g.fillRect(48, 28 + ay - phase, 12, 5);
+  ell(g, 4, 30 + ay + phase, 3, 3.5, '#8aaa6a'); ell(g, 60, 30 + ay - phase, 3, 3.5, '#8aaa6a');
+  // the ticket: a sheet with a dog-ear
+  g.fillStyle = '#ece8d6'; g.beginPath(); g.moveTo(13, 8); g.lineTo(44, 8); g.lineTo(51, 15); g.lineTo(51, 52); g.lineTo(13, 52); g.fill();
+  g.fillStyle = '#c8c2a8'; g.beginPath(); g.moveTo(44, 8); g.lineTo(44, 15); g.lineTo(51, 15); g.fill();
+  ell(g, 19, 47, 4, 2.5, 'rgba(90,120,50,0.6)'); ell(g, 45, 24, 2.5, 4, 'rgba(90,120,50,0.5)');
+  if (back) {
+    g.fillStyle = '#9a9a8a'; g.fillRect(16, 10, 3, 1);
+    g.fillStyle = '#555'; g.font = 'bold 4px monospace'; g.fillText('PRIORITY:', 17, 26); g.fillText('LOW', 25, 32);
+    return;
+  }
+  g.fillStyle = '#1f58d6'; g.fillRect(13, 8, 31, 6);
+  g.fillStyle = '#fff'; g.font = 'bold 4px monospace'; g.fillText('#4242', 15 + f * 0.3, 12.5);
+  g.fillStyle = '#9a9a8a'; for (let y = 36; y < 50; y += 3) g.fillRect(16, y, 30 - (y % 6) * 2, 1);
+  g.save(); g.translate(33 + f * 0.3, 42); g.rotate(-0.2);
+  g.strokeStyle = '#c21d1d'; g.lineWidth = 1; g.strokeRect(-11, -4, 22, 7);
+  g.fillStyle = '#c21d1d'; g.font = 'bold 5px monospace'; g.fillText('PENDING', -10, 1.5);
+  g.restore();
+  // undead face
+  eyes(v, dir, 25 + f, 39 + f, (x) => { ell(g, x, 21, 3.5, x < 32 + f ? 3.5 : 2.5, '#f2f2e0'); ell(g, x, 21.5, 1.3, 1.3, '#a01010'); });
+  ell(g, 32 + f, 29, 5, [1.5, 2.5, 3.5, 2.5][atk], '#3a1a1a');
+}
+
+// Abuse report: a ghostly complaint form with its red ABUSE header, floating, firing orbs.
+function drawAbuse(g, phase, atk, v = 0, dir = 1) {
+  const f = FACE_SHIFT[v] * dir, back = v >= 3;
+  const col = '#e8ecf2';
+  g.fillStyle = col;
+  g.beginPath(); g.moveTo(14, 26); g.arc(32, 26, 18, Math.PI, 0); g.lineTo(50, 50);
+  const flare = atk === 2 ? 4 : 0;
+  for (let k = 0; k < 4; k++) {
+    const x = 50 - k * 9;
+    g.quadraticCurveTo(x - 2.25, 58 + flare + (k + phase) % 2 * 4, x - 4.5, 50 + flare * 0.5);
+    g.quadraticCurveTo(x - 6.75, 46, x - 9, 50);
+  }
+  g.closePath(); g.fill();
+  ell(g, 26, 18, 6, 7, 'rgba(255,255,255,0.7)');
+  if (back) { g.fillStyle = '#b8bcc4'; for (let y = 22; y < 46; y += 4) g.fillRect(20, y, 24, 1); return; }
+  g.fillStyle = '#c21d1d'; g.fillRect(16, 31, 32, 7);
+  g.fillStyle = '#fff'; g.font = 'bold 6px monospace'; g.fillText('ABUSE', 19 + f * 0.3, 37);
+  g.fillStyle = '#b8bcc4'; for (let y = 41; y < 49; y += 3) g.fillRect(20, y, 24, 1);
+  eyes(v, dir, 26 + f, 38 + f, (x) => { ell(g, x, 22, 3, 4.5, '#14161a'); ell(g, x, 23, 1.3, 1.6, ['#ff3030', '#ff8a2a', '#ffe14a', '#ff3030'][atk]); });
+  ell(g, 32 + f, 28.5, 2, [1, 1.5, 2.2, 1.5][atk], '#14161a');
+}
+
+// THE 1 TBPS: a hulk packed with packets, its throughput on a chest display. Shielded until
+// the VAC terminals are on (game.js damageEnemy).
+function drawTbps(g, phase, atk, v = 0, dir = 1) {
+  const back = v >= 3, f = FACE_SHIFT[v] * dir * 0.6;
+  const lo = phase ? 4 : -4;
+  const pk = (x, y) => { g.fillStyle = '#f2f2f2'; g.fillRect(x, y, 6, 4); g.fillStyle = '#2a7de1'; g.fillRect(x, y, 6, 1.2); };
+  g.fillStyle = '#20242c'; g.fillRect(15, 44, 12, 20 + Math.min(0, lo)); g.fillRect(37, 44, 12, 20 - Math.max(0, lo));
+  g.fillStyle = '#2a2f3a'; g.beginPath(); g.moveTo(6, 16); g.lineTo(58, 16); g.lineTo(50, 48); g.lineTo(14, 48); g.fill();
+  const R = rng(41 + phase);
+  for (let i = 0; i < 26; i++) pk(9 + R() * 40, 18 + R() * 26);
+  // fists of fiber bundles (raised, punched forward with a flash, back down)
+  const [ay, fs] = [[0, 0], [-10, 0], [-4, 7], [2, 0]][atk];
+  for (const s of [-1, 1]) {
+    const x = 32 + s * 27;
+    cable(g, [[32 + s * 22, 19], [x + s * 2, 26 + ay], [x, 36 + ay]], '#e8741a', 6);
+    cable(g, [[32 + s * 22, 21], [x, 28 + ay], [x - s, 36 + ay]], '#f2c21a', 2.5);
+    g.fillStyle = '#3a3f4a'; g.fillRect(x - 6, 36 + ay, 12, 10);
+    if (fs) { ell(g, x, 41 + ay, fs, fs, '#ffe14a'); ell(g, x, 41 + ay, fs * 0.5, fs * 0.5, '#fff'); }
+  }
+  if (!back) {
+    g.fillStyle = '#050505'; g.fillRect(18 + f, 24, 28, 12);
+    g.fillStyle = atk === 2 ? '#fff' : '#ff2a2a'; g.font = 'bold 7px monospace'; g.fillText('1Tbps', 21 + f, 31.5);
+    g.fillStyle = '#ff2a2a'; g.fillRect(20 + f, 33, 6 + phase * 6 + (atk ? 12 : 0), 1.5);
+  }
+  // head with its visor
+  g.fillStyle = '#1a1d24'; g.fillRect(24 + f * 0.5, 3, 16, 14);
+  if (!back) { g.fillStyle = ['#ff2020', '#ff8a2a', '#fff', '#ff2020'][atk]; g.fillRect(26 + f, 8, 12, 3); }
+  g.fillStyle = '#ffe14a'; g.font = 'bold 5px monospace'; g.fillText('SYN', 1, 10 - phase * 2); g.fillText('ACK', 52, 8 + phase * 2);
+}
+
 /* ------------------------------------------------- volumetric decor props */
 
 // Faces are small canvases drawn in a design space (w x h), at TS x resolution.
@@ -1450,7 +1660,7 @@ function buildAssets() {
   // the OVHCLOUD SPECIAL mod (episode 5) swaps these tiles for OVHcloud-branded ones
   Assets.ovhWalls = { ...Assets.walls, W: variants(drawOvhSign, 1, 1), R: variants(drawOvhRack('R'), 3, 2),
     S: variants(drawOvhRack('S'), 2, 2), N: variants(drawOvhRack('N'), 3, 2), C: variants(drawCdu, 1, 2),
-    7: variants(specialRack('nutanixOvh'), 1, 2) };
+    7: variants(specialRack('nutanixOvh'), 1, 2), I: variants(drawVac(false), 1, 2), 0: variants(drawVac(true), 1, 2) };
   Assets.floor = [makeTexture(drawFloor(false), 5), makeTexture(drawFloor(true), 6), makeTexture(drawZoneFloor, 7, 77)];
   Assets.ceil = [makeTexture(drawCeiling('plain'), 7), makeTexture(drawCeiling('light'), 8), makeTexture(drawCeiling('tray'), 9)];
 
@@ -1469,6 +1679,16 @@ function buildAssets() {
   Assets.enemies.bitrot = buildEnemySprites(drawBitrot, ['#1d2a4a', '#4a7a2a', '#6b4a2a', '#2a2a2a'], 23);
   Assets.enemies.shadowit = buildEnemySprites(drawShadowIT, ['#1a1426', '#2c2240', '#e8c21a', '#555'], 24);
   Assets.enemies.thief = buildEnemySprites(drawThief, ['#3a3f4a', '#1a1c20', '#9aa1a8', '#f2f2f2'], 25);
+  // OVHCLOUD SPECIAL (MOD_ENEMIES in game.js); the puddles are small blobs
+  Object.assign(Assets.enemies, {
+    gull: buildEnemySprites(drawGull, ['#f4f4f4', '#9aa3ad', '#f2c21a', '#16181c'], 26),
+    blob: buildEnemySprites(drawBlob, ['#1f86e8', '#3aa0ff', '#1f6fe0', '#d02828'], 27),
+    mirai: buildEnemySprites(drawMirai, ['#f2f2f2', '#9aa1a8', '#1a1c20', '#e8e8e8'], 28),
+    ticket: buildEnemySprites(drawTicket, ['#ece8d6', '#1f58d6', '#7a9a5a', '#c21d1d'], 29),
+    abuse: buildEnemySprites(drawAbuse, ['#e8ecf2', '#c21d1d', '#b8bcc4', '#14161a'], 30),
+    tbps: buildEnemySprites(drawTbps, ['#2a2f3a', '#f2f2f2', '#e8741a', '#2a7de1'], 31),
+  });
+  Assets.enemies.puddle = Assets.enemies.blob;
   Assets.items = {};
   for (const k of '+HAascruFMLejkgKGYlhw') Assets.items[k] = makeSprite(drawItem(k), true);
   Assets.decor = buildDecor();
@@ -1484,6 +1704,11 @@ function buildAssets() {
     fire: [0, 1].map((i) => makeSprite((g) => { ell(g, 32, 32, 10 + i, 10 + i, '#c8300a'); ell(g, 32, 33, 7, 7, '#ff8a1a'); ell(g, 32, 34, 4, 4, '#ffe890'); })),
     rot: orbSprite('#c8ff7a', '#3a6a1a', 8),
     packet: makeSprite((g) => { g.fillStyle = '#f2f2f2'; g.fillRect(22, 26, 20, 13); g.fillStyle = '#2a7de1'; g.fillRect(22, 26, 20, 4); g.fillStyle = '#ffe14a'; g.fillRect(24, 32, 16, 1.5); g.fillRect(24, 35, 10, 1.5); }, true),
+    plus1: makeSprite((g) => { ell(g, 32, 32, 15, 13, '#ffe14a'); g.fillStyle = '#1f58d6'; g.font = 'bold 15px monospace'; g.textAlign = 'center'; g.fillText('+1', 32, 37); g.textAlign = 'left'; }, true),
+    update: makeSprite((g) => {
+      g.fillStyle = '#f2f2f2'; g.fillRect(4, 18, 56, 24); g.beginPath(); g.moveTo(14, 42); g.lineTo(10, 50); g.lineTo(22, 42); g.fill();
+      g.fillStyle = '#c21d1d'; g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.fillText('any', 32, 28); g.fillText('update?', 32, 38); g.textAlign = 'left';
+    }, true),
     plug: [0, 1].map((i) => makeSprite((g) => { g.save(); g.translate(32, 32); g.rotate(i * Math.PI / 2); g.fillStyle = '#e8c21a'; g.fillRect(-4, -8, 8, 10); g.fillStyle = 'rgba(220,240,255,0.9)'; g.fillRect(-5, 2, 10, 7); g.fillStyle = '#c9a227'; for (let k = -4; k < 5; k += 2) g.fillRect(k, 7, 1, 2); g.restore(); }, true)),
     card: [0, 1, 2, 3].map((i) => makeSprite((g) => { g.save(); g.translate(32, 32); g.rotate(i * Math.PI / 4); g.fillStyle = '#e8c21a'; g.fillRect(-10, -6, 20, 12); g.fillStyle = '#222'; g.fillRect(-10, -3, 20, 3); g.fillStyle = '#c9a227'; g.fillRect(-7, 1, 5, 3); g.restore(); }, true)),
     nut: [0, 1, 2, 3].map((i) => makeSprite((g) => drawCageNut(g, 32, 32, 1.3, i * Math.PI / 8))),

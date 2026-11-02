@@ -20,6 +20,7 @@ for (const i of indices) {
   let easy = 0;
   def.map.forEach((row, y) => [...row].forEach((c, x) => { if ('bdotmZVy'.includes(c) && keepEnemy(c, x, y, 0)) easy++; }));
   if (enemies && !easy) { r.ok = false; r.errors.push('no enemy left on the easiest skill'); }
+  if (def.miniType === 'tbps' && n('I') !== 2) { r.ok = false; r.errors.push(`THE 1 TBPS: expected 2 VAC terminals, found ${n('I')}`); }
   if (def.miniType && n('V') !== 1) { r.ok = false; r.errors.push(`expected 1 mini-boss, found ${n('V')}`); }
   const need = LevelGen.OBJ_NEEDS[def.objective];
   if (need) for (const [ch, , cnt] of [...(need.walls || []), ...(need.floor || []).map(([c, k]) => [c, null, k])]) {

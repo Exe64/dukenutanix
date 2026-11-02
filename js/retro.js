@@ -408,7 +408,7 @@ const Retro = (() => {
 
   const MAPCOL = { '#': '#6b7178', '?': '#6b7178', R: '#2e8b3d', S: '#2e6da6', N: '#8a6d1f', C: '#b8bcc0', W: '#c2a020', X: '#3dff6a', D: '#9aa3ad',
     1: '#d42020', 2: '#1f58d6', 3: '#cc092f', 4: '#e57000', 5: '#2f9bff', 6: '#00a4ef', 7: '#7855fa',
-    T: '#4fb4ff', O: '#ff6a3a', J: '#c2a020', Q: '#3dff6a', E: '#ff2a2a', U: '#555b62', 8: '#ff6a3a', 9: '#3dff6a' };
+    T: '#4fb4ff', O: '#ff6a3a', J: '#c2a020', Q: '#3dff6a', E: '#ff2a2a', U: '#555b62', 8: '#ff6a3a', 9: '#3dff6a', I: '#ff3b3b', 0: '#3dff6a' };
   function automap() {
     rect(0, 0, SW, VHR, 0);
     const cs = Math.min((SW - 16) / L.w, (VHR - 16) * ASPECT / L.h), csy = cs / ASPECT;

@@ -14,7 +14,8 @@
  *   firmware  stand in the 3 upload zones (z) until each upload completes
  *   evac      reach the REBOOT terminal before the gas suppression fires, 5 minutes
  *   thief     stop the data thief (y) before he reaches the exit
- *   miniboss / boss  the guardian of the x5 / x10 levels
+ *   miniboss / boss  the guardian of the x5 / x10 levels; THE 1 TBPS (OVHCLOUD SPECIAL) takes
+ *             a tenth of the damage until the 2 VAC terminals (I, on: 0) of its level are on
  *
  * game.js calls init (on load), update (each step), use (E on a wall), pickup,
  * kill, done, and the HUD and map helpers. The state lives in L.obj.
@@ -116,6 +117,9 @@ const Objectives = (() => {
         break;
       default: break;
     }
+    // VAC terminals of THE 1 TBPS: keyed on the tiles, whatever the objective
+    const vac = cellsOf(L, 'I');
+    if (vac.length) { o.vac = vac; o.vacOn = 0; }
   }
 
   // Distance (in cells) to the host rack of the live migration, through doors.
@@ -403,6 +407,13 @@ const Objectives = (() => {
         if (!o.repair) { o.repair = o.nodes[k]; o.repairBy = who; msg('Upgrading the node... hold E'); }
         return true;
       }
+      case 'I':
+        if (!o.vac) return false;
+        setTile(L, x, y, '0');
+        o.vacOn++;
+        Sfx.door();
+        msg(o.vacOn < o.vac.length ? `VAC anti-DDoS terminal on (${o.vacOn}/${o.vac.length})` : 'VAC MITIGATION ACTIVE: THE 1 TBPS is exposed!', true);
+        return true;
       case '9':
         if (o.type !== 'defend') return false;
         if (!o.started && !o.done) {
@@ -468,6 +479,7 @@ const Objectives = (() => {
   function hud(L) {
     const o = L.obj;
     if (!o) return '';
+    if (o.vac && L.bossAlive && o.vacOn < o.vac.length) return `VAC terminals ${o.vacOn}/${o.vac.length} on, then destroy THE 1 TBPS`;
     if (o.done) return 'OBJECTIVE COMPLETE: reach the REBOOT terminal';
     switch (o.type) {
       case 'backup': return `BACKUP: tapes ${o.stored}/${o.total} restored${o.carried ? `, ${o.carried} carried` : ''}`;
@@ -485,7 +497,9 @@ const Objectives = (() => {
       case 'lcm': return `LCM UPGRADE: nodes ${o.cur}/${o.nodes.length}${o.repair ? ` (${Math.round(o.repair.prog * 100)}%)` : ''}`;
       case 'snapshots': return `SNAPSHOT CLEANUP: ${o.cleaned}/${o.total} zombie snapshots deleted`;
       case 'migrate': return o.vm ? `LIVE MIGRATION: VM ${Math.max(0, Math.round(o.vm.hp))}%  ${o.field ? Math.max(0, o.field[(o.vm.y | 0) * L.w + (o.vm.x | 0)]) : '?'} m to the host${near(P.x, P.y, o.vm.x, o.vm.y, 5) ? '' : '  (stay close!)'}` : '';
-      case 'miniboss': case 'boss': return L.bossAlive ? 'Destroy the guardian of the REBOOT terminal' : 'OBJECTIVE COMPLETE: reach the REBOOT terminal';
+      case 'miniboss': case 'boss':
+        if (!L.bossAlive) return 'OBJECTIVE COMPLETE: reach the REBOOT terminal';
+        return o.vac ? 'VAC mitigation active: destroy THE 1 TBPS' : 'Destroy the guardian of the REBOOT terminal';
       default: return '';
     }
   }
@@ -524,6 +538,7 @@ const Objectives = (() => {
     const o = L.obj, out = [];
     if (!o || o.done) return out;
     const wall = (c, col) => out.push([c.x + 0.5, c.y + 0.5, col]);
+    if (o.vac) for (const c of o.vac) if (L.map[c.i] === 73) wall(c, '#ff3b3b');
     switch (o.type) {
       case 'backup': for (const it of L.items) if (it.type === 'l' && !it.taken) out.push([it.x, it.y, '#4fb4ff']); if (o.lib) wall(o.lib, '#3dff6a'); break;
       case 'overheat': for (const u of o.units) if (L.map[u.i] === 79) wall(u, '#ff3b3b'); break;
@@ -547,7 +562,7 @@ const Objectives = (() => {
   function progress(L) {
     const o = L.obj;
     const mig = o.type === 'migrate' && o.vm && o.field ? Math.floor(4 * (1 - Math.max(0, o.field[(o.vm.y | 0) * L.w + (o.vm.x | 0)]) / o.dist0)) : 0;
-    return (o.stored || 0) + (o.fixed || 0) + (o.on || 0) + (o.cut || 0) + (o.carry ? 1 : 0) + (o.started ? 1 : 0) + (o.cur || 0) + (o.cleaned || 0) + mig
+    return (o.stored || 0) + (o.fixed || 0) + (o.on || 0) + (o.cut || 0) + (o.carry ? 1 : 0) + (o.started ? 1 : 0) + (o.cur || 0) + (o.cleaned || 0) + (o.vacOn || 0) + mig
       + (o.zones ? o.zones.filter((z) => z.prog >= 1).length : 0) + (o.done ? 1 : 0);
   }
 

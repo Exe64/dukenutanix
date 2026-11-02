@@ -14,10 +14,10 @@
 const LevelGen = (() => {
   // 3 Broadcom ESXi, 4 Proxmox, 5 Vates, 6 Hyper-V, 7 Nutanix (special racks)
   // objective tiles: T tape library, O broken CRAC, J/Q power panel off/on, E/U infected/isolated rack,
-  // 8 failed server, 9 production database
-  const WALLS = '#RSNCWX34567TOJQEU89';
-  const OBSTACLES = '#RSNCWX34567TOJQEU89xB';
-  const OBJ_TILES = 'TOJE89';
+  // 8 failed server, 9 production database, I/0 VAC anti-DDoS terminal off/on (OVHCLOUD SPECIAL)
+  const WALLS = '#RSNCWX34567TOJQEU89I0';
+  const OBSTACLES = '#RSNCWX34567TOJQEU89I0xB';
+  const OBJ_TILES = 'TOJE89I';
   const SPECIALS = '33456';
 
   function rng(seed) {
@@ -395,6 +395,7 @@ const LevelGen = (() => {
     defend: { walls: [['9', 'RSN', 1]] },
     firmware: { floor: [['z', 3]] },
     thief: { floor: [['y', 1]] },
+    vac: { walls: [['I', '#', 2]] },   // the VAC terminals that weaken THE 1 TBPS (not an objective of its own)
   };
   function placeObjective(map, type, seed) {
     const need = OBJ_NEEDS[type];

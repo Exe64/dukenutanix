@@ -8,7 +8,7 @@
 const W = 480, H = 270, HUD_H = 40, VH = H - HUD_H, HORIZ = VH / 2;
 const PLANE = 0.8, PROJ = (W / 2) / PLANE;
 const FONT = '"Press Start 2P", monospace';
-const WALL_CHARS = '#RSNCWXD12?34567TOJQEU89';
+const WALL_CHARS = '#RSNCWXD12?34567TOJQEU89I0';
 const SPECIAL_NAMES = { '3': 'Broadcom ESXi', '4': 'Proxmox', '5': 'Vates XCP-ng', '6': 'Hyper-V' };
 
 /* ------------------------------------------------------------ definitions */
@@ -30,10 +30,10 @@ const WEAPON_SLOT = { F: 2, M: 3, K: 4, G: 5, Y: 6, L: 7 };
 const BOSS_BASE = { speed: 1.0, radius: 0.7, scale: 1.9, z: 0, atkRange: 18, cd: 1.5, sight: 30, pain: 0.04, shotZ: 0.9, boss: true };
 const ETYPES = {
   bug: { name: 'Bug', hp: 35, speed: 2.2, radius: 0.3, scale: 0.7, z: 0, melee: true, dmg: [5, 11], atkRange: 1.0, cd: 0.9, sight: 16, pain: 0.7 },
-  drone: { name: 'Viral drone', hp: 50, speed: 1.6, radius: 0.3, scale: 0.6, z: 0.35, dmg: [8, 14], atkRange: 11, cd: 1.9, sight: 18, pain: 0.5, shotZ: 0.62, shot: 'orb' },
-  bot: { name: 'BSOD bot', hp: 85, speed: 1.2, radius: 0.32, scale: 1.0, z: 0, dmg: [5, 9], atkRange: 13, cd: 2.4, sight: 18, pain: 0.35, burst: 3, shotZ: 0.55, shot: 'bolt' },
+  drone: { name: 'Viral drone', hp: 50, speed: 1.6, radius: 0.3, scale: 0.6, z: 0.35, dmg: [8, 14], atkRange: 11, cd: 1.9, sight: 18, pain: 0.5, shotZ: 0.62, shot: 'orb', hover: true },
+  bot: { name: 'BSOD bot', hp: 85, speed: 1.2, radius: 0.32, scale: 1.0, z: 0, dmg: [5, 9], atkRange: 13, cd: 2.4, sight: 18, pain: 0.35, burst: 3, shotZ: 0.55, shot: 'bolt', drop: true },
   troll: { name: 'Forum troll', hp: 170, speed: 1.6, radius: 0.4, scale: 1.15, z: 0, melee: true, dmg: [14, 24], atkRange: 1.2, cd: 1.2, sight: 16, pain: 0.2 },
-  spam: { name: 'Spammer', hp: 60, speed: 1.3, radius: 0.32, scale: 0.8, z: 0, dmg: [4, 7], atkRange: 10, cd: 2.2, sight: 16, pain: 0.5, shotZ: 0.45, shot: 'bolt', fan: 3 },
+  spam: { name: 'Spammer', hp: 60, speed: 1.3, radius: 0.32, scale: 0.8, z: 0, dmg: [4, 7], atkRange: 10, cd: 2.2, sight: 16, pain: 0.5, shotZ: 0.45, shot: 'bolt', fan: 3, drop: true },
   botnet: { ...BOSS_BASE, name: 'BOTNET', tag: 'ZOMBIFICATION IN PROGRESS', hp: 900, dmg: [7, 12], shot: 'botnet', minion: 'bug' },
   miner: { ...BOSS_BASE, name: 'CRYPTOMINER', tag: 'MINING IN PROGRESS', hp: 1100, dmg: [8, 13], shot: 'miner', minion: 'drone' },
   rootkit: { ...BOSS_BASE, name: 'ROOTKIT', tag: 'PRIVILEGE ESCALATION', hp: 1300, dmg: [9, 14], shot: 'boss', minion: 'spam' },
@@ -51,6 +51,20 @@ Object.assign(ETYPES, {
 });
 // The data thief of the thief objective never fights: he runs for the exit (js/objectives.js).
 ETYPES.thief = { name: 'Data thief', hp: 60, speed: 2.4, radius: 0.3, scale: 0.95, z: 0, flee: true, dmg: [0, 0], atkRange: 0, cd: 9, sight: 20, pain: 0.3 };
+// OVHCLOUD SPECIAL: spawnEnemy swaps the 5 base monsters for the mod's (MOD_ENEMIES), with close
+// stats. snd: their sound family. The blob splits into 2 puddles when it dies, the seagull
+// glides high and swoops on its prey (enemyZ), and THE 1 TBPS shrugs off most of the damage
+// until the VAC terminals of its level are on (js/objectives.js).
+Object.assign(ETYPES, {
+  gull: { ...ETYPES.bug, name: 'Gravelines seagull', speed: 2.4, z: 0.3, swoop: true, snd: 'bug' },
+  blob: { ...ETYPES.troll, name: 'Watercooling blob', split: 'puddle', snd: 'bug' },
+  puddle: { ...ETYPES.bug, name: 'Puddle blob', hp: 30, speed: 2.0, radius: 0.25, scale: 0.5, dmg: [4, 8], snd: 'bug' },
+  mirai: { ...ETYPES.bot, name: 'Mirai IoT camera', burst: 4, dmg: [4, 7], shot: 'packet', snd: 'bot' },
+  ticket: { ...ETYPES.spam, name: 'Zombie support ticket', shot: 'plus1', shot2: 'update', shotScale: 0.4, snd: 'bot' },
+  abuse: { ...ETYPES.drone, name: 'Abuse report', snd: 'drone' },
+  tbps: { ...MINI_BASE, name: 'THE 1 TBPS', tag: 'VOLUMETRIC DDOS', hp: 800, speed: 0.9, scale: 1.5, dmg: [4, 7], shot: 'packet', fan: 5, burst: 2, shotSpeed: 11, shotScale: 0.3, cd: 2.4, vac: true },
+});
+const MOD_ENEMIES = { bug: 'gull', troll: 'blob', bot: 'mirai', spam: 'ticket', drone: 'abuse' };
 const ENEMY_CHARS = { b: 'bug', d: 'drone', o: 'bot', t: 'troll', m: 'spam', y: 'thief' };
 const ITEM_CHARS = '+HAascrukgjFMKGYL';
 const OBJ_ITEMS = 'lhw';   // objective items (tapes, spare disk, stolen disk): not counted in the items score
@@ -243,7 +257,7 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const randi = (a, b) => Math.floor(rand(a, b + 1));
 const alive = (e) => e.state !== 'dead' && e.state !== 'dying';
 // sound family of an enemy
-const sndKind = (e) => (ETYPES[e.type].boss ? 'boss' : e.type === 'troll' ? 'bug' : e.type === 'spam' || e.type === 'thief' ? 'bot' : e.type);
+const sndKind = (e) => (ETYPES[e.type].boss ? 'boss' : ETYPES[e.type].snd || (e.type === 'troll' ? 'bug' : e.type === 'spam' || e.type === 'thief' ? 'bot' : e.type));
 
 function loadLevel(idx) {
   const def = run ? seedLevel(run.seed, run.depth) : getLevel(idx);
@@ -313,6 +327,7 @@ function loadLevel(idx) {
 }
 
 function spawnEnemy(type, x, y) {
+  if (L.def.mod && MOD_ENEMIES[type]) type = MOD_ENEMIES[type];
   const T = ETYPES[type];
   const e = { type, x, y, hp: T.hp, state: 'idle', timer: 0, cd: 0, animT: Math.random(), painT: 0, flash: 0, sees: false, losT: Math.random() * 0.2,
     alerted: false, strafe: Math.random() < 0.5 ? 1 : -1, shots: 0, shotT: 0, attacks: 0, shrunk: 0, tpT: 4,
@@ -472,7 +487,7 @@ function saveComfort() { try { localStorage.setItem('dukenutanix.comfort', JSON.
 let aimMode = 'free';
 const freeAim = () => useGL && aimMode === 'free';
 // height span of a target ([bottom, top], in the 0..1 room height)
-const enemySpan = (e) => { const T = ETYPES[e.type]; return [T.z, T.z + T.scale * (e.shrunk > 0 ? 0.4 : 1)]; };
+const enemySpan = (e) => { const T = ETYPES[e.type], z = T.swoop ? enemyZ(e, T) : T.z; return [z, z + T.scale * (e.shrunk > 0 ? 0.4 : 1)]; };
 
 // Remappable actions (KeyboardEvent.code values, so WASD stays in place on AZERTY),
 // saved in dukenutanix.keys. Escape always pauses; N, G, T, V and F3 stay fixed.
@@ -900,7 +915,15 @@ function killEnemy(e, how) {
   if (how !== 'stomp') addFx(e.x, e.y, 'boom', 0.2 + T.z, T.boss ? 1.5 : 0.5);
   if (useGL) GLR.kill(e);
   Objectives.kill(L, e);
-  if ((e.type === 'bot' || e.type === 'spam') && Math.random() < 0.7) L.items.push({ x: e.x, y: e.y, type: 'a', taken: false, drop: true });
+  if (T.split) {
+    for (const s of [1, -1]) {
+      let x = e.x + s * 0.3, y = e.y + s * 0.2;
+      if (blocked(x, y, 0.25)) { x = e.x; y = e.y; }
+      const b = spawnEnemy(T.split, x, y);
+      b.state = 'chase'; b.alerted = true;
+    }
+  }
+  if (T.drop && Math.random() < 0.7) L.items.push({ x: e.x, y: e.y, type: 'a', taken: false, drop: true });
   if (T.mini) {
     L.bossAlive = L.enemies.some((o) => o !== e && alive(o) && ETYPES[o.type].boss);
     P.shake = 0.7;
@@ -917,8 +940,15 @@ function killEnemy(e, how) {
 
 function damageEnemy(e, dmg) {
   const T = ETYPES[e.type];
+  const o = L.obj;
+  const shielded = T.vac && o && o.vac && o.vacOn < o.vac.length;
+  if (shielded) {
+    dmg *= 0.1;
+    addFx(e.x, e.y, 'plasmaHit', 0.2 + T.scale * 0.5, 0.5);   // deflect spark instead of the hit flash
+    if (!(o.vacMsgT > L.time)) { o.vacMsgT = L.time + 4; msg(`${T.name} absorbs the flood: switch on the VAC terminals!`); }
+  }
   e.hp -= dmg;
-  e.flash = 0.08;
+  e.flash = shielded ? 0 : 0.08;
   e.alerted = true;
   if (e.hp <= 0) { killEnemy(e); return; }
   if (e.state === 'idle') { e.state = 'chase'; Sfx.alert(sndKind(e), e); }
@@ -992,9 +1022,9 @@ function enemyFire(e) {
     e.attacks++;
     if (T.minion && e.attacks % 4 === 0) spawnMinions(e);
   } else if (T.fan) {
-    for (let k = 0; k < T.fan; k++) shoot(ang + (k - (T.fan - 1) / 2) * 0.18, T.shot, 9, 0.22);
-  } else if (e.type === 'drone') shoot(ang + rand(-0.05, 0.05), 'orb', 7, 0.35);
-  else shoot(ang + rand(-0.07, 0.07), 'bolt', 12, 0.25);
+    for (let k = 0; k < T.fan; k++) shoot(ang + (k - (T.fan - 1) / 2) * 0.18, T.shot2 && k % 2 ? T.shot2 : T.shot, 9, T.shotScale || 0.22);
+  } else if (T.shot === 'orb') shoot(ang + rand(-0.05, 0.05), 'orb', 7, 0.35);
+  else shoot(ang + rand(-0.07, 0.07), T.shot, 12, 0.25);
 }
 
 function spawnMinions(boss) {
@@ -1024,7 +1054,7 @@ function updateEnemy(e, dt) {
   if (T.flee) { Objectives.thief(L, e, dt); return; }
   // the target: the nearest living player
   const tg = e.target = nearestPlayer(e.x, e.y);
-  const dx = tg.x - e.x, dy = tg.y - e.y, dist = Math.hypot(dx, dy) || 0.001;
+  const dx = tg.x - e.x, dy = tg.y - e.y, dist = e.dist = Math.hypot(dx, dy) || 0.001;
   e.losT -= dt;
   if (e.losT <= 0) {
     e.sees = !tg.dead && dist < T.sight && hasLOS(e.x, e.y, tg.x, tg.y);
@@ -1101,7 +1131,7 @@ function updateEnemy(e, dt) {
   }
   const mdx = tx - e.x, mdy = ty - e.y, md = Math.hypot(mdx, mdy);
   if (md < 0.01) return;
-  const sp = T.speed * (shrunk ? 0.7 : 1) * dt;
+  const sp = T.speed * (shrunk ? 0.7 : 1) * (T.swoop && e.sees && dist < 3 ? 1.5 : 1) * dt;
   const r = shrunk ? 0.12 : T.radius;
   const ox = e.x, oy = e.y;
   e.face = Math.atan2(mdy, mdx);
@@ -1399,10 +1429,9 @@ function collectSprites(add, retro, gpu) {
     else if (e.state === 'dying') spr = S.die[e.timer > 0.25 ? 0 : 1];
     else if (e.state === 'attack') spr = Array.isArray(R.atk) ? R.atk[retro ? attackFrame(e, T) : 1] : R.atk;   // MODERN: the strike
     else if (e.state === 'idle') spr = R.walk[0];
-    else spr = R.walk[((e.animT * (e.type === 'drone' ? 6 : e.shrunk > 0 ? 10 : 4)) | 0) % 2];
-    let z = T.z;
+    else spr = R.walk[((e.animT * (T.hover || T.swoop ? 6 : e.shrunk > 0 ? 10 : 4)) | 0) % 2];
+    let z = enemyZ(e, T);
     let scale = T.scale;
-    if (e.type === 'drone' && e.state !== 'dead') z += Math.sin(e.animT * 3 + e.x) * 0.05;
     if (e.state === 'dead') { z = 0; scale = Math.max(0.8, T.scale * 0.7); }
     if (e.shrunk > 0 && alive(e)) { scale *= e.shrunk < 1 ? 0.3 + 0.7 * (1 - e.shrunk) : 0.3; z = 0; }
     add(e.x, e.y, spr, scale, z, e.flash > 0);
@@ -1414,6 +1443,12 @@ function collectSprites(add, retro, gpu) {
     const i = Math.min(fr.length - 1, (f.t / f.dur * fr.length) | 0);
     add(f.x, f.y, fr[i], f.scale, f.z - f.scale / 2 + (f.kind === 'smoke' ? f.t * 0.4 : 0), false, true);
   }
+}
+
+// Height of a monster's feet: drones bob, seagulls glide high and swoop down on their target.
+function enemyZ(e, T) {
+  if (T.swoop) return e.state === 'attack' ? 0.02 : T.z * Math.min(1, Math.max(0, ((e.dist || 9) - 0.9) / 2.5)) + Math.sin(e.animT * 4 + e.x) * 0.03;
+  return T.z + (T.hover ? Math.sin(e.animT * 3 + e.x) * 0.05 : 0);
 }
 
 // RETRO attack frame (index into atk: 0 wind-up, 1 strike or shot, 2 recovery), from the
@@ -1708,7 +1743,7 @@ function drawMap(g) {
   g.fillStyle = 'rgba(0,8,4,0.85)'; g.fillRect(0, 0, W, VH);
   const col = { '#': '#6b7178', '?': '#6b7178', R: '#2e8b3d', S: '#2e6da6', N: '#8a6d1f', C: '#b8bcc0', W: '#c2a020', X: '#3dff6a', D: '#9aa3ad', '1': '#d42020', '2': '#1f58d6',
     '3': '#cc092f', '4': '#e57000', '5': '#2f9bff', '6': '#00a4ef', '7': '#7855fa',
-    T: '#4fb4ff', O: '#ff6a3a', J: '#c2a020', Q: '#3dff6a', E: '#ff2a2a', U: '#555b62', '8': '#ff6a3a', '9': '#3dff6a' };
+    T: '#4fb4ff', O: '#ff6a3a', J: '#c2a020', Q: '#3dff6a', E: '#ff2a2a', U: '#555b62', '8': '#ff6a3a', '9': '#3dff6a', I: '#ff3b3b', '0': '#3dff6a' };
   for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
     const i = y * L.w + x, t = L.map[i];
     if (!t) { if (L.block[i]) { g.fillStyle = '#5a4a2a'; g.fillRect(ox + x * cs + cs * 0.2, oy + y * cs + cs * 0.2, cs * 0.6, cs * 0.6); } continue; }

@@ -293,7 +293,7 @@ const MOD_LEVELS = [
     intro: 'Roubaix, the assembly workshop where the servers are built by hand. Something has crawled into the production line.' },
   { code: 'GRA', name: 'GRAVELINES CAMPUS', tpl: 13, objective: 'overheat',
     intro: 'Gravelines: four buildings of server rooms by the sea, a cooling tower and the generators out in the yard. The seagulls are not friendly.' },
-  { code: 'VRACK', name: 'NETWORK CORE', tpl: 24, objective: 'miniboss', miniboss: 'storm',
+  { code: 'VRACK', name: 'NETWORK CORE', tpl: 24, objective: 'miniboss', miniboss: 'tbps',
     intro: 'The vRack backbone. Every packet of every customer goes through here, and right now one terabit per second of them is aimed at you.' },
   { code: 'BARE METAL', name: 'DEDICATED SERVERS', tpl: 36, objective: 'backup',
     intro: 'Rows of bare metal servers as far as the eye can see. The customers want their backups, and they want them now.' },
@@ -311,8 +311,11 @@ function modLevel(i) {
   spec.objective = m.objective;
   spec.boss = m.objective === 'boss' ? EPISODES[MOD_EP].boss : null;
   spec.miniboss = m.miniboss || null;
-  const map = LevelGen.generate(spec).map;
-  const obj = spec.miniboss ? `Mini-boss alert: ${MINIBOSS_NAMES[spec.miniboss]} is guarding the REBOOT terminal.`
+  let map = LevelGen.generate(spec).map;
+  // THE 1 TBPS needs its 2 VAC terminals (tools/validate-levels.js checks they are there)
+  if (spec.miniboss === 'tbps') map = LevelGen.placeObjective(map, 'vac', spec.seed + 31) || map;
+  const obj = spec.miniboss === 'tbps' ? 'Mini-boss alert: THE 1 TBPS is flooding the network. Switch on the 2 VAC anti-DDoS terminals to strip its shield.'
+    : spec.miniboss ? `Mini-boss alert: ${MINIBOSS_NAMES[spec.miniboss]} is guarding the REBOOT terminal.`
     : spec.boss ? 'Destroy the boss guarding the REBOOT terminal.' : OBJECTIVE_INTRO[m.objective];
   return {
     map, index: i, code: m.code, episode: MOD_EP, mod: EPISODES[MOD_EP].mod, tpl: m.tpl,

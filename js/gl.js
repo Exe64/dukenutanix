@@ -1662,6 +1662,7 @@ const GLR = (() => {
       case 'spin': axis = 'z'; a = t * 0.9 + e.x; break;
       case 'orbit': axis = 'z'; a = t * 2.4 + e.x; break;
       case 'scarf': axis = 'z'; a = Math.sin(t * 7 + e.x) * 0.35; break;
+      case 'wing': axis = 'x'; a = p.side * (Math.sin(t * (T.swoop && e.dist < 3 ? 16 : 7) + e.x) * 0.45 - atk * 0.6); break;
       case 'mouth': sz = 1 + atk * 1.8; break;
       case 'flame': sz = 1 + 0.08 * Math.sin(t * 9 + p.k * 1.7) + atk * 0.15; sxy = 1 + 0.05 * Math.sin(t * 7 + p.k); break;
       case 'bolt': sz = Math.sin(t * 23 + e.x) > -0.4 || atk ? 1 : 0.001; break;
@@ -1690,8 +1691,7 @@ const GLR = (() => {
       if (dx * cam.f[0] + dy * cam.f[1] < -1.5) continue;       // behind the camera
       // bosses are taller than the ceiling as sprites: as models they stand under it, wider instead
       const hmax = 0.96 - T.z;
-      let k = Math.min(T.scale, hmax) / 64, kxy = k * Math.sqrt(Math.max(1, T.scale / hmax)), z = T.z;
-      if (e.type === 'drone') z += Math.sin(e.animT * 3 + e.x) * 0.05;
+      let k = Math.min(T.scale, hmax) / 64, kxy = k * Math.sqrt(Math.max(1, T.scale / hmax)), z = enemyZ(e, T);
       if (e.shrunk > 0) { const f = e.shrunk < 1 ? 0.3 + 0.7 * (1 - e.shrunk) : 0.3; k *= f; kxy *= f; z = 0; }
       let base = M4.mul(M4.trs(e.x, e.y, z), M4.rot('z', e.face || 0));
       if (e.painT > 0) base = M4.mul(base, M4.rot('y', 0.22));   // flinches back
