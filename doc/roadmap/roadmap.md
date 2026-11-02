@@ -1,7 +1,7 @@
 # Roadmap Duke Nutanix
 
 > Backlog actif. L'historique détaillé est archivé dans `_archives/`.
-> Dernière mise à jour : 2026-10-22.
+> Dernière mise à jour : 2026-11-02.
 
 ## Contexte
 
@@ -14,14 +14,6 @@ La vision d'ensemble (multijoueur) est résumée dans [`ROADMAP.md`](../../ROADM
 ---
 
 ## À faire
-### [Issue: #1] RETRO : 3 frames d'attaque pour les monstres [PRIORITÉ: MOYENNE] [Complexité: M] 🟡
-
-Plan : [`1-retro-attack-frames.md`](1-retro-attack-frames.md)
-
-Préparation, coup/tir et retour pour tous les monstres qui attaquent, dans les 8 rotations RETRO. Implémenté ; reste la vérification à l'œil en RETRO sur un écran 60 Hz.
-
----
-
 ### [Issue: #22] Mesurer MODERN sur du vrai matériel [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
 
 Plan : [`22-modern-real-hw-benchmark.md`](22-modern-real-hw-benchmark.md)
@@ -56,7 +48,9 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
 
 ## Fait
 
-### Plans livrés (2026-10-22 → 2026-10-22)
+### Plans livrés (2026-10-22 → 2026-11-02)
+- **[Issue: #1] `#1` — RETRO : 3 frames d'attaque pour les monstres** (2026-11-02) 🔵 — préparation, coup/tir et retour dans les 8 rotations RETRO, frame choisie selon les minuteurs d'attaque ; MODERN inchangé
+  [`1-retro-attack-frames.md`](done/1-retro-attack-frames.md)
 - **[Issue: #2] `#2` — Overlay de performance (F3)** (2026-10-22) 🔵 — overlay F3 (FPS, temps de frame et CPU, draw calls, sprites, durée des bakes CPU et GPU), mémorisé
   [`2-perf-overlay.md`](done/2-perf-overlay.md)
 - **[Issue: #3] `#3` — Portes GPU : reconstruire seulement quand elles bougent** (2026-10-22) 🔵 — mesh des portes GPU reconstruit seulement quand une porte bouge (signature des d.open)

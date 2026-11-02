@@ -2,8 +2,8 @@
 plan:
   id: '1'
   name: 1-retro-attack-frames.md
-  link: https://github.com/Exe64/dukenutanix/blob/main/doc/roadmap/1-retro-attack-frames.md
-status: in-progress
+  link: https://github.com/Exe64/dukenutanix/blob/main/doc/roadmap/done/1-retro-attack-frames.md
+status: done
 date: 2026-10-22
 description: >
   RETRO : 3 frames d'attaque (préparation, coup/tir, retour) pour tous les monstres qui attaquent, dans les 8 rotations.
@@ -48,7 +48,7 @@ En RETRO, un monstre affiche une seule frame d'attaque pendant toute l'attaque. 
 - [x] Étape 2 — `js/game.js` : choisir la frame d'attaque selon `e.timer`, `e.shotT`, `e.shots` dans `collectSprites` (S · standard → Sonnet)
 - [x] Étape 3 — Retirer l'item de `ROADMAP.md` (XS · standard → Sonnet)
 - [x] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
-- [ ] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
+- [x] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
 
 ## Décisions techniques
 
@@ -92,6 +92,6 @@ node tools/smoke-test.js          # needs playwright + a browser able to start
 | 2026-11-02 | Simulation des timers IA à 35 fps | séquences cohérentes | mêlée `0111…222`, bot ×3 `000*11 00*11 00*1112222` | ✅ |
 | 2026-11-02 | Relecture appelants / consommateurs de `.atk` | aucun appelant cassé | game.js, gl.js:999 (`atk[1]`), retro.js OK | ✅ |
 | 2026-11-02 | `smoke-test.js` | PASS | non joué : Playwright absent sur l'hôte | ⏳ |
-| — | Vérif à l'œil RETRO 60 Hz | frames lisibles, pas de saccade | à faire par l'utilisateur | ⏳ |
+| 2026-11-02 | Vérif à l'œil RETRO 60 Hz | frames lisibles, pas de saccade | validé par l'utilisateur (« ok ») | ✅ |
 
 Limite connue : en coop, l'invité ne reçoit pas `shots`/`shotT` → attaques à distance sans préparation chez lui (coup puis retour).
