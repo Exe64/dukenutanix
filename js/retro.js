@@ -195,7 +195,7 @@ const Retro = (() => {
     const plX = -dirY * PLANE_R, plY = dirX * PLANE_R;
     const w = L.w, h = L.h, S = SECT;
     const floors = Assets.floor.map(qFlat), ceils = Assets.ceil.map(qFlat);
-    const concreteT = Assets.concrete[L.def.episode % 5];
+    const concreteT = Assets.concrete[L.def.episode], wallT = wallTiles(L);
 
     // floors and ceilings: 64x64 flats, light from the cell under each pixel
     const rdx0 = dirX - plX, rdy0 = dirY - plY, rdx1 = dirX + plX, rdy1 = dirY + plY;
@@ -228,7 +228,7 @@ const Retro = (() => {
       const y0 = Math.max(0, Math.ceil(top)), y1 = Math.min(VHR - 1, Math.floor(HZ + lh / 2));
       const vi = RH.my * w + RH.mx;
       const ch = String.fromCharCode(RH.tile);
-      const vars = ch === '#' || ch === '?' ? concreteT : Assets.walls[ch];
+      const vars = ch === '#' || ch === '?' ? concreteT : wallT[ch];
       const frames = vars[L.variant[vi] % vars.length];
       const t = qWall(frames[(animFrame + L.variant[vi]) % frames.length]);
       let tx = (RH.wx * WT) | 0;

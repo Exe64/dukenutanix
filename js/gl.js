@@ -596,7 +596,7 @@ const GLR = (() => {
   function buildWallArray() {
     const list = [];
     const reg = (t, mat) => { if (t.glLayer === undefined) { t.glLayer = list.length; list.push([t, mat]); } };
-    for (const ch of Object.keys(Assets.walls)) for (const v of Assets.walls[ch]) v.forEach((t) => reg(t, TILE_MAT[ch] || 'rack'));
+    for (const set of [Assets.walls, Assets.ovhWalls]) for (const ch of Object.keys(set)) for (const v of set[ch]) v.forEach((t) => reg(t, TILE_MAT[ch] || 'rack'));
     for (const ep of Assets.concrete) for (const v of ep) v.forEach((t) => reg(t, 'concrete'));
     reg(Assets.floor[0], 'floor'); reg(Assets.floor[1], 'perf'); reg(Assets.floor[2], 'floor');
     Assets.ceil.forEach((t) => reg(t, 'ceil'));
@@ -819,7 +819,7 @@ const GLR = (() => {
 
   function wallFrames(L, i) {
     const ch = String.fromCharCode(L.map[i]);
-    const vars = ch === '#' || ch === '?' ? Assets.concrete[L.def.episode % 5] : Assets.walls[ch];
+    const vars = ch === '#' || ch === '?' ? Assets.concrete[L.def.episode] : wallTiles(L)[ch];
     return vars[L.variant[i] % vars.length];
   }
 

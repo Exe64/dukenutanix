@@ -809,7 +809,7 @@ function meleeAttack(w, from = P) {
     const hx = from.x + dx * (RH.d - 0.1), hy = from.y + dy * (RH.d - 0.1);
     addFx(hx, hy, 'nutanix', 0.55, 0.7, 0.5);
     if (from === P) { count('migrated', 25, 'cloudNative'); P.pickT = 0.2; }
-    msg(`${SPECIAL_NAMES[ch]} rack migrated to NUTANIX! (${L.migrated}/${L.totalSpecials})`, true);
+    msg(`${SPECIAL_NAMES[ch]} rack migrated to NUTANIX${L.def.mod ? ' ON OVHCLOUD' : ''}! (${L.migrated}/${L.totalSpecials})`, true);
     if (L.migrated === L.totalSpecials) {
       msg('100% NUTANIX DATACENTER! Bonus: +50 armor', true);
       INV.armor = Math.min(200, INV.armor + 50);
@@ -1273,7 +1273,7 @@ function render() {
   const plX = -dirY * PLANE, plY = dirX * PLANE;
   const w = L.w, h = L.h;
   const floorT = Assets.floor, ceilT = Assets.ceil;
-  const concreteT = Assets.concrete[L.def.episode % 5];
+  const concreteT = Assets.concrete[L.def.episode], wallT = wallTiles(L);
   Light.update(L, P);
   [fogR, fogG, fogB] = Light.fog;
   glow.fill(0);
@@ -1320,7 +1320,7 @@ function render() {
     const y0 = Math.max(0, Math.ceil(top)), y1 = Math.min(RVH - 1, Math.floor(RHZ + lh / 2));
     const vi = RH.my * w + RH.mx;
     const ch = String.fromCharCode(RH.tile);
-    const vars = ch === '#' || ch === '?' ? concreteT : Assets.walls[ch];
+    const vars = ch === '#' || ch === '?' ? concreteT : wallT[ch];
     const frames = vars[L.variant[vi] % vars.length];
     const tex = frames[(animFrame + L.variant[vi]) % frames.length];
     let tx = (RH.wx * WTEX) | 0;
@@ -2256,6 +2256,18 @@ function showSkill(first) {
   `);
 }
 
+// The OVHcloud logo (drawOvhLogo) for the mod's menu and end screen, drawn once.
+let ovhLogoUrl;
+function ovhLogoImg() {
+  if (!ovhLogoUrl) {
+    const c = newCanvas(470, 120), g = c.getContext('2d');
+    g.fillStyle = '#000e9c'; g.fillRect(0, 0, 470, 120);
+    drawOvhLogo(g, 40, 30, 60);
+    ovhLogoUrl = c.toDataURL();
+  }
+  return `<img class="ovhlogo" src="${ovhLogoUrl}" alt="OVHcloud">`;
+}
+
 // The OVHCLOUD SPECIAL mod's menu: its story, its own save and its 5 levels.
 function showMod() {
   state = 'select';
@@ -2266,7 +2278,7 @@ function showMod() {
     return `<button ${locked ? 'disabled' : `data-act="play" data-arg="${i}"`} title="${tip}" class="lvl${m.objective === 'boss' ? ' boss' : m.miniboss ? ' mini' : ''}">${m.code}${rec ? `<span class="rank">${rec.rank}</span>` : ''}</button>`;
   }).join('');
   showPanel(`
-    <h1 class="logo ovh">OVHCLOUD SPECIAL</h1>
+    ${ovhLogoImg()}<h1 class="logo ovh">SPECIAL</h1>
     <h2>DUKE NUTANIX<br><span class="ok">GOES TO THE CLOUD</span></h2>
     <p class="story">${EPISODES[MOD_EP].intro} Fight through <b>5 OVHcloud datacenters</b>, keep the
     customers' servers up and face <b>THE OVH FOUNDER</b> at the headquarters.</p>
@@ -2763,7 +2775,7 @@ function completeLevel() {
       It's 6:47 AM. The admin lights an e-cigarette, puts his shades back on and
       leaves the post-mortem to somebody else.`];
     showPanel(`
-      <h1 class="logo${L.def.mod ? ' ovh' : ''}">${title}</h1>
+      ${L.def.mod ? ovhLogoImg() : ''}<h1 class="logo${L.def.mod ? ' ovh' : ''}">${title}</h1>
       <h2>${sub}</h2>
       <p class="story">${story}</p>
       ${stats}

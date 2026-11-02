@@ -94,7 +94,7 @@ function rj45(g, x, y, col) {
 
 /* ----------------------------------------------------------------- walls */
 
-const EP_STRIPES = [['#1f4f7a', '#2e6da6'], ['#1f6a7a', '#3aa6c0'], ['#7a5a1f', '#c0902e'], ['#4a3a6a', '#7a62a6'], ['#7a1f2a', '#c0303e']];
+const EP_STRIPES = [['#1f4f7a', '#2e6da6'], ['#1f6a7a', '#3aa6c0'], ['#7a5a1f', '#c0902e'], ['#4a3a6a', '#7a62a6'], ['#7a1f2a', '#c0303e'], ['#000e9c', '#4a6bff']];
 function concrete(ep) { return (g, R) => drawConcrete(g, R, ep); }
 function drawConcrete(g, R, ep = 0) {
   noiseFill(g, R, 0, 0, 64, 64, 92, 95, 100, 16);
@@ -102,8 +102,9 @@ function drawConcrete(g, R, ep = 0) {
   g.fillRect(0, 0, 64, 1); g.fillRect(0, 0, 1, 64); g.fillRect(32, 0, 1, 40);
   g.fillStyle = 'rgba(255,255,255,0.08)';
   g.fillRect(1, 1, 63, 1); g.fillRect(33, 1, 1, 39);
-  // painted stripe (datacenter signage)
-  g.fillStyle = EP_STRIPES[ep][0]; g.fillRect(0, 40, 64, 6);
+  // painted stripe (datacenter signage), a full OVHcloud-blue band in the mod (ep 5)
+  g.fillStyle = EP_STRIPES[ep][0]; g.fillRect(0, 40, 64, ep === 5 ? 18 : 6);
+  if (ep === 5) drawOvhLogo(g, 3, 44.5, 9);
   g.fillStyle = EP_STRIPES[ep][1]; g.fillRect(0, 40, 64, 1);
   // baseboard
   g.fillStyle = '#3a3d42'; g.fillRect(0, 58, 64, 6);
@@ -263,6 +264,63 @@ function drawExit(g, R, led, L) {
   led(24, 44, 16, 10, L() < 0.5 ? '#ff2a2a' : '#c01010');
   g.fillStyle = '#ffd0d0'; g.fillRect(27, 45, 6, 2);
   g.fillStyle = '#f2c230'; g.fillRect(2, 60, 60, 2);
+}
+
+/* ------------------------------------------- OVHCLOUD SPECIAL mod tiles */
+
+// The OVHcloud logo, redrawn from the official artwork: the mark (an ellipse cut by the
+// "V" notch and the bolt), h high with its top-left corner at x, y, then the "OVHcloud"
+// wordmark when `word`. Returns the width drawn.
+function drawOvhLogo(g, x, y, h, word = true, col = '#fff') {
+  const s = h / 146;   // the artwork's mark is 248 x 146, the whole logo 948 wide
+  const poly = (pts) => { g.beginPath(); pts.forEach(([px, py], k) => (k ? g.lineTo(px, py) : g.moveTo(px, py))); g.fill(); };
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.fillStyle = col;
+  if (word) { g.font = '160px sans-serif'; g.textAlign = 'left'; g.fillText('OVHcloud', 290, 136, 658); }
+  g.beginPath(); g.ellipse(124, 68, 124, 128, 0, 0, Math.PI * 2); g.clip();
+  poly([[-10, 0], [10.7, 0], [61.7, 82], [109, 0], [181, 0], [98, 146], [-10, 146]]);
+  poly([[260, 0], [235.4, 0], [208, 50], [180, 50], [146, 110], [173, 110], [153, 146], [260, 146]]);
+  g.restore();
+  return (word ? 948 : 248) * s;
+}
+
+// OVHcloud rack: blue posts, a logo plate on top and, on servers and storage, the
+// watercooling loop (cold blue / hot red hoses from each unit to the manifolds).
+function drawOvhRack(kind) {
+  return (g, R, led, L) => {
+    drawRack(kind)(g, R, led, L);
+    g.fillStyle = '#000e9c'; g.fillRect(0, 0, 4, 64); g.fillRect(60, 0, 4, 64); g.fillRect(0, 0, 64, 3);
+    g.fillStyle = '#2b4bff'; g.fillRect(1, 0, 1, 64); g.fillRect(62, 0, 1, 64);
+    g.fillStyle = '#000e9c'; g.fillRect(20, 0, 24, 7); drawOvhLogo(g, 27.75, 1, 5, false);
+    if (kind === 'N') return;
+    for (let y = 7; y < 58; y += 8) {
+      cable(g, [[52, y], [55, y], [56.5, y + 3]], '#1f6fe0', 0.7);
+      cable(g, [[52, y + 2], [56, y + 2], [58.5, y + 5]], '#d02828', 0.7);
+    }
+    cable(g, [[56.5, 3], [56.5, 33], [56.5, 64]], '#1f6fe0', 1.6);
+    cable(g, [[58.5, 3], [58.5, 33], [58.5, 64]], '#d02828', 1.6);
+  };
+}
+
+// Watercooling unit (in place of the CRAC): the pump cabinet, a flow display, and the
+// thick cold and hot pipes of the loop.
+function drawCdu(g, R, led, L) {
+  drawCrac(g, R, led, L);
+  led(6, 6, 20, 10, '#000e9c');
+  g.fillStyle = '#fff'; g.font = 'bold 5px monospace'; g.textAlign = 'left'; g.fillText('H2O', 8, 11.5);
+  g.fillStyle = '#9fd0ff'; g.font = '4px monospace'; g.fillText(L() < 0.5 ? '42 L/m' : '41 L/m', 8, 15);
+  g.fillStyle = '#000e9c'; g.fillRect(43, 7, 16, 4);
+  cable(g, [[42, 64], [42, 40], [42, 18]], '#1f6fe0', 5);
+  cable(g, [[52, 64], [52, 40], [52, 18]], '#d02828', 5);
+  for (const x of [42, 52]) { g.fillStyle = '#c9cdd1'; g.fillRect(x - 3.5, 30, 7, 2); g.fillRect(x - 3.5, 50, 7, 2); }
+  ell(g, 42, 40, 3, 3, '#e8c21a'); ell(g, 42, 40, 1, 1, '#333');
+}
+
+// OVHcloud sign: the lit logo over the mod's blue-banded wall.
+function drawOvhSign(g, R, led) {
+  drawConcrete(g, R, 5);
+  led(5, 10, 54, 22, '#000e9c');
+  drawOvhLogo(g, 9.3, 17.5, 7);
 }
 
 /* --------------------------------------------------- objective tiles */
@@ -840,6 +898,13 @@ const BRANDS = {
     g.strokeStyle = '#b6a4ff'; g.beginPath(); g.moveTo(x0 + 8, 8); g.lineTo(x0, 16); g.stroke();
     g.fillStyle = '#7855fa'; g.fillRect(5, 20, 50, 3);
   } },
+  // the mod's migrated racks: "Nutanix on OVHcloud"
+  nutanixOvh: { name: 'NUTANIX ON OVHCLOUD', bg: '#000e9c', led: '#7855fa', logo(g) {
+    g.fillStyle = '#fff'; g.textAlign = 'center'; fitText(g, 'NUTANIX', 32, 13, 48, 9); g.textAlign = 'left';
+    g.fillStyle = '#7855fa'; g.fillRect(8, 15, 48, 1);
+    g.fillStyle = '#b6c4ff'; fitText(g, 'on', 7, 24, 8, 5, 'normal');
+    drawOvhLogo(g, 14, 18, 6.6);
+  } },
 };
 const SPECIAL_TILES = { '3': 'esxi', '4': 'proxmox', '5': 'vates', '6': 'hyperv', '7': 'nutanix' };
 
@@ -1348,6 +1413,8 @@ function sparkSprite(cols, n, seed) {
 /* -------------------------------------------------------------- assembly */
 
 const Assets = {};
+// the wall tiles of a level: the mod has its own
+const wallTiles = (L) => (L.def.mod ? Assets.ovhWalls : Assets.walls);
 
 function buildAssets() {
   const variants = (fn, n, frames) => {
@@ -1379,7 +1446,11 @@ function buildAssets() {
     8: variants(drawFailedServer, 1, 2), 9: variants(drawProdDB, 1, 2),
   });
   // concrete (and secret fake walls) in each episode's colors
-  Assets.concrete = [0, 1, 2, 3, 4].map((ep) => variants(concrete(ep), 2, 1));
+  Assets.concrete = [0, 1, 2, 3, 4, 5].map((ep) => variants(concrete(ep), 2, 1));
+  // the OVHCLOUD SPECIAL mod (episode 5) swaps these tiles for OVHcloud-branded ones
+  Assets.ovhWalls = { ...Assets.walls, W: variants(drawOvhSign, 1, 1), R: variants(drawOvhRack('R'), 3, 2),
+    S: variants(drawOvhRack('S'), 2, 2), N: variants(drawOvhRack('N'), 3, 2), C: variants(drawCdu, 1, 2),
+    7: variants(specialRack('nutanixOvh'), 1, 2) };
   Assets.floor = [makeTexture(drawFloor(false), 5), makeTexture(drawFloor(true), 6), makeTexture(drawZoneFloor, 7, 77)];
   Assets.ceil = [makeTexture(drawCeiling('plain'), 7), makeTexture(drawCeiling('light'), 8), makeTexture(drawCeiling('tray'), 9)];
 
