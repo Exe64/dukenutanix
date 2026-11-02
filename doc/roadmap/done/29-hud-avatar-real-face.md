@@ -2,8 +2,8 @@
 plan:
   id: '29'
   name: 29-hud-avatar-real-face.md
-  link: https://github.com/Exe64/dukenutanix/blob/main/doc/roadmap/29-hud-avatar-real-face.md
-status: in-progress
+  link: https://github.com/Exe64/dukenutanix/blob/main/doc/roadmap/done/29-hud-avatar-real-face.md
+status: done
 date: 2026-11-02
 description: >
   Avatar du HUD redessiné en pixel-art stylisé d'après la vraie tête de l'auteur (photo de référence).
@@ -44,7 +44,7 @@ barbe courte châtain, t-shirt noir, sourire en coin.
 
 - [x] Étape 1 — Redessiner `drawFace` d'après la photo, toutes humeurs conservées (S · standard → Sonnet)
 - [x] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
-- [ ] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
+- [x] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
 
 ## Décisions techniques
 
@@ -85,4 +85,4 @@ node $SCRATCH/avatar/render.js        # drawFace taken from js/game.js, every mo
 | 2026-11-02 | Planche des 9 humeurs (8x et 1x, MODERN et RETRO) | toutes présentes, ressemblance | relue par un agent « directeur artistique » (6/10 → 10 corrections appliquées), vérifiée à l'œil | ✅ |
 | 2026-11-02 | Retour utilisateur : cheveux noirs, fond adapté | cheveux et barbe plus foncés, fond bleu ardoise #3c5068 (MODERN et RETRO) | planche re-rendue, smoke OK | ✅ |
 | 2026-11-02 | Retour utilisateur : cheveux et barbe NOIRS | noir pur, pas de marron | #0c0c0c / #141414, planche re-rendue, smoke OK | ✅ |
-| — | Vérif en jeu par l'utilisateur | ressemblance validée | à faire | ⏳ |
+| 2026-11-02 | Vérif en jeu par l'utilisateur | ressemblance validée | « OK » | ✅ |

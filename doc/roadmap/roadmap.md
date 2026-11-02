@@ -22,14 +22,6 @@ Plan : [`30-ovhcloud-special-mod.md`](30-ovhcloud-special-mod.md)
 
 ---
 
-### [Issue: #29] Avatar du HUD d'après la vraie tête [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
-
-Plan : [`29-hud-avatar-real-face.md`](29-hud-avatar-real-face.md)
-
-`drawFace` redessinée en pixel-art d'après la photo de l'auteur (lunettes miroir bleues, barbe courte), humeurs conservées.
-
----
-
 ### [Issue: #22] Mesurer MODERN sur du vrai matériel [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
 
 Plan : [`22-modern-real-hw-benchmark.md`](22-modern-real-hw-benchmark.md)
@@ -65,6 +57,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
 ## Fait
 
 ### Plans livrés (2026-10-22 → 2026-11-02)
+- **[Issue: #29] `#29` — Avatar du HUD d'après la vraie tête** (2026-11-02) 🔵 — `drawFace` en pixel-art d'après la photo de l'auteur (cheveux et barbe noirs, lunettes miroir bleues), fond bleu ardoise, humeurs conservées
+  [`29-hud-avatar-real-face.md`](done/29-hud-avatar-real-face.md)
 - **[Issue: #1] `#1` — RETRO : 3 frames d'attaque pour les monstres** (2026-11-02) 🔵 — préparation, coup/tir et retour dans les 8 rotations RETRO, frame choisie selon les minuteurs d'attaque ; MODERN inchangé
   [`1-retro-attack-frames.md`](done/1-retro-attack-frames.md)
 - **[Issue: #2] `#2` — Overlay de performance (F3)** (2026-10-22) 🔵 — overlay F3 (FPS, temps de frame et CPU, draw calls, sprites, durée des bakes CPU et GPU), mémorisé
