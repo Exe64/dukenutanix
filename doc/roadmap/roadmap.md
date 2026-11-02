@@ -14,6 +14,14 @@ La vision d'ensemble (multijoueur) est résumée dans [`ROADMAP.md`](../../ROADM
 ---
 
 ## À faire
+### [Issue: #29] Avatar du HUD d'après la vraie tête [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
+
+Plan : [`29-hud-avatar-real-face.md`](29-hud-avatar-real-face.md)
+
+`drawFace` redessinée en pixel-art d'après la photo de l'auteur (lunettes miroir bleues, barbe courte), humeurs conservées.
+
+---
+
 ### [Issue: #22] Mesurer MODERN sur du vrai matériel [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
 
 Plan : [`22-modern-real-hw-benchmark.md`](22-modern-real-hw-benchmark.md)
