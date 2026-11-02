@@ -1,4 +1,4 @@
-// Generates and checks all 50 levels: dimensions, borders, framed doors,
+// Generates and checks all 50 levels and the 5 of the OVHCLOUD SPECIAL mod: dimensions, borders, framed doors,
 // reachability with badges, special racks, objectives (what each one needs is on
 // the map, and never the same objective on two levels in a row), enemies left on the
 // easiest difficulty.
@@ -6,10 +6,12 @@
 const fs = require('fs');
 const path = require('path');
 const load = (f) => fs.readFileSync(path.join(__dirname, '../js', f), 'utf8');
-const { getLevel, LEVEL_COUNT, LevelGen, SKILLS, keepEnemy, seedLevel } = new Function(load('levelgen.js').replace(/if \(typeof module[^\n]*/, '') + load('levels.js') + '; return { getLevel, LEVEL_COUNT, LevelGen, SKILLS, keepEnemy, seedLevel };')();
+const { getLevel, LEVEL_COUNT, MOD_FIRST, MOD_COUNT, LevelGen, SKILLS, keepEnemy, seedLevel } = new Function(load('levelgen.js').replace(/if \(typeof module[^\n]*/, '') + load('levels.js') + '; return { getLevel, LEVEL_COUNT, MOD_FIRST, MOD_COUNT, LevelGen, SKILLS, keepEnemy, seedLevel };')();
 let ok = true, prevObj = null;
 const t0 = Date.now();
-for (let i = 0; i < LEVEL_COUNT; i++) {
+const indices = [...Array(LEVEL_COUNT).keys(), ...Array.from({ length: MOD_COUNT }, (_, k) => MOD_FIRST + k)];
+for (const i of indices) {
+  if (i === MOD_FIRST) prevObj = null;   // the mod is a campaign of its own
   const def = getLevel(i);
   const r = LevelGen.validate(def.map);
   const n = (c) => def.map.join('').split(c).length - 1;
@@ -27,7 +29,7 @@ for (let i = 0; i < LEVEL_COUNT; i++) {
   const racks = { lcm: 4, migrate: 1 }[def.objective];
   if (racks && !LevelGen.pickRacks(def.map, racks)) { r.ok = false; r.errors.push(`objective ${def.objective}: needs ${racks} reachable racks`); }
   prevObj = def.objective;
-  console.log(`${def.code.padEnd(6)} ${String(def.map[0].length).padStart(2)}x${String(def.map.length).padEnd(2)} enemies ${String(enemies).padStart(2)} (${String(easy).padStart(2)} ${SKILLS[0].name.toLowerCase()})  secret ${n('?')}  badge doors ${n('1') + n('2')}  ${(def.objective === 'boss' ? 'boss ' + def.bossType : def.objective === 'miniboss' ? 'mini-boss ' + def.miniType : def.objective).padEnd(20)} ${r.ok ? 'OK' : 'ERROR'}`);
+  console.log(`${def.code.padEnd(10)} ${String(def.map[0].length).padStart(2)}x${String(def.map.length).padEnd(2)} enemies ${String(enemies).padStart(2)} (${String(easy).padStart(2)} ${SKILLS[0].name.toLowerCase()})  secret ${n('?')}  badge doors ${n('1') + n('2')}  ${(def.objective === 'boss' ? 'boss ' + def.bossType : def.objective === 'miniboss' ? 'mini-boss ' + def.miniType : def.objective).padEnd(20)} ${r.ok ? 'OK' : 'ERROR'}`);
   if (!r.ok) { ok = false; r.errors.slice(0, 5).forEach((e) => console.log('   ' + e)); }
 }
 // seeded runs (daily seed, endless): a sample of seeds and depths must generate valid maps

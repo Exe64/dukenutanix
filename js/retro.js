@@ -388,7 +388,7 @@ const Retro = (() => {
     L.msgs.forEach((m, i) => text(m.text, 2, 10 + i * 7, yellow));
     if (L.titleT > 0 && !showMap) {
       center(L.def.name, 34, col('#3dff6a'), 2);
-      center(`EPISODE ${L.def.episode + 1}: ${EPISODES[L.def.episode].name}`, 50, col('#9aa3ad'));
+      center(episodeLabel(L.def.episode), 50, col('#9aa3ad'));
     }
     if (L.subtitle && L.subtitle.t > 0) center(L.subtitle.text, VHR - 18, 15);
     const right = (s, y, c) => text(s, SW - 2 - textW(s), y, c);

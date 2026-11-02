@@ -90,7 +90,13 @@ const EPISODES = [
     intro: "Tape libraries, SAN arrays and snapshots forgotten since 2009. It's dark and it smells like a degraded RAID." },
   { name: 'THE HYPERSCALE', boss: 'ransomware', ambient: 0.9,
     intro: "Acres of servers as far as the eye can see. The RANSOMWARE is waiting at the end. It has no backup. Neither do you." },
+  // the OVHCLOUD SPECIAL mod (MOD_LEVELS below); `mod` is the flag the textures, monsters,
+  // objectives and music key on (L.def.mod)
+  { name: 'OVHCLOUD SPECIAL', mod: 'ovh', boss: 'ransomware', ambient: 0.9,
+    intro: 'Event day at OVHcloud: the datacenters from Roubaix to Gravelines are overrun, and the founder himself is behind it.' },
 ];
+// "EPISODE 2: COOLING ZONE", or the mod's name alone
+const episodeLabel = (ep) => (EPISODES[ep].mod ? EPISODES[ep].name : `EPISODE ${ep + 1}: ${EPISODES[ep].name}`);
 
 const LEVEL_NAMES = [
   'CLEAN ROOM NORTH', 'COLD AISLES', 'UPS ROOM', 'LOADING DOCK', 'PATCH ROOM',
@@ -242,6 +248,7 @@ function levelSpec(i) {
 const levelCache = {};
 function getLevel(i) {
   if (levelCache[i]) return levelCache[i];
+  if (i >= MOD_FIRST) return (levelCache[i] = modLevel(i));
   const ep = Math.floor(i / 10), k = i % 10;
   const code = `E${ep + 1}M${k + 1}`;
   let def;
@@ -276,6 +283,44 @@ function getLevel(i) {
 }
 
 const LEVEL_COUNT = 50;
+
+// OVHCLOUD SPECIAL: a 5-level event mod, indices MOD_FIRST.. after the campaign, with its
+// own save (see saveKey in game.js). Placeholder maps for now: each level is generated
+// from a campaign template (`tpl`: size, enemies, weapons) with its own seed.
+const MOD_FIRST = LEVEL_COUNT, MOD_EP = 5;
+const MOD_LEVELS = [
+  { code: 'RBX', name: 'ASSEMBLY WORKSHOP', tpl: 2, objective: 'hotswap',
+    intro: 'Roubaix, the assembly workshop where the servers are built by hand. Something has crawled into the production line.' },
+  { code: 'GRA', name: 'GRAVELINES CAMPUS', tpl: 13, objective: 'overheat',
+    intro: 'Gravelines: four buildings of server rooms by the sea, a cooling tower and the generators out in the yard. The seagulls are not friendly.' },
+  { code: 'VRACK', name: 'NETWORK CORE', tpl: 24, objective: 'miniboss', miniboss: 'storm',
+    intro: 'The vRack backbone. Every packet of every customer goes through here, and right now one terabit per second of them is aimed at you.' },
+  { code: 'BARE METAL', name: 'DEDICATED SERVERS', tpl: 36, objective: 'backup',
+    intro: 'Rows of bare metal servers as far as the eye can see. The customers want their backups, and they want them now.' },
+  { code: 'HQ', name: 'HEADQUARTERS', tpl: 49, objective: 'boss',
+    intro: "The headquarters. The lights are out, the guitars are plugged in, and THE OVH FOUNDER is waiting for you on stage." },
+];
+const MOD_COUNT = MOD_LEVELS.length;
+const MOD_ENDING = ['UPTIME RESTORED', 'THE CLOUD IS SAFE',
+  `The last chord fades out, the watercooling hums again and the vRack lights up green from Roubaix to Gravelines.
+  THE OVH FOUNDER puts his guitar down, shakes your hand and offers you a job. You ask for the coffee machine first.`];
+function modLevel(i) {
+  const m = MOD_LEVELS[i - MOD_FIRST];
+  const spec = levelSpec(m.tpl);
+  spec.seed = 30000 + i * 97;
+  spec.objective = m.objective;
+  spec.boss = m.objective === 'boss' ? EPISODES[MOD_EP].boss : null;
+  spec.miniboss = m.miniboss || null;
+  const map = LevelGen.generate(spec).map;
+  const obj = spec.miniboss ? `Mini-boss alert: ${MINIBOSS_NAMES[spec.miniboss]} is guarding the REBOOT terminal.`
+    : spec.boss ? 'Destroy the boss guarding the REBOOT terminal.' : OBJECTIVE_INTRO[m.objective];
+  return {
+    map, index: i, code: m.code, episode: MOD_EP, mod: EPISODES[MOD_EP].mod, tpl: m.tpl,
+    name: `${m.code} : ${m.name}`, intro: `${m.intro} ${obj}`, ambient: EPISODES[MOD_EP].ambient,
+    bossType: spec.boss, miniType: spec.miniboss, objective: m.objective,
+    par: Math.round((90 + map.length * map[0].length / 6) / 15) * 15,
+  };
+}
 
 // Seeded runs (daily seed, endless): levels generated outside the campaign. The depth
 // picks a campaign level as a template (size, enemies, weapons: harder and harder) and

@@ -229,6 +229,7 @@ function newInventory() {
 }
 // Starting loadout when jumping straight into a later level.
 function defaultLoadout(idx) {
+  if (idx >= MOD_FIRST) idx = getLevel(idx).tpl;   // the mod: its template's loadout
   const inv = newInventory();
   for (const [ch, first] of Object.entries(WEAPON_FIRST_LEVEL)) if (first < idx) inv.weapons[WEAPON_SLOT[ch]] = true;
   const w = inv.weapons;
@@ -1671,7 +1672,7 @@ function drawOverlayText(g) {
     g.fillStyle = '#000'; g.fillText(L.def.name, W / 2 + 1, 61);
     g.fillStyle = '#3dff6a'; g.fillText(L.def.name, W / 2, 60);
     g.font = `5px ${FONT}`; g.fillStyle = '#9aa3ad';
-    g.fillText(`EPISODE ${L.def.episode + 1}: ${EPISODES[L.def.episode].name}`, W / 2, 72);
+    g.fillText(episodeLabel(L.def.episode), W / 2, 72);
     g.globalAlpha = 1;
   }
   if (L.subtitle && L.subtitle.t > 0) {
@@ -1940,8 +1941,10 @@ function step(ts) {
 /* ------------------------------------------------------------ save game */
 
 const SAVE_KEY = 'dukenutanix.save';
-function readSave() {
-  try { return JSON.parse(localStorage.getItem(SAVE_KEY)) || null; } catch (e) { return null; }
+// the OVHCLOUD SPECIAL mod keeps its own save, best times and ranks
+const saveKey = (idx) => (idx >= MOD_FIRST ? 'dukenutanix.ovh.save' : SAVE_KEY);
+function readSave(idx = 0) {
+  try { return JSON.parse(localStorage.getItem(saveKey(idx))) || null; } catch (e) { return null; }
 }
 // Rank of a finished level: one point each for beating the par time, killing every
 // enemy and finding every secret (S = all three).
@@ -1951,21 +1954,21 @@ function levelRank(L) {
 }
 // Keeps the best time and the best rank of each level.
 function writeRecord(L, rank) {
-  const s = readSave() || { maxLevel: 0 };
+  const s = readSave(L.idx) || { maxLevel: 0 };
   const r = (s.records = s.records || {})[L.idx] || {};
   const better = !r.time || L.time < r.time;
   if (better) r.time = L.time;
   if (!r.rank || 'CBAS'.indexOf(rank) > 'CBAS'.indexOf(r.rank)) r.rank = rank;
   s.records[L.idx] = r;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) { /* storage unavailable */ }
+  try { localStorage.setItem(saveKey(L.idx), JSON.stringify(s)); } catch (e) { /* storage unavailable */ }
   return { ...r, newBest: better };
 }
 
 function writeSave(idx, inv) {
-  const s = readSave() || { maxLevel: 0 };
+  const s = readSave(idx) || { maxLevel: 0 };
   s.maxLevel = Math.max(s.maxLevel || 0, idx);
   s.level = idx; s.inv = inv; s.skill = skill;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) { /* storage unavailable */ }
+  try { localStorage.setItem(saveKey(idx), JSON.stringify(s)); } catch (e) { /* storage unavailable */ }
 }
 
 /* --------------------------------------------------------------- screens */
@@ -2004,8 +2007,10 @@ const CONTROLS = `
   </table>`;
 
 const actions = {
-  newGame() { showSkill(); },
-  skill(arg) { Sfx.init(); run = null; skill = +arg; INV = newInventory(); startLevel(0); },
+  newGame(arg) { showSkill(+arg || 0); },
+  // "skill first-level": the campaign starts at 0, the mod at MOD_FIRST
+  skill(arg) { const [k, first] = arg.split(' ').map(Number); Sfx.init(); run = null; skill = k; INV = newInventory(); startLevel(first); },
+  ovh() { showMod(); },
   daily() { startRun(dailySeed(), true); },
   endless() { startRun(Math.floor(Math.random() * 1e9), false); },
   retryRun() { startRun(run.seed, run.daily); },
@@ -2084,19 +2089,19 @@ const actions = {
     const v = document.getElementById('seed').value.trim();
     if (v) startRun(seedOf(v), false);
   },
-  continueGame() {
+  continueGame(arg) {
     Sfx.init();
     run = null;
-    const s = readSave();
+    const first = +arg || 0, s = readSave(first);
     skill = s && s.skill !== undefined ? s.skill : SKILL_DEFAULT;
-    INV = s && s.inv ? cloneInv(s.inv) : defaultLoadout(s ? s.level : 0);
-    startLevel(s ? s.level : 0);
+    INV = s && s.inv ? cloneInv(s.inv) : defaultLoadout(s ? s.level : first);
+    startLevel(s ? s.level : first);
   },
   select() { showSelect(); },
   play(arg) {
     Sfx.init();
     run = null;
-    const idx = +arg, s = readSave();
+    const idx = +arg, s = readSave(idx);
     skill = s && s.skill !== undefined ? s.skill : SKILL_DEFAULT;
     INV = s && s.level === idx && s.inv ? cloneInv(s.inv) : defaultLoadout(idx);
     startLevel(idx);
@@ -2150,6 +2155,7 @@ function showTitle() {
     <button data-act="customSeed">CUSTOM SEED</button>
     <button data-act="coop">COOP</button>
     <button data-act="achievements">ACHIEVEMENTS</button>
+    <br><button data-act="ovh" class="ovh">OVHCLOUD SPECIAL</button>
     <p class="hint">Daily run: today's seed, the same for everyone${readRuns()[dailySeed()] ? ` (your best: depth ${readRuns()[dailySeed()]})` : ''}. Endless: a new seed each time. One life, as deep as you can go.</p>
     <button data-act="style" id="tsty">STYLE: ${style.toUpperCase()}</button>
     ${CONTROLS}
@@ -2199,6 +2205,7 @@ const ACHIEVEMENTS = [
 ];
 function readAch() { try { return JSON.parse(localStorage.getItem('dukenutanix.achievements')) || {}; } catch (e) { return {}; } }
 function unlock(id) {
+  if (L && L.def.mod) return false;   // the mod has achievements of its own
   const a = readAch();
   if (a[id]) return false;
   a[id] = new Date().toISOString().slice(0, 10);
@@ -2209,6 +2216,7 @@ function unlock(id) {
 }
 // cumulative counters (racks migrated, enemies stomped): unlocks at the target
 function count(key, target, id) {
+  if (L && L.def.mod) return;
   const a = readAch();
   a.counts = a.counts || {};
   a.counts[key] = (a.counts[key] || 0) + 1;
@@ -2239,11 +2247,33 @@ function showAchievements() {
   `);
 }
 
-function showSkill() {
+function showSkill(first) {
   state = 'select';
   showPanel(`
     <h2>CHOOSE YOUR ACCESS LEVEL</h2>
-    ${SKILLS.map((k, i) => `<p class="story small"><button data-act="skill" data-arg="${i}" class="${i === SKILL_DEFAULT ? 'big' : ''}">${k.name}</button><br>${k.hint}</p>`).join('')}
+    ${SKILLS.map((k, i) => `<p class="story small"><button data-act="skill" data-arg="${i} ${first}" class="${i === SKILL_DEFAULT ? 'big' : ''}">${k.name}</button><br>${k.hint}</p>`).join('')}
+    <button data-act="${first ? 'ovh' : 'title'}">BACK</button>
+  `);
+}
+
+// The OVHCLOUD SPECIAL mod's menu: its story, its own save and its 5 levels.
+function showMod() {
+  state = 'select';
+  const s = readSave(MOD_FIRST), max = s ? s.maxLevel : MOD_FIRST;
+  const lvls = MOD_LEVELS.map((m, k) => {
+    const i = MOD_FIRST + k, locked = i > max, rec = s && s.records && s.records[i];
+    const tip = locked ? 'Locked' : m.name + (rec ? ` | best ${fmtTime(rec.time)}, rank ${rec.rank}` : '');
+    return `<button ${locked ? 'disabled' : `data-act="play" data-arg="${i}"`} title="${tip}" class="lvl${m.objective === 'boss' ? ' boss' : m.miniboss ? ' mini' : ''}">${m.code}${rec ? `<span class="rank">${rec.rank}</span>` : ''}</button>`;
+  }).join('');
+  showPanel(`
+    <h1 class="logo ovh">OVHCLOUD SPECIAL</h1>
+    <h2>DUKE NUTANIX<br><span class="ok">GOES TO THE CLOUD</span></h2>
+    <p class="story">${EPISODES[MOD_EP].intro} Fight through <b>5 OVHcloud datacenters</b>, keep the
+    customers' servers up and face <b>THE OVH FOUNDER</b> at the headquarters.</p>
+    ${s ? `<button data-act="continueGame" data-arg="${MOD_FIRST}" class="big">CONTINUE ${getLevel(s.level).code}</button>` : ''}
+    <button data-act="newGame" data-arg="${MOD_FIRST}" class="${s ? '' : 'big'}">NEW GAME</button>
+    <div class="grid mod">${lvls}</div>
+    <p class="hint">Separate save, best times and ranks. Levels unlock as you progress.</p>
     <button data-act="title">BACK</button>
   `);
 }
@@ -2254,6 +2284,7 @@ function showSelect() {
   const max = s ? s.maxLevel : 0;
   let html = '<h2>SELECT LEVEL</h2>';
   EPISODES.forEach((ep, e) => {
+    if (ep.mod) return;
     html += `<h3>EPISODE ${e + 1}: ${ep.name}</h3><div class="grid">`;
     for (let k = 0; k < 10; k++) {
       const i = e * 10 + k;
@@ -2276,7 +2307,7 @@ function startLevel(idx) {
   state = 'briefing';
   drawFrame();
   showPanel(`
-    <h2>${L.def.name}<br><span class="ep">EPISODE ${L.def.episode + 1}: ${EPISODES[L.def.episode].name}</span></h2>
+    <h2>${L.def.name}<br><span class="ep">${episodeLabel(L.def.episode)}</span></h2>
     <p class="story">${L.def.intro}</p>
     <p class="story objective">OBJECTIVE: ${Objectives.title(L)}</p>
     <p class="story small">Difficulty: ${SKILLS[skill].name} | Bonus: racks to migrate to Nutanix: ${L.totalSpecials} | Secret areas: ${L.totalSecrets}</p>
@@ -2707,7 +2738,7 @@ function completeLevel() {
     `, () => { INV.hp = Math.max(INV.hp, 1); run.depth++; startLevel(L.idx); });
     return;
   }
-  const lastLevel = L.idx === LEVEL_COUNT - 1;
+  const lastLevel = L.idx === LEVEL_COUNT - 1 || L.idx === MOD_FIRST + MOD_COUNT - 1;
   const rank = levelRank(L), rec = writeRecord(L, rank);
   if (!lastLevel) {
     const next = cloneInv(INV);
@@ -2727,15 +2758,17 @@ function completeLevel() {
       <tr><td>RANK</td><td class="ok">${rank}</td></tr>
     </table>`;
   if (lastLevel) {
-    showPanel(`
-      <h1 class="logo">REBOOT COMPLETE</h1>
-      <h2>THE DATACENTER IS SAVED</h2>
-      <p class="story">The ransomware is purged, the racks power back up one by one and the LEDs turn green again.
+    const [title, sub, story] = L.def.mod ? MOD_ENDING : ['REBOOT COMPLETE', 'THE DATACENTER IS SAVED',
+      `The ransomware is purged, the racks power back up one by one and the LEDs turn green again.
       It's 6:47 AM. The admin lights an e-cigarette, puts his shades back on and
-      leaves the post-mortem to somebody else.</p>
+      leaves the post-mortem to somebody else.`];
+    showPanel(`
+      <h1 class="logo${L.def.mod ? ' ovh' : ''}">${title}</h1>
+      <h2>${sub}</h2>
+      <p class="story">${story}</p>
       ${stats}
       ${achHtml}
-      <button data-act="title" class="big">MAIN MENU</button>
+      <button data-act="${L.def.mod ? 'ovh' : 'title'}" class="big">MAIN MENU</button>
     `);
     return;
   }

@@ -73,7 +73,7 @@ inspiré d'Octave Klaba (« THE OVH FOUNDER »). Le branding est validé par l'u
 
 ## Étapes
 
-- [ ] Étape 1 — Squelette du mod : entrée de menu, épisode à 5 niveaux, sauvegarde et meilleurs temps séparés, écran de fin, `validate-levels` (M · standard → Sonnet)
+- [x] Étape 1 — Squelette du mod : entrée de menu, épisode à 5 niveaux, sauvegarde et meilleurs temps séparés, écran de fin, `validate-levels` (M · standard → Sonnet)
 - [ ] Étape 2 — Habillage OVHcloud : textures bleues, logo en tracés canvas, watercooling, racks « Nutanix on OVHcloud » (M · standard → Sonnet)
 - [ ] Étape 3 — Monstres du mod (5 + mini-boss THE 1 TBPS et bornes VAC), RETRO 8 rotations + 3 frames d'attaque, MODERN (L · reasoning → Opus)
 - [ ] Étape 4 — Missions : habillages HDD / LTO / GE, nouveaux objectifs RAM et fuite de watercooling (L · reasoning → Opus)
