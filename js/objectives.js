@@ -17,6 +17,13 @@
  *   miniboss / boss  the guardian of the x5 / x10 levels; THE 1 TBPS (OVHCLOUD SPECIAL) takes
  *             a tenth of the damage until the 2 VAC terminals (I, on: 0) of its level are on
  *
+ * OVHCLOUD SPECIAL: hotswap, backup and power keep their rules under OVHcloud names (HDD
+ * replacement, LTO backup, generators), the backup gets the 5-minute countdown; a boss on
+ * a mission level must go too. Two missions of its own:
+ *   ram       fit the 3 RAM kits (v) into the 3 servers of a rack row (%)
+ *   leak      close the 3 leaking watercooling valves (~, closed: =), hold E for 2 s each,
+ *             before the hall floods (5 minutes); the water rises on screen and slows the player
+ *
  * game.js calls init (on load), update (each step), use (E on a wall), pickup,
  * kill, done, and the HUD and map helpers. The state lives in L.obj.
  */
@@ -70,6 +77,8 @@ const Objectives = (() => {
       }
       case 'ransom': o.racks = cellsOf(L, 'E'); o.cut = 0; break;
       case 'hotswap': o.server = cellsOf(L, '8')[0]; o.carry = false; break;
+      case 'ram': o.servers = cellsOf(L, '%'); o.sticks = 0; o.fitted = 0; break;
+      case 'leak': o.valves = cellsOf(L, '~'); o.closed = 0; o.burnT = 0; o.water = 0; break;
       case 'defend': o.rack = cellsOf(L, '9')[0]; o.started = false; o.hp = 100; o.left = 90; o.spawnT = 0; break;
       case 'firmware': o.zones = L.zones.map((z) => ({ ...z, prog: 0 })); o.spawnT = 0; o.beep = 0; break;
       case 'lcm':
@@ -117,6 +126,7 @@ const Objectives = (() => {
         break;
       default: break;
     }
+    if (type === 'backup' && L.def.mod) o.timed = true;   // the backup window closes
     // VAC terminals of THE 1 TBPS: keyed on the tiles, whatever the objective
     const vac = cellsOf(L, 'I');
     if (vac.length) { o.vac = vac; o.vacOn = 0; }
@@ -171,9 +181,15 @@ const Objectives = (() => {
     const o = L.obj;
     if (o.done) return;
     o.done = true;
-    msg(`OBJECTIVE COMPLETE: ${text}. Reach the REBOOT terminal.`, true);
+    msg(`OBJECTIVE COMPLETE: ${text}. ${L.bossAlive ? `Now destroy ${bossName(L)}.` : 'Reach the REBOOT terminal.'}`, true);
     Sfx.secret();
     quip('objective', 1, true);
+  }
+
+  // the boss (or mini-boss) still standing, by name
+  function bossName(L) {
+    const e = L.enemies.find((k) => alive(k) && ETYPES[k.type].boss);
+    return e ? ETYPES[e.type].name : 'the boss';
   }
 
   function fail(L, reason) {
@@ -205,8 +221,35 @@ const Objectives = (() => {
 
   function update(L, dt) {
     const o = L.obj;
+    if (o && o.water && o.done) o.water = Math.max(0, o.water - dt / 4);   // the hall drains
     if (!o || o.done || o.failed || P.dead) return;
     switch (o.type) {
+      case 'backup':
+        if (!o.timed) break;
+        o.left -= dt;
+        if (o.left <= 0) fail(L, 'BACKUP WINDOW MISSED: the customers will have to trust their RAID.');
+        break;
+      case 'leak': {
+        o.left -= dt;
+        o.water = 1 - o.left / TIMED_S;
+        if (o.repair) {
+          const u = o.repair;
+          if (!holding(o.repairBy) || !near(o.repairBy.x, o.repairBy.y, u.x + 0.5, u.y + 0.5, 1.9)) { o.repair = null; msg('Valve left half open!'); break; }
+          u.prog = (u.prog || 0) + dt / 2;
+          if ((u.prog * 6 | 0) !== ((u.prog - dt / 2) * 6 | 0)) Sfx.click();
+          if (u.prog >= 1) {
+            o.repair = null; o.closed++;
+            setTile(L, u.x, u.y, '=');
+            Sfx.key();
+            msg(`Valve closed (${o.closed}/${o.valves.length})`, true);
+            if (o.closed >= o.valves.length) complete(L, 'the leak is sealed, the hall drains');
+          }
+        }
+        // the water reaches the power strips in the last minute
+        if (o.left < 60) { o.burnT += dt; if (o.burnT > 2) { o.burnT = 0; damagePlayer(2, P.x, P.y); } }
+        if (o.left <= 0) fail(L, 'HALL FLOODED: the servers are swimming, and so is the customer data.');
+        break;
+      }
       case 'overheat': {
         o.left -= dt;
         if (o.repair) {
@@ -365,7 +408,7 @@ const Objectives = (() => {
         o.stored += o.carried; o.carried = 0;
         Sfx.key();
         msg(`Tapes loaded: ${o.stored}/${o.total}`, true);
-        if (o.stored >= o.total) complete(L, 'the backups are safe');
+        if (o.stored >= o.total) complete(L, L.def.mod ? 'the backups are on tape' : 'the backups are safe');
         return true;
       case 'O': {
         if (o.type !== 'overheat') return false;
@@ -381,8 +424,8 @@ const Objectives = (() => {
         L.ambMul = 0.3 + 0.7 * o.on / o.panels.length;
         relight(L);
         Sfx.door();
-        msg(`Power restored: ${o.on}/${o.panels.length} panels`, true);
-        if (o.on >= o.panels.length) { o.dark = false; complete(L, 'the lights are back'); }
+        msg(L.def.mod ? `Generator started: ${o.on}/${o.panels.length}` : `Power restored: ${o.on}/${o.panels.length} panels`, true);
+        if (o.on >= o.panels.length) { o.dark = false; complete(L, L.def.mod ? 'the generators are running' : 'the lights are back'); }
         return true;
       case 'E':
         if (o.type !== 'ransom') return false;
@@ -394,11 +437,26 @@ const Objectives = (() => {
         return true;
       case '8':
         if (o.type !== 'hotswap') return false;
-        if (!o.carry) { msg('DISK FAIL: you need the SPARE disk to hot-swap it.'); Sfx.deny(); return true; }
+        if (!o.carry) { msg(L.def.mod ? 'HDD FAIL: you need the spare HDD to replace it.' : 'DISK FAIL: you need the SPARE disk to hot-swap it.'); Sfx.deny(); return true; }
         o.carry = false;
         setTile(L, x, y, 'R');
-        complete(L, 'disk hot-swapped, the RAID is rebuilding');
+        complete(L, L.def.mod ? 'HDD replaced, the RAID is rebuilding' : 'disk hot-swapped, the RAID is rebuilding');
         return true;
+      case '%':
+        if (o.type !== 'ram') return false;
+        if (!o.sticks) { msg(`RAM UPGRADE: this server waits for its RAM kit (${o.fitted}/${o.servers.length} fitted).`); Sfx.deny(); return true; }
+        o.sticks--; o.fitted++;
+        setTile(L, x, y, 'R');
+        Sfx.key();
+        msg(`RAM fitted, the server reboots (${o.fitted}/${o.servers.length})`, true);
+        if (o.fitted >= o.servers.length) complete(L, 'the servers have their new RAM');
+        return true;
+      case '~': {
+        if (o.type !== 'leak') return false;
+        const u = o.valves.find((k) => k.x === x && k.y === y);
+        if (u && !o.repair) { o.repair = u; o.repairBy = who; msg('Closing the valve... hold E'); }
+        return true;
+      }
       case 'R': case 'S': case 'N': {
         if (o.type !== 'lcm' || o.done) return false;
         const k = o.nodes.findIndex((n) => n.x === x && n.y === y);
@@ -431,14 +489,20 @@ const Objectives = (() => {
     const o = L.obj;
     if (it.type === 'l' && o.type === 'backup') {
       o.carried++;
-      msg(`LTO tape picked up (${o.carried} carried, ${o.stored}/${o.total} restored)`, true);
+      msg(`LTO tape picked up (${o.carried} carried, ${o.stored}/${o.total} ${L.def.mod ? 'loaded' : 'restored'})`, true);
+      Sfx.pickup(); P.pickT = 0.25;
+      return true;
+    }
+    if (it.type === 'v' && o.type === 'ram') {
+      o.sticks++;
+      msg(`RAM kit picked up (${o.sticks} carried, ${o.fitted}/${o.servers.length} fitted)`, true);
       Sfx.pickup(); P.pickT = 0.25;
       return true;
     }
     if (it.type === 'h' && o.type === 'hotswap') {
       o.carry = true;
       if (INV.cur > 1) switchWeapon(INV.weapons[1] ? 1 : 0);
-      msg('SPARE disk in hand: keyboard or pistol only until it is swapped in.', true);
+      msg(L.def.mod ? 'Spare HDD in hand: keyboard or pistol only until it is in.' : 'SPARE disk in hand: keyboard or pistol only until it is swapped in.', true);
       Sfx.weaponPickup(); P.pickT = 0.3;
       return true;
     }
@@ -465,13 +529,14 @@ const Objectives = (() => {
     const o = L.obj;
     if (!o) return true;
     if (o.type === 'boss' || o.type === 'miniboss') return !L.bossAlive;
+    if (L.def.mod && L.bossAlive) return false;   // a mission level with a guardian
     if (o.type === 'evac') return !o.failed;   // reaching the terminal is the objective
     return o.done;
   }
 
   function lockedText(L) {
     const o = L.obj;
-    if (o.type === 'boss' || o.type === 'miniboss') return 'The system is locked! Destroy the boss.';
+    if (o.type === 'boss' || o.type === 'miniboss' || (L.def.mod && o.done && L.bossAlive)) return 'The system is locked! Destroy the boss.';
     return `The system is locked: ${hud(L).replace(/ {2,}/g, ' ')}`;
   }
 
@@ -479,14 +544,20 @@ const Objectives = (() => {
   function hud(L) {
     const o = L.obj;
     if (!o) return '';
-    if (o.vac && L.bossAlive && o.vacOn < o.vac.length) return `VAC terminals ${o.vacOn}/${o.vac.length} on, then destroy THE 1 TBPS`;
-    if (o.done) return 'OBJECTIVE COMPLETE: reach the REBOOT terminal';
+    // VAC line (on a mission level, it takes turns with the mission's)
+    if (o.vac && L.bossAlive && o.vacOn < o.vac.length && (o.done || o.type === 'miniboss' || L.time % 8 < 3)) return `VAC terminals ${o.vacOn}/${o.vac.length} on, then destroy THE 1 TBPS`;
+    if (o.done) return L.def.mod && L.bossAlive ? `OBJECTIVE COMPLETE: destroy ${bossName(L)}` : 'OBJECTIVE COMPLETE: reach the REBOOT terminal';
+    const mod = L.def.mod;
     switch (o.type) {
-      case 'backup': return `BACKUP: tapes ${o.stored}/${o.total} restored${o.carried ? `, ${o.carried} carried` : ''}`;
+      case 'backup': return mod ? `LTO BACKUP: tapes ${o.stored}/${o.total} loaded${o.carried ? `, ${o.carried} carried` : ''}  ${fmt(o.left)}`
+        : `BACKUP: tapes ${o.stored}/${o.total} restored${o.carried ? `, ${o.carried} carried` : ''}`;
       case 'overheat': return `COOLING: CRAC ${o.fixed}/${o.units.length} repaired${o.repair ? ` (${Math.round((o.repair.prog || 0) * 100)}%)` : ''}  TEMP ${Math.round(100 - o.left / TIMED_S * 60)}C  ${fmt(o.left)}`;
-      case 'power': return `POWER: panels ${o.on}/${o.panels.length} on`;
+      case 'power': return mod ? `BLACKOUT: generators ${o.on}/${o.panels.length} started` : `POWER: panels ${o.on}/${o.panels.length} on`;
       case 'ransom': return `RANSOMWARE: racks ${o.cut}/${o.racks.length} isolated  ENCRYPTED ${Math.round((1 - o.left / TIMED_S) * 100)}%  ${fmt(o.left)}`;
-      case 'hotswap': return o.carry ? 'HOT SWAP: bring the spare disk to the failed server' : 'HOT SWAP: find the SPARE disk';
+      case 'hotswap': return mod ? (o.carry ? 'HDD REPLACEMENT: bring the spare HDD to the failed server' : 'HDD REPLACEMENT: find the spare HDD')
+        : o.carry ? 'HOT SWAP: bring the spare disk to the failed server' : 'HOT SWAP: find the SPARE disk';
+      case 'ram': return `RAM UPGRADE: servers ${o.fitted}/${o.servers.length} upgraded${o.sticks ? `, ${o.sticks} kit${o.sticks > 1 ? 's' : ''} carried` : ''}`;
+      case 'leak': return `WATER LEAK: valves ${o.closed}/${o.valves.length} closed${o.repair ? ` (${Math.round((o.repair.prog || 0) * 100)}%)` : ''}  WATER ${Math.round(o.water * 40)} cm  ${fmt(o.left)}`;
       case 'defend': return o.started ? `DEFEND THE PROD DB: ${fmt(o.left)}  RACK ${Math.max(0, Math.round(o.hp))}%` : 'DEFEND: start the failover on the PROD DB rack';
       case 'firmware': {
         const n = o.zones.filter((z) => z.prog >= 1).length, act = o.zones.find((z) => z.prog > 0 && z.prog < 1);
@@ -518,9 +589,20 @@ const Objectives = (() => {
     migrate: ['Live migration: escort the VM to the Nutanix host without a crash', 'VM migrated'],
     miniboss: ['Destroy the mini-boss guarding the REBOOT terminal', 'Mini-boss destroyed'],
     boss: ['Destroy the boss guarding the REBOOT terminal', 'Boss destroyed'],
+    ram: ['RAM upgrade: fit the 3 RAM kits into the 3 servers of the rack row', 'RAM upgraded'],
+    leak: ['Water leak: close the 3 watercooling valves before the hall floods (5 min)', 'Leak sealed'],
+  };
+  // the OVHcloud names of the campaign objectives in the mod
+  const MOD_TITLES = {
+    hotswap: ['HDD replacement: bring the spare HDD to the server with the failed disk', 'HDD replaced'],
+    backup: ['LTO backup: load the 5 LTO tapes into the tape library before the window closes (5 min)', 'Backup on tape'],
+    power: ['Blackout: start the 3 generators (GE)', 'Generators started'],
   };
   // The objective in one sentence (briefing), or its short name once done (level stats).
-  const title = (L, short) => (TITLES[L.obj ? L.obj.type : 'evac'] || TITLES.evac)[short ? 1 : 0];
+  const title = (L, short) => {
+    const type = L.obj ? L.obj.type : 'evac';
+    return ((L.def.mod && MOD_TITLES[type]) || TITLES[type] || TITLES.evac)[short ? 1 : 0];
+  };
 
   // Red flashes of the fire alarm (opacity of the overlay, 0 when none).
   function alarm(L) {
@@ -531,7 +613,7 @@ const Objectives = (() => {
   }
 
   // true when the line should blink (time running out)
-  const urgent = (L) => L.obj && !L.obj.done && 'overheat ransom evac'.includes(L.obj.type) && L.obj.left < 60;
+  const urgent = (L) => L.obj && !L.obj.done && ('overheat ransom evac leak'.includes(L.obj.type) || L.obj.timed) && L.obj.left < 60;
 
   // Where to go, for the automap: [x, y, color].
   function markers(L) {
@@ -544,6 +626,8 @@ const Objectives = (() => {
       case 'overheat': for (const u of o.units) if (L.map[u.i] === 79) wall(u, '#ff3b3b'); break;
       case 'power': for (const p of o.panels) if (L.map[p.i] === 74) wall(p, '#ffe14a'); break;
       case 'ransom': for (const r of o.racks) if (L.map[r.i] === 69) wall(r, '#ff3b3b'); break;
+      case 'ram': for (const it of L.items) if (it.type === 'v' && !it.taken) out.push([it.x, it.y, '#4fb4ff']); for (const c of o.servers) if (L.map[c.i] === 37) wall(c, '#ffe14a'); break;
+      case 'leak': for (const c of o.valves) if (L.map[c.i] === 126) wall(c, '#20e8ff'); break;
       case 'hotswap': if (!o.carry) for (const it of L.items) if (it.type === 'h' && !it.taken) out.push([it.x, it.y, '#ffe14a']); if (o.server) wall(o.server, '#ff3b3b'); break;
       case 'defend': if (o.rack) wall(o.rack, '#3dff6a'); break;
       case 'firmware': for (const z of o.zones) if (z.prog < 1) out.push([z.x, z.y, '#20e8ff']); break;
@@ -557,19 +641,19 @@ const Objectives = (() => {
   }
 
   // Steps of the objective done so far (tapes stored, CRACs repaired, panels on, racks cut,
-  // spare disk taken, failover started, uploads finished, objective complete): game.js
+  // spare disk taken, failover started, uploads finished, RAM fitted, valves closed, objective complete): game.js
   // saves a checkpoint each time it goes up.
   function progress(L) {
     const o = L.obj;
     const mig = o.type === 'migrate' && o.vm && o.field ? Math.floor(4 * (1 - Math.max(0, o.field[(o.vm.y | 0) * L.w + (o.vm.x | 0)]) / o.dist0)) : 0;
-    return (o.stored || 0) + (o.fixed || 0) + (o.on || 0) + (o.cut || 0) + (o.carry ? 1 : 0) + (o.started ? 1 : 0) + (o.cur || 0) + (o.cleaned || 0) + (o.vacOn || 0) + mig
+    return (o.stored || 0) + (o.fixed || 0) + (o.on || 0) + (o.cut || 0) + (o.carry ? 1 : 0) + (o.started ? 1 : 0) + (o.cur || 0) + (o.cleaned || 0) + (o.vacOn || 0) + (o.fitted || 0) + (o.closed || 0) + mig
       + (o.zones ? o.zones.filter((z) => z.prog >= 1).length : 0) + (o.done ? 1 : 0);
   }
 
   // A restored checkpoint leaves at least a minute on the countdowns that fail the level.
   function restored(L) {
     const o = L.obj;
-    if (['overheat', 'ransom', 'evac'].includes(o.type)) o.left = Math.max(o.left, 60);
+    if (['overheat', 'ransom', 'evac', 'leak'].includes(o.type) || o.timed) o.left = Math.max(o.left, 60);
   }
 
   // players besides the local one that the objective brings (the VM of the live migration)

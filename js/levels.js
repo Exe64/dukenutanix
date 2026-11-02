@@ -291,16 +291,24 @@ const MOD_FIRST = LEVEL_COUNT, MOD_EP = 5;
 const MOD_LEVELS = [
   { code: 'RBX', name: 'ASSEMBLY WORKSHOP', tpl: 2, objective: 'hotswap',
     intro: 'Roubaix, the assembly workshop where the servers are built by hand. Something has crawled into the production line.' },
-  { code: 'GRA', name: 'GRAVELINES CAMPUS', tpl: 13, objective: 'overheat',
+  { code: 'GRA', name: 'GRAVELINES CAMPUS', tpl: 13, objective: 'leak',
     intro: 'Gravelines: four buildings of server rooms by the sea, a cooling tower and the generators out in the yard. The seagulls are not friendly.' },
-  { code: 'VRACK', name: 'NETWORK CORE', tpl: 24, objective: 'miniboss', miniboss: 'tbps',
+  { code: 'VRACK', name: 'NETWORK CORE', tpl: 24, objective: 'ram', miniboss: 'tbps',
     intro: 'The vRack backbone. Every packet of every customer goes through here, and right now one terabit per second of them is aimed at you.' },
   { code: 'BARE METAL', name: 'DEDICATED SERVERS', tpl: 36, objective: 'backup',
     intro: 'Rows of bare metal servers as far as the eye can see. The customers want their backups, and they want them now.' },
-  { code: 'HQ', name: 'HEADQUARTERS', tpl: 49, objective: 'boss',
+  { code: 'HQ', name: 'HEADQUARTERS', tpl: 49, objective: 'power', boss: true,
     intro: "The headquarters. The lights are out, the guitars are plugged in, and THE OVH FOUNDER is waiting for you on stage." },
 ];
 const MOD_COUNT = MOD_LEVELS.length;
+// the mod's missions: OVHcloud versions of 3 campaign objectives, and 2 of its own
+const MOD_OBJECTIVE_INTRO = {
+  hotswap: 'A customer server lost a hard drive: grab the spare HDD and swap it into the server with the failed disk.',
+  leak: 'The watercooling loop is leaking into the hall: close the 3 valves before the water reaches the servers (5 minutes).',
+  ram: 'A customer ordered more memory: pick up the 3 RAM kits and fit them into the 3 servers waiting in a rack row.',
+  backup: 'The backup window is open: load the 5 LTO tapes into the tape library before it closes (5 minutes).',
+  power: 'Blackout! Start the 3 generators (GE) to bring the power back.',
+};
 const MOD_ENDING = ['UPTIME RESTORED', 'THE CLOUD IS SAFE',
   `The last chord fades out, the watercooling hums again and the vRack lights up green from Roubaix to Gravelines.
   THE OVH FOUNDER puts his guitar down, shakes your hand and offers you a job. You ask for the coffee machine first.`];
@@ -309,14 +317,14 @@ function modLevel(i) {
   const spec = levelSpec(m.tpl);
   spec.seed = 30000 + i * 97;
   spec.objective = m.objective;
-  spec.boss = m.objective === 'boss' ? EPISODES[MOD_EP].boss : null;
+  spec.boss = m.boss ? EPISODES[MOD_EP].boss : null;
   spec.miniboss = m.miniboss || null;
   let map = LevelGen.generate(spec).map;
   // THE 1 TBPS needs its 2 VAC terminals (tools/validate-levels.js checks they are there)
   if (spec.miniboss === 'tbps') map = LevelGen.placeObjective(map, 'vac', spec.seed + 31) || map;
-  const obj = spec.miniboss === 'tbps' ? 'Mini-boss alert: THE 1 TBPS is flooding the network. Switch on the 2 VAC anti-DDoS terminals to strip its shield.'
-    : spec.miniboss ? `Mini-boss alert: ${MINIBOSS_NAMES[spec.miniboss]} is guarding the REBOOT terminal.`
-    : spec.boss ? 'Destroy the boss guarding the REBOOT terminal.' : OBJECTIVE_INTRO[m.objective];
+  // the mission, then the guardian of the REBOOT terminal (it has to go too)
+  const obj = MOD_OBJECTIVE_INTRO[m.objective] + (spec.miniboss === 'tbps' ? ' Mini-boss alert: THE 1 TBPS is flooding the network. Switch on the 2 VAC anti-DDoS terminals to strip its shield.'
+    : spec.boss ? ' Then destroy the boss guarding the REBOOT terminal.' : '');
   return {
     map, index: i, code: m.code, episode: MOD_EP, mod: EPISODES[MOD_EP].mod, tpl: m.tpl,
     name: `${m.code} : ${m.name}`, intro: `${m.intro} ${obj}`, ambient: EPISODES[MOD_EP].ambient,

@@ -8,7 +8,7 @@
 const W = 480, H = 270, HUD_H = 40, VH = H - HUD_H, HORIZ = VH / 2;
 const PLANE = 0.8, PROJ = (W / 2) / PLANE;
 const FONT = '"Press Start 2P", monospace';
-const WALL_CHARS = '#RSNCWXD12?34567TOJQEU89I0';
+const WALL_CHARS = '#RSNCWXD12?34567TOJQEU89I0%~=';
 const SPECIAL_NAMES = { '3': 'Broadcom ESXi', '4': 'Proxmox', '5': 'Vates XCP-ng', '6': 'Hyper-V' };
 
 /* ------------------------------------------------------------ definitions */
@@ -67,7 +67,7 @@ Object.assign(ETYPES, {
 const MOD_ENEMIES = { bug: 'gull', troll: 'blob', bot: 'mirai', spam: 'ticket', drone: 'abuse' };
 const ENEMY_CHARS = { b: 'bug', d: 'drone', o: 'bot', t: 'troll', m: 'spam', y: 'thief' };
 const ITEM_CHARS = '+HAascrukgjFMKGYL';
-const OBJ_ITEMS = 'lhw';   // objective items (tapes, spare disk, stolen disk): not counted in the items score
+const OBJ_ITEMS = 'lhwv';   // objective items (tapes, spare disk, stolen disk, RAM kits): not counted in the items score
 const DECOR_CHARS = 'xef';
 
 /* ----------------------------------------------------------- one-liners */
@@ -620,7 +620,7 @@ function updatePlayer(dt) {
   const run = held('run') || pad.run;
   if (P.boostT > 0) P.boostT -= dt;
   if (len > 0) {
-    const sp = (run ? 5.6 : 3.8) * (P.boostT > 0 ? 1.45 : 1) * (L.obj && L.obj.carry ? 0.85 : 1) * dt / len;
+    const sp = (run ? 5.6 : 3.8) * (P.boostT > 0 ? 1.45 : 1) * (L.obj && L.obj.carry ? 0.85 : 1) * (L.obj && L.obj.water ? 1 - 0.3 * L.obj.water : 1) * dt / len;
     moveEntity(P, mx * sp, my * sp, 0.28, true);
     P.bobPhase += dt * (run ? 11 : 8);
     P.bobAmt = Math.min(1, P.bobAmt + dt * 4);
@@ -927,12 +927,12 @@ function killEnemy(e, how) {
   if (T.mini) {
     L.bossAlive = L.enemies.some((o) => o !== e && alive(o) && ETYPES[o.type].boss);
     P.shake = 0.7;
-    msg(`MINI-BOSS ${T.name} DOWN!${L.bossAlive ? '' : ' The REBOOT terminal is unlocked.'}`);
+    msg(`MINI-BOSS ${T.name} DOWN!${Objectives.done(L) ? ' The REBOOT terminal is unlocked.' : ''}`);
     quip('bossKill', 1, true);
   } else if (T.boss) {
     L.bossAlive = false;
     P.shake = 1;
-    msg(`${T.name} ELIMINATED! The REBOOT terminal is unlocked.`);
+    msg(`${T.name} ELIMINATED!${Objectives.done(L) ? ' The REBOOT terminal is unlocked.' : ''}`);
     quip('bossKill', 1, true);
     for (const o of L.enemies) if (o !== e && alive(o)) { o.hp = 0; killEnemy(o); }
   } else if (how !== 'stomp') quip('kill', 0.18);
@@ -1692,7 +1692,7 @@ function drawOverlayText(g) {
   if (ob && !showMap && !(Objectives.urgent(L) && L.time % 0.6 < 0.2)) {
     g.font = `5px ${FONT}`; g.textAlign = 'left';
     g.fillStyle = '#000'; g.fillText(ob, 7, 11);
-    g.fillStyle = L.obj.done ? '#3dff6a' : Objectives.urgent(L) ? '#ff3b3b' : '#20e8ff'; g.fillText(ob, 6, 10);
+    g.fillStyle = L.obj.done && !(L.def.mod && L.bossAlive) ? '#3dff6a' : Objectives.urgent(L) ? '#ff3b3b' : '#20e8ff'; g.fillText(ob, 6, 10);
   }
   g.font = `6px ${FONT}`; g.textAlign = 'left';
   L.msgs.forEach((m, i) => {
@@ -1743,7 +1743,7 @@ function drawMap(g) {
   g.fillStyle = 'rgba(0,8,4,0.85)'; g.fillRect(0, 0, W, VH);
   const col = { '#': '#6b7178', '?': '#6b7178', R: '#2e8b3d', S: '#2e6da6', N: '#8a6d1f', C: '#b8bcc0', W: '#c2a020', X: '#3dff6a', D: '#9aa3ad', '1': '#d42020', '2': '#1f58d6',
     '3': '#cc092f', '4': '#e57000', '5': '#2f9bff', '6': '#00a4ef', '7': '#7855fa',
-    T: '#4fb4ff', O: '#ff6a3a', J: '#c2a020', Q: '#3dff6a', E: '#ff2a2a', U: '#555b62', '8': '#ff6a3a', '9': '#3dff6a', I: '#ff3b3b', '0': '#3dff6a' };
+    T: '#4fb4ff', O: '#ff6a3a', J: '#c2a020', Q: '#3dff6a', E: '#ff2a2a', U: '#555b62', '8': '#ff6a3a', '9': '#3dff6a', I: '#ff3b3b', '0': '#3dff6a', '%': '#ffe14a', '~': '#20e8ff', '=': '#3dff6a' };
   for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
     const i = y * L.w + x, t = L.map[i];
     if (!t) { if (L.block[i]) { g.fillStyle = '#5a4a2a'; g.fillRect(ox + x * cs + cs * 0.2, oy + y * cs + cs * 0.2, cs * 0.6, cs * 0.6); } continue; }
@@ -1783,6 +1783,17 @@ function renderGL(dt = 0) {
   });
 }
 
+// The watercooling leak (OVHCLOUD SPECIAL): the hall fills up, the water line rises up the view.
+function drawWater(g, w) {
+  const top = VH * (1 - 0.3 * w);
+  g.fillStyle = `rgba(10,60,160,${0.12 * w})`; g.fillRect(0, 0, W, VH);
+  g.beginPath(); g.moveTo(0, VH);
+  for (let x = 0; x <= W + 8; x += 8) g.lineTo(x, top + Math.sin(x * 0.04 + L.time * 2.5) * 2);
+  g.lineTo(W + 8, VH); g.closePath();
+  g.fillStyle = 'rgba(25,110,220,0.42)'; g.fill();
+  g.strokeStyle = 'rgba(190,230,255,0.7)'; g.lineWidth = 1; g.stroke();
+}
+
 function present() {
   vctx.setTransform(1, 0, 0, 1, 0, 0);
   vctx.imageSmoothingEnabled = style === 'modern';
@@ -1796,6 +1807,7 @@ function present() {
   vctx.setTransform(K, 0, 0, K, 0, 0);
   const g = vctx;
   g.save(); g.beginPath(); g.rect(0, 0, W, VH); g.clip();
+  if (L.obj && L.obj.water) drawWater(g, L.obj.water);
   if (useGL && GLR.hasWeapons) drawWeapon(g, 0, 0, 'fx', glPose);
   else drawWeapon(g, sh ? rand(-sh, sh) / K : 0, sh ? rand(-sh, sh) / K : 0);
   g.restore();
@@ -2310,7 +2322,7 @@ function showMod() {
   const lvls = MOD_LEVELS.map((m, k) => {
     const i = MOD_FIRST + k, locked = i > max, rec = s && s.records && s.records[i];
     const tip = locked ? 'Locked' : m.name + (rec ? ` | best ${fmtTime(rec.time)}, rank ${rec.rank}` : '');
-    return `<button ${locked ? 'disabled' : `data-act="play" data-arg="${i}"`} title="${tip}" class="lvl${m.objective === 'boss' ? ' boss' : m.miniboss ? ' mini' : ''}">${m.code}${rec ? `<span class="rank">${rec.rank}</span>` : ''}</button>`;
+    return `<button ${locked ? 'disabled' : `data-act="play" data-arg="${i}"`} title="${tip}" class="lvl${m.boss ? ' boss' : m.miniboss ? ' mini' : ''}">${m.code}${rec ? `<span class="rank">${rec.rank}</span>` : ''}</button>`;
   }).join('');
   showPanel(`
     ${ovhLogoImg()}<h1 class="logo ovh">SPECIAL</h1>

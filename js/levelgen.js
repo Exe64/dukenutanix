@@ -14,10 +14,11 @@
 const LevelGen = (() => {
   // 3 Broadcom ESXi, 4 Proxmox, 5 Vates, 6 Hyper-V, 7 Nutanix (special racks)
   // objective tiles: T tape library, O broken CRAC, J/Q power panel off/on, E/U infected/isolated rack,
-  // 8 failed server, 9 production database, I/0 VAC anti-DDoS terminal off/on (OVHCLOUD SPECIAL)
-  const WALLS = '#RSNCWX34567TOJQEU89I0';
-  const OBSTACLES = '#RSNCWX34567TOJQEU89I0xB';
-  const OBJ_TILES = 'TOJE89I';
+  // 8 failed server, 9 production database; OVHCLOUD SPECIAL: I/0 VAC anti-DDoS terminal off/on,
+  // % server waiting for its RAM, ~/= watercooling valve leaking/closed
+  const WALLS = '#RSNCWX34567TOJQEU89I0%~=';
+  const OBSTACLES = '#RSNCWX34567TOJQEU89I0%~=xB';
+  const OBJ_TILES = 'TOJE89I%~';
   const SPECIALS = '33456';
 
   function rng(seed) {
@@ -396,6 +397,9 @@ const LevelGen = (() => {
     firmware: { floor: [['z', 3]] },
     thief: { floor: [['y', 1]] },
     vac: { walls: [['I', '#', 2]] },   // the VAC terminals that weaken THE 1 TBPS (not an objective of its own)
+    // OVHCLOUD SPECIAL: 3 servers side by side in a rack row ('row') and their RAM kits; 3 leaking valves
+    ram: { walls: [['%', 'RSN', 3, 'row']], floor: [['v', 3]] },
+    leak: { walls: [['~', '#', 3]] },
   };
   function placeObjective(map, type, seed) {
     const need = OBJ_NEEDS[type];
@@ -427,12 +431,25 @@ const LevelGen = (() => {
       }
       return true;
     };
-    for (const [ch, from, n] of need.walls || []) {
+    for (const [ch, from, n, row] of need.walls || []) {
       const cands = [];
       const collect = (chars) => {
         for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (chars.includes(g[y][x]) && faces(x, y)) cands.push([x, y, g[y][x]]);
       };
       collect(from);
+      if (row) {
+        // n neighbors in a line, all facing the floor: the run picked far from the start
+        const ok = new Set(cands.map((c) => c[0] + ',' + c[1]));
+        let best = null, bestScore = -1;
+        for (const [x, y] of cands) for (const [dx, dy] of [[1, 0], [0, 1]]) {
+          if (![...Array(n).keys()].every((k) => ok.has((x + dx * k) + ',' + (y + dy * k)))) continue;
+          const score = Math.hypot(x - sx, y - sy) * (0.5 + R());
+          if (score > bestScore) { bestScore = score; best = [x, y, dx, dy]; }
+        }
+        if (!best) return null;
+        for (let k = 0; k < n; k++) { const x = best[0] + best[2] * k, y = best[1] + best[3] * k; taken.push([x, y]); g[y][x] = ch; }
+        continue;
+      }
       if (cands.length < n * 2) collect(from === '#' ? 'RSN' : '#');
       if (!spread(cands, n, ch)) return null;
     }

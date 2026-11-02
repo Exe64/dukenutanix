@@ -394,6 +394,78 @@ function drawVac(on) {
   };
 }
 
+/* ------------------------------------- OVHCLOUD SPECIAL mission tiles */
+
+// The tape library of the LTO backup, with an OVHcloud screen.
+function drawOvhTapeLibrary(g, R, led, L) {
+  drawTapeLibrary(g, R, led, L);
+  led(6, 5, 52, 10, '#000e9c');
+  drawOvhLogo(g, 8, 7, 6, false);
+  g.fillStyle = '#fff'; g.font = 'bold 5px monospace'; g.textAlign = 'left'; g.fillText('LTO LIBRARY', 20, 12, 36);
+}
+
+// Generator (GE) control cabinet: the engine status, the RPM gauge and the START button;
+// stopped: red, running: green.
+function drawGenset(on) {
+  return (g, R, led, L) => {
+    noiseFill(g, R, 0, 0, 64, 64, 196, 168, 46, 10);
+    g.fillStyle = '#6a5818'; g.fillRect(0, 0, 64, 2); g.fillRect(0, 62, 64, 2); g.fillRect(0, 0, 2, 64); g.fillRect(62, 0, 2, 64);
+    g.fillStyle = '#2b2f35'; g.fillRect(6, 5, 52, 31);
+    led(9, 8, 46, 11, on ? '#042010' : '#2a0404');
+    g.fillStyle = on ? '#3dff6a' : '#ff3b3b'; g.font = 'bold 6px monospace'; g.textAlign = 'center';
+    g.fillText(on ? 'GE RUNNING' : 'GE STOPPED', 32, 15.5, 44);
+    ell(g, 20, 27.5, 6, 6, '#e8e8e0');
+    const a = on ? -0.5 + L() * 0.2 : -Math.PI + 0.4;
+    g.strokeStyle = '#c21d1d'; g.lineWidth = 1; g.beginPath(); g.moveTo(20, 27.5); g.lineTo(20 + Math.cos(a) * 5, 27.5 + Math.sin(a) * 5); g.stroke();
+    ell(g, 43, 27.5, 5.5, 5.5, '#111');
+    led(39.5, 24, 7, 7, on ? '#3dff6a' : (L() < 0.6 ? '#ff2a2a' : '#601010'));
+    g.fillStyle = '#111'; g.font = 'bold 2.5px monospace'; g.fillText('START', 43, 28.5);
+    g.textAlign = 'left';
+    for (let y = 40; y < 59; y += 3) { g.fillStyle = '#3a3218'; g.fillRect(6, y, 52, 1.5); }
+    g.fillStyle = '#000e9c'; g.fillRect(40, 38, 18, 7);
+    g.fillStyle = '#fff'; g.font = 'bold 5px monospace'; g.fillText('GE', 45, 43.5);
+  };
+}
+
+// OVHcloud server waiting for its RAM upgrade: lid off, empty DIMM slots, an amber LED.
+function drawRamServer(g, R, led, L) {
+  drawOvhRack('R')(g, R, led, L);
+  g.fillStyle = '#1b1e22'; g.fillRect(5, 21, 46, 20);
+  g.fillStyle = '#0f3a1f'; g.fillRect(6, 22, 44, 18);
+  for (let k = 0; k < 8; k++) {
+    const x = 9 + k * 5;
+    g.fillStyle = '#05070a'; g.fillRect(x, 24.5, 2.5, 13);
+    g.fillStyle = '#e8e8e0'; g.fillRect(x, 23.5, 2.5, 1); g.fillRect(x, 37.5, 2.5, 1);
+  }
+  led(46, 18, 3, 2, L() < 0.5 ? '#ffb52e' : '#402a08');
+  g.fillStyle = '#000e9c'; g.fillRect(6, 42, 25, 6);
+  g.fillStyle = '#ffe14a'; g.font = 'bold 4px monospace'; g.textAlign = 'left'; g.fillText('ADD RAM', 8, 46.5);
+}
+
+// Watercooling valve on the mod's wall: the blue pipe of the loop and its wheel; leaking:
+// red wheel, water spraying from the joint, a puddle; closed: green wheel and tag.
+function drawValve(closed) {
+  return (g, R, led, L) => {
+    drawConcrete(g, R, 5);
+    cable(g, [[0, 30], [32, 30], [64, 30]], '#1f6fe0', 7);
+    g.fillStyle = '#c9cdd1'; g.fillRect(12, 25, 3, 10); g.fillRect(49, 25, 3, 10);
+    g.fillStyle = '#8a9099'; g.fillRect(27, 24, 10, 12); g.fillRect(31, 13, 2, 11);
+    g.strokeStyle = closed ? '#2e9b3d' : '#c21d1d'; g.lineWidth = 2;
+    g.beginPath(); g.ellipse(32, 13, 9, 3.5, 0, 0, Math.PI * 2); g.moveTo(23, 13); g.lineTo(41, 13); g.stroke();
+    g.font = 'bold 4px monospace'; g.textAlign = 'center';
+    if (closed) {
+      g.fillStyle = '#3dff6a'; g.fillRect(38, 34, 12, 5); g.fillStyle = '#111'; g.fillText('SHUT', 44, 38);
+    } else {
+      // the spray, different on each frame
+      g.fillStyle = 'rgba(150,210,255,0.85)';
+      for (let k = 0; k < 16; k++) { const t = L(); g.fillRect(37 + t * 14 + L() * 2, 31 + t * t * 26 + L() * 2, 1.5, 1.5); }
+      ell(g, 44, 61, 18, 2.5, 'rgba(60,150,255,0.75)');
+      g.fillStyle = '#c21d1d'; g.fillRect(18, 34, 12, 5); g.fillStyle = '#fff'; g.fillText('LEAK', 24, 38);
+    }
+    g.textAlign = 'left';
+  };
+}
+
 // Rack being encrypted by the ransomware: a red screen with a padlock and a progress bar.
 function drawInfected(g, R, led, L) {
   drawRack('R')(g, R, led, L);
@@ -417,14 +489,17 @@ function drawUnplugged(g, R, led, L) {
   g.fillStyle = '#e8c21a'; g.fillRect(10, 26, 26, 8); g.fillStyle = '#111'; g.font = 'bold 5px monospace'; g.fillText('ISOLATED', 11, 32);
 }
 
-// Server with a failed disk: an empty bay, a blinking amber/red LED and a label.
-function drawFailedServer(g, R, led, L) {
-  drawRack('R')(g, R, led, L);
-  g.fillStyle = '#2e3238'; g.fillRect(5, 24, 54, 14);
-  g.fillStyle = '#050607'; g.fillRect(14, 26, 14, 10);
-  g.fillStyle = '#1b1e22'; g.fillRect(31, 26, 14, 10);
-  led(48, 28, 4, 3, L() < 0.5 ? '#ff2a2a' : '#ffb52e');
-  g.fillStyle = '#ff3b3b'; g.font = 'bold 4px monospace'; g.fillText('DISK FAIL', 10, 43);
+// Server with a failed disk, in a rack (campaign or OVHcloud): an empty bay, a blinking
+// amber/red LED and a label.
+function failedServer(rack, label) {
+  return (g, R, led, L) => {
+    rack(g, R, led, L);
+    g.fillStyle = '#2e3238'; g.fillRect(5, 24, 54, 14);
+    g.fillStyle = '#050607'; g.fillRect(14, 26, 14, 10);
+    g.fillStyle = '#1b1e22'; g.fillRect(31, 26, 14, 10);
+    led(48, 28, 4, 3, L() < 0.5 ? '#ff2a2a' : '#ffb52e');
+    g.fillStyle = '#ff3b3b'; g.font = 'bold 4px monospace'; g.fillText(label, 10, 43);
+  };
 }
 
 // The production database: a premium rack with a lit label that nobody dares to touch.
@@ -1469,6 +1544,15 @@ function drawItem(type) {
         drawHdd(g, 34, 54, 1.25, 0);
         g.fillStyle = '#ffe14a'; g.font = 'bold 4px monospace'; g.fillText('SPARE', 25, 44);
         break;
+      case 'v': // RAM kit (OVHCLOUD SPECIAL): 2 DIMMs in an antistatic bag
+        g.fillStyle = 'rgba(170,180,195,0.8)'; g.fillRect(16, 41, 32, 22);
+        for (const y of [45, 53]) {
+          g.fillStyle = '#0f6a2a'; g.fillRect(19, y, 26, 6);
+          for (let k = 0; k < 6; k++) { g.fillStyle = '#1a1c20'; g.fillRect(20.5 + k * 4, y + 1, 3, 3); }
+          g.fillStyle = '#e8c21a'; g.fillRect(19, y + 5, 26, 1);
+        }
+        g.fillStyle = '#ffe14a'; g.font = 'bold 5px monospace'; g.fillText('RAM', 28, 39);
+        break;
       case 'w': // the stolen disk, dropped by the thief
         drawHdd(g, 32, 54, 1.25, 0.3);
         g.fillStyle = '#ff3b3b'; g.font = 'bold 4px monospace'; g.fillText('STOLEN', 22, 44);
@@ -1653,14 +1737,18 @@ function buildAssets() {
   Object.assign(Assets.walls, {
     T: variants(drawTapeLibrary, 1, 2), O: variants(drawCracBroken, 1, 2), J: variants(drawBreaker(false), 1, 2),
     Q: variants(drawBreaker(true), 1, 1), E: variants(drawInfected, 1, 2), U: variants(drawUnplugged, 1, 1),
-    8: variants(drawFailedServer, 1, 2), 9: variants(drawProdDB, 1, 2),
+    8: variants(failedServer(drawRack('R'), 'DISK FAIL'), 1, 2), 9: variants(drawProdDB, 1, 2),
   });
   // concrete (and secret fake walls) in each episode's colors
   Assets.concrete = [0, 1, 2, 3, 4, 5].map((ep) => variants(concrete(ep), 2, 1));
   // the OVHCLOUD SPECIAL mod (episode 5) swaps these tiles for OVHcloud-branded ones
   Assets.ovhWalls = { ...Assets.walls, W: variants(drawOvhSign, 1, 1), R: variants(drawOvhRack('R'), 3, 2),
     S: variants(drawOvhRack('S'), 2, 2), N: variants(drawOvhRack('N'), 3, 2), C: variants(drawCdu, 1, 2),
-    7: variants(specialRack('nutanixOvh'), 1, 2), I: variants(drawVac(false), 1, 2), 0: variants(drawVac(true), 1, 2) };
+    7: variants(specialRack('nutanixOvh'), 1, 2), I: variants(drawVac(false), 1, 2), 0: variants(drawVac(true), 1, 2),
+    // the missions: HDD replacement, LTO backup, generators, RAM upgrade, watercooling leak
+    8: variants(failedServer(drawOvhRack('R'), 'HDD FAIL'), 1, 2), T: variants(drawOvhTapeLibrary, 1, 2),
+    J: variants(drawGenset(false), 1, 2), Q: variants(drawGenset(true), 1, 2), '%': variants(drawRamServer, 1, 2),
+    '~': variants(drawValve(false), 1, 2), '=': variants(drawValve(true), 1, 1) };
   Assets.floor = [makeTexture(drawFloor(false), 5), makeTexture(drawFloor(true), 6), makeTexture(drawZoneFloor, 7, 77)];
   Assets.ceil = [makeTexture(drawCeiling('plain'), 7), makeTexture(drawCeiling('light'), 8), makeTexture(drawCeiling('tray'), 9)];
 
@@ -1690,7 +1778,7 @@ function buildAssets() {
   });
   Assets.enemies.puddle = Assets.enemies.blob;
   Assets.items = {};
-  for (const k of '+HAascruFMLejkgKGYlhw') Assets.items[k] = makeSprite(drawItem(k), true);
+  for (const k of '+HAascruFMLejkgKGYlhwv') Assets.items[k] = makeSprite(drawItem(k), true);
   Assets.decor = buildDecor();
   Assets.proj = {
     orb: orbSprite('#ff3bd0', '#7a1f5c', 7),

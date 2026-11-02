@@ -384,7 +384,7 @@ const Retro = (() => {
   function overlays() {
     const yellow = col('#ffe14a');
     const ob = coop && coop.role === 'guest' ? coop.hud : Objectives.hud(L);
-    if (ob && !showMap && !(Objectives.urgent(L) && L.time % 0.6 < 0.2)) text(ob, 2, 2, col(L.obj.done ? '#3dff6a' : Objectives.urgent(L) ? '#ff3b3b' : '#20e8ff'));
+    if (ob && !showMap && !(Objectives.urgent(L) && L.time % 0.6 < 0.2)) text(ob, 2, 2, col(L.obj.done && !(L.def.mod && L.bossAlive) ? '#3dff6a' : Objectives.urgent(L) ? '#ff3b3b' : '#20e8ff'));
     L.msgs.forEach((m, i) => text(m.text, 2, 10 + i * 7, yellow));
     if (L.titleT > 0 && !showMap) {
       center(L.def.name, 34, col('#3dff6a'), 2);
@@ -408,7 +408,7 @@ const Retro = (() => {
 
   const MAPCOL = { '#': '#6b7178', '?': '#6b7178', R: '#2e8b3d', S: '#2e6da6', N: '#8a6d1f', C: '#b8bcc0', W: '#c2a020', X: '#3dff6a', D: '#9aa3ad',
     1: '#d42020', 2: '#1f58d6', 3: '#cc092f', 4: '#e57000', 5: '#2f9bff', 6: '#00a4ef', 7: '#7855fa',
-    T: '#4fb4ff', O: '#ff6a3a', J: '#c2a020', Q: '#3dff6a', E: '#ff2a2a', U: '#555b62', 8: '#ff6a3a', 9: '#3dff6a', I: '#ff3b3b', 0: '#3dff6a' };
+    T: '#4fb4ff', O: '#ff6a3a', J: '#c2a020', Q: '#3dff6a', E: '#ff2a2a', U: '#555b62', 8: '#ff6a3a', 9: '#3dff6a', I: '#ff3b3b', 0: '#3dff6a', '%': '#ffe14a', '~': '#20e8ff', '=': '#3dff6a' };
   function automap() {
     rect(0, 0, SW, VHR, 0);
     const cs = Math.min((SW - 16) / L.w, (VHR - 16) * ASPECT / L.h), csy = cs / ASPECT;
@@ -442,12 +442,23 @@ const Retro = (() => {
     return 0;
   }
 
+  // The watercooling leak (OVHCLOUD SPECIAL): a dithered water line rising up the view.
+  function water(w) {
+    const top = VHR * (1 - 0.3 * w), c = col('#1f6fe0'), foam = col('#9fd0ff');
+    for (let x = 0; x < SW; x++) {
+      const t = Math.round(top + Math.sin(x * 0.08 + L.time * 2.5) * 1.5);
+      fb[t * SW + x] = foam;
+      for (let y = t + 1; y < VHR; y++) if ((x + y) & 1) fb[y * SW + x] = c;
+    }
+  }
+
   function frame() {
     init();
     sectors();
     extra = P.flashT > 0 ? (INV.cur === 2 || INV.cur === 4 ? 2 : 1) : 0;
     torch = L.obj && L.obj.dark && !P.dead ? 10 : 0;
     view3d();
+    if (L.obj && L.obj.water) water(L.obj.water);
     weapon();
     if (showMap) automap();
     overlays();

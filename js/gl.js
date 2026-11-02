@@ -503,7 +503,7 @@ const GLR = (() => {
     warn: [1.4, 0.3, 0.2, 0.012], exit: [1.8, 0.4, 0.3, 0.02], floor: [1.2, 0.78, 0.6, 0.008], perf: [2.2, 0.66, 0.55, 0.014], ceil: [1.2, 0.22, 0.12, 0.012],
   };
   const TILE_MAT = { '#': 'concrete', '?': 'concrete', W: 'warn', R: 'rack', S: 'rack', N: 'rack', C: 'crac', D: 'door', 1: 'door', 2: 'door', X: 'exit',
-    T: 'rack', O: 'crac', J: 'warn', Q: 'warn', E: 'rack', U: 'rack', 8: 'rack', 9: 'rack' };
+    T: 'rack', O: 'crac', J: 'warn', Q: 'warn', E: 'rack', U: 'rack', 8: 'rack', 9: 'rack', '~': 'crac', '=': 'crac' };
 
   // Detail map, tiled several times per texture and faded in up close: fine grain and
   // micro relief so that surfaces don't turn into smooth blur when the player

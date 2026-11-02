@@ -1,6 +1,6 @@
 // Generates and checks all 50 levels and the 5 of the OVHCLOUD SPECIAL mod: dimensions, borders, framed doors,
 // reachability with badges, special racks, objectives (what each one needs is on
-// the map, and never the same objective on two levels in a row), enemies left on the
+// the map, the RAM servers side by side, and never the same objective on two levels in a row), enemies left on the
 // easiest difficulty.
 // Usage: node tools/validate-levels.js
 const fs = require('fs');
@@ -21,6 +21,14 @@ for (const i of indices) {
   def.map.forEach((row, y) => [...row].forEach((c, x) => { if ('bdotmZVy'.includes(c) && keepEnemy(c, x, y, 0)) easy++; }));
   if (enemies && !easy) { r.ok = false; r.errors.push('no enemy left on the easiest skill'); }
   if (def.miniType === 'tbps' && n('I') !== 2) { r.ok = false; r.errors.push(`THE 1 TBPS: expected 2 VAC terminals, found ${n('I')}`); }
+  // the RAM upgrade's 3 servers stand side by side in one rack row
+  if (def.objective === 'ram') {
+    const cells = [];
+    def.map.forEach((row, y) => [...row].forEach((c, x) => { if (c === '%') cells.push([x, y]); }));
+    const line = cells.every(([x, y]) => y === cells[0][1]) || cells.every(([x]) => x === cells[0][0]);
+    const span = Math.max(...cells.map(([x, y]) => x + y)) - Math.min(...cells.map(([x, y]) => x + y));
+    if (!line || span !== cells.length - 1) { r.ok = false; r.errors.push('objective ram: the servers are not side by side in a row'); }
+  }
   if (def.miniType && n('V') !== 1) { r.ok = false; r.errors.push(`expected 1 mini-boss, found ${n('V')}`); }
   const need = LevelGen.OBJ_NEEDS[def.objective];
   if (need) for (const [ch, , cnt] of [...(need.walls || []), ...(need.floor || []).map(([c, k]) => [c, null, k])]) {
