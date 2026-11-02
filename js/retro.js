@@ -360,7 +360,7 @@ const Retro = (() => {
     }
     label('ARMS', 126);
     // the admin's face
-    rect(145, y + 2, 33, 30, P.hurtT > 0 ? col('#5a0d00') : 224 + 2);
+    rect(145, y + 2, 33, 30, P.hurtT > 0 ? col('#5a0d00') : col('#3c5068'));
     fctx.setTransform(1, 0, 0, 1, 0, 0);
     fctx.clearRect(0, 0, 32, 32);
     fctx.setTransform(1, 0, 0, 1 / ASPECT * 1.05, 0, 0);

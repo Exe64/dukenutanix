@@ -83,4 +83,5 @@ node $SCRATCH/avatar/render.js        # drawFace taken from js/game.js, every mo
 | 2026-11-02 | `validate-levels.js` | PASS | 50 niveaux + 72 runs OK | ✅ |
 | 2026-11-02 | `smoke-test.js` | PASS | modern OK, retro OK | ✅ |
 | 2026-11-02 | Planche des 9 humeurs (8x et 1x, MODERN et RETRO) | toutes présentes, ressemblance | relue par un agent « directeur artistique » (6/10 → 10 corrections appliquées), vérifiée à l'œil | ✅ |
+| 2026-11-02 | Retour utilisateur : cheveux noirs, fond adapté | cheveux et barbe plus foncés, fond bleu ardoise #3c5068 (MODERN et RETRO) | planche re-rendue, smoke OK | ✅ |
 | — | Vérif en jeu par l'utilisateur | ressemblance validée | à faire | ⏳ |

@@ -1561,7 +1561,7 @@ function weaponPose() {
 
 /* ------------------------------------------------------------------- HUD */
 
-// The admin's face: short dark hair, blue mirror shades, trimmed beard, black tee.
+// The admin's face: short black hair, blue mirror shades, trimmed beard, black tee.
 function drawFace(g, cx, cy) {
   const hp = INV.hp;
   const mood = P.dead ? 'dead' : P.faceMood;
@@ -1574,18 +1574,18 @@ function drawFace(g, cx, cy) {
   g.fillRect(cx - 9, cy + 8, 18, 2); g.fillRect(cx - 6, cy + 10, 12, 2);
   g.fillRect(cx - 12, cy - 3, 1, 5); g.fillRect(cx + 11, cy - 3, 1, 5);
   g.fillStyle = 'rgba(255,255,255,0.22)'; g.fillRect(cx - 5, cy - 11, 8, 3); // forehead shine
-  // short dark-brown hair, soft rounded hairline lowest in the middle, receding temples
-  g.fillStyle = '#2e1f15';
+  // short black hair, soft rounded hairline lowest in the middle, receding temples
+  g.fillStyle = '#121214';
   g.fillRect(cx - 7, cy - 16, 14, 1); g.fillRect(cx - 9, cy - 15, 18, 2); g.fillRect(cx - 10, cy - 13, 20, 1);
   g.fillRect(cx - 6, cy - 12, 12, 1);
   g.fillRect(cx - 11, cy - 13, 2, 7); g.fillRect(cx + 9, cy - 13, 2, 7);  // sides over the ears
-  g.fillStyle = '#3d2a1c'; g.fillRect(cx - 3, cy - 16, 1, 1); g.fillRect(cx - 6, cy - 15, 1, 1); g.fillRect(cx + 3, cy - 15, 1, 1);
+  g.fillStyle = '#2c2c34'; g.fillRect(cx - 3, cy - 16, 1, 1); g.fillRect(cx - 6, cy - 15, 1, 1); g.fillRect(cx + 3, cy - 15, 1, 1);
   // trimmed beard along the jaw and chin, sideburns joining it to the hair
-  g.fillStyle = '#7a5538';
+  g.fillStyle = '#3e2c20';
   g.fillRect(cx - 11, cy + 1, 2, 4); g.fillRect(cx + 9, cy + 1, 2, 4);
   g.fillRect(cx - 10, cy + 4, 20, 4); g.fillRect(cx - 9, cy + 8, 18, 2); g.fillRect(cx - 6, cy + 10, 12, 2);
   g.fillStyle = skin; g.fillRect(cx - 7, cy + 2, 14, 2); g.fillRect(cx - 8, cy + 4, 3, 1); g.fillRect(cx + 5, cy + 4, 3, 1);
-  g.fillStyle = '#5c3e28'; g.fillRect(cx - 6, cy + 4, 12, 3);        // moustache, one block under the nose
+  g.fillStyle = '#261a12'; g.fillRect(cx - 6, cy + 4, 12, 3);        // moustache, one block under the nose
   for (let x = cx - 8; x < cx + 8; x += 3) g.fillRect(x, cy + 8 + (x & 1), 1, 1);
   g.fillStyle = '#c38f70'; g.fillRect(cx - 1, cy + 2, 3, 1); g.fillRect(cx + 1, cy, 1, 2);  // long nose
   g.fillStyle = '#a8735a'; g.fillRect(cx - 1, cy + 2, 1, 1); g.fillRect(cx + 1, cy + 2, 1, 1);
@@ -1603,7 +1603,7 @@ function drawFace(g, cx, cy) {
     g.fillStyle = '#1f5fb8'; g.fillRect(cx - 10, cy - 2, 8, 2); g.fillRect(cx + 2, cy - 2, 8, 2);
     g.fillStyle = god ? '#ffd700' : '#d8f4ff'; g.fillRect(cx - 8 + P.look, cy - 4, 3, 1); g.fillRect(cx + 4 + P.look, cy - 4, 3, 1);
   }
-  g.fillStyle = '#7a5538'; g.fillRect(cx - 11, cy - 3, 1, 5); g.fillRect(cx + 10, cy - 3, 1, 5);  // sideburns
+  g.fillStyle = '#3e2c20'; g.fillRect(cx - 11, cy - 3, 1, 5); g.fillRect(cx + 10, cy - 3, 1, 5);  // sideburns
   // mouth: closed half smile in the beard, right corner up
   g.fillStyle = '#5a1a1a';
   if (mood === 'ouch' || mood === 'dead') ell(g, cx, cy + 8, 3, 2.5, '#5a1a1a');
@@ -1635,7 +1635,7 @@ function drawHud(g) {
     g.fillText(String(i + 1), x, yy + 4);
   }
   label('WEAPONS', 178);
-  g.fillStyle = '#0e1013'; g.fillRect(216, y + 3, 50, HUD_H - 4);
+  g.fillStyle = '#3c5068'; g.fillRect(216, y + 3, 50, HUD_H - 4);  // slate blue: the black hair and tee stand out
   if (P.hurtT > 0) { g.fillStyle = 'rgba(255,0,0,0.25)'; g.fillRect(216, y + 3, 50, HUD_H - 4); }
   drawFace(g, 241, y + 20);
   big(INV.armor + '%', 301, '#4fb4ff'); label('ARMOR', 301);
