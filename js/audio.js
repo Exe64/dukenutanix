@@ -86,13 +86,17 @@ const Sfx = (() => {
   // rate. The music has its own volume (musicGain) under the master (N mutes both).
   // Theme: bpm, root (MIDI note), minor or major scale degrees, chord roots (one per
   // bar, in scale degrees), bass rhythm, arpeggio rhythm, kick / snare / hat patterns.
-  const MIN = [0, 2, 3, 5, 7, 8, 10], MAJ = [0, 2, 4, 5, 7, 9, 11];
+  // In a bass line a digit plays that many scale degrees above the chord root (a riff);
+  // power: the bass becomes a distorted power chord (root + fifth), for the metal finale.
+  const MIN = [0, 2, 3, 5, 7, 8, 10], MAJ = [0, 2, 4, 5, 7, 9, 11], PHR = [0, 1, 3, 5, 7, 8, 10];
   const THEMES = {
     ep0: { bpm: 112, root: 45, scale: MIN, chords: [0, 5, 3, 4], bass: 'x.x.x.xxx.x.x.x.', arp: 'x.xx.xx.x.xx.xx.', kick: 'x...x...x...x...', snare: '....x.......x...', hat: '..x...x...x...x.' },
     ep1: { bpm: 100, root: 43, scale: MIN, chords: [0, 3, 5, 4], bass: 'x..x..x.x..x..x.', arp: 'x.x.x.x.x.x.x.x.', kick: 'x.....x.x.......', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.' },
     ep2: { bpm: 128, root: 47, scale: MIN, chords: [0, 0, 5, 6], bass: 'xxx.xxx.xxx.x.x.', arp: 'xxxxxxxxxxxxxxxx', kick: 'x...x...x...x...', snare: '....x.......x..x', hat: '.xxx.xxx.xxx.xxx' },
     ep3: { bpm: 88, root: 40, scale: MIN, chords: [0, 5, 6, 4], bass: 'x.......x.x.....', arp: 'x...x...x...x...', kick: 'x.......x.......', snare: '........x.......', hat: '....x.......x...' },
     ep4: { bpm: 120, root: 48, scale: MAJ, chords: [0, 4, 5, 3], bass: 'x.x.x.x.x.x.x.x.', arp: 'x.xxx.xxx.xxx.xx', kick: 'x..x..x.x..x..x.', snare: '....x.......x...', hat: 'xxxxxxxxxxxxxxxx' },
+    ovh: { bpm: 124, root: 45, scale: MAJ, chords: [5, 3, 0, 4], bass: 'x.xx..x.x.xx..4.', arp: 'x.x.xxx.x.x.xxx.', kick: 'x...x...x...x...', snare: '....x.......x...', hat: '..x...x...x...x.' },
+    metal: { bpm: 168, root: 40, scale: PHR, chords: [0, 0, 1, 6], bass: 'xxx.xxx.x3x2x1x.', arp: 'x.......x...x...', kick: 'xxx.xxx.xxx.xxx.', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', power: true },
     boss: { bpm: 140, root: 38, scale: MIN, chords: [0, 1, 0, 6], bass: 'xxxxxxxxxxxxxxxx', arp: 'x.x.xx.xx.x.xx.x', kick: 'x.x.x.x.x.x.x.x.', snare: '....x..x....x..x', hat: '.x.x.x.x.x.x.x.x' },
   };
   const midi = (n) => 440 * 2 ** ((n - 69) / 12);
@@ -117,7 +121,9 @@ const Sfx = (() => {
     const th = theme, s = step % 16, bar = Math.floor(step / 16) % th.chords.length;
     const deg = th.chords[bar], sc = th.scale, note = (d) => th.root + sc[((d % 7) + 7) % 7] + 12 * Math.floor(d / 7);
     const sixteenth = 60 / th.bpm / 4;
-    if (th.bass[s] === 'x') mtone('sawtooth', midi(note(deg) - 12), t, sixteenth * 1.6, 0.22, 700);
+    const b = th.bass[s], bn = note(deg + (b === 'x' ? 0 : +b)) - 12;
+    if (b !== '.') mtone('sawtooth', midi(bn), t, sixteenth * 1.6, 0.22, th.power ? 2200 : 700);
+    if (b !== '.' && th.power) mtone('square', midi(bn + 7), t, sixteenth * 1.4, 0.12, 1800);
     if (th.arp[s] === 'x') mtone('square', midi(note(deg + [0, 2, 4, 7][s % 4]) + 12), t, sixteenth * 0.9, 0.06, 2600);
     if (th.kick[s] === 'x') { const o = ac.createOscillator(), g = ac.createGain(); o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(40, t + 0.12);
       g.gain.setValueAtTime(0.5, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16); o.connect(g); g.connect(musicGain); o.start(t); o.stop(t + 0.2); notesPlayed.n++; }
@@ -128,7 +134,7 @@ const Sfx = (() => {
     if (!theme || !ac) return;
     while (nextT < ac.currentTime + 0.12) { playStep(nextT); nextT += 60 / theme.bpm / 4; step++; }
   }
-  // music(name): a theme of THEMES (ep0..ep4, boss), or null to stop; same name = no restart
+  // music(name): a theme of THEMES (ep0..ep4, ovh, metal, boss), or null to stop; same name = no restart
   function music(name) {
     if (!ac || name === themeName) return;
     themeName = name; theme = name ? THEMES[name] : null; step = 0; nextT = ac.currentTime + 0.05;

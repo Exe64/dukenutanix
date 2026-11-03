@@ -957,6 +957,7 @@ function killEnemy(e, how) {
     P.shake = 0.7;
     msg(`MINI-BOSS ${T.name} DOWN!${Objectives.done(L) ? ' The REBOOT terminal is unlocked.' : ''}`);
     quip('bossKill', 1, true);
+    if (T.vac && L.obj && L.obj.vac && L.obj.vacOn >= L.obj.vac.length) unlock('vacMitigated');
   } else if (T.boss) {
     L.bossAlive = false;
     P.shake = 1;
@@ -1924,12 +1925,13 @@ function applyLook(dt) {
   mouseDX = 0; mouseDY = 0;
 }
 
-// The music follows the game: the episode's theme while playing, the boss theme once a
-// boss or mini-boss is engaged, silence in the menus and after the end of a level.
+// The music follows the game: the episode's (or the mod's) theme while playing, the boss
+// theme once a boss or mini-boss is engaged, silence in the menus and after the end of a level.
 function updateMusic() {
   if (state !== 'playing' && state !== 'paused') { Sfx.music(null); return; }
   const boss = L.enemies.some((e) => ETYPES[e.type].boss && alive(e) && e.state !== 'idle');
-  Sfx.music(boss ? 'boss' : 'ep' + (L.def.episode % 5));
+  if (L.finaleT) Sfx.music('metal');   // THE OVH FOUNDER's phase 2
+  else Sfx.music(boss ? 'boss' : L.def.mod ? 'ovh' : 'ep' + (L.def.episode % 5));
 }
 
 function update(dt) {
@@ -2115,7 +2117,7 @@ const actions = {
   daily() { startRun(dailySeed(), true); },
   endless() { startRun(Math.floor(Math.random() * 1e9), false); },
   retryRun() { startRun(run.seed, run.daily); },
-  achievements() { showAchievements(); },
+  achievements(arg) { showAchievements(arg === 'ovh'); },
   coop() { showCoop(); },
   async coopHost() {
     showPanel('<h2>HOST A GAME</h2><p class="story">Preparing the connection code...</p>');
@@ -2304,16 +2306,25 @@ const ACHIEVEMENTS = [
   ['deepDive', 'DEEP DIVE', 'Clear depth 5 in a seeded run'],
   ['stomper', 'GARBAGE COLLECTOR', 'Stomp 10 compressed enemies'],
 ];
-function readAch() { try { return JSON.parse(localStorage.getItem('dukenutanix.achievements')) || {}; } catch (e) { return {}; } }
+// The OVHCLOUD SPECIAL has its own list, kept in dukenutanix.ovh.achievements.
+const MOD_ACHIEVEMENTS = [
+  ['ovhFinish', 'WELCOME TO THE CLOUD', 'Finish the OVHCLOUD SPECIAL'],
+  ['vacMitigated', 'MITIGATED', 'Destroy THE 1 TBPS with both VAC terminals on'],
+  ['noPower', 'I HAVE THE POWER', 'Survive THE OVH FOUNDER\'s finale'],
+];
+const achSet = (mod) => mod ? ['dukenutanix.ovh.achievements', MOD_ACHIEVEMENTS] : ['dukenutanix.achievements', ACHIEVEMENTS];
+function readAch(mod) { try { return JSON.parse(localStorage.getItem(achSet(mod)[0])) || {}; } catch (e) { return {}; } }
+// unlocks id from the list of the level being played (campaign or mod); returns its name if new
 function unlock(id) {
-  if (L && L.def.mod) return false;   // the mod has achievements of its own
-  const a = readAch();
+  const mod = !!(L && L.def.mod), [key, list] = achSet(mod), def = list.find((x) => x[0] === id);
+  if (!def) return false;   // campaign achievements are not earned in the mod, and the reverse
+  const a = readAch(mod);
   if (a[id]) return false;
   a[id] = new Date().toISOString().slice(0, 10);
-  try { localStorage.setItem('dukenutanix.achievements', JSON.stringify(a)); } catch (e) { /* ignored */ }
-  msg(`ACHIEVEMENT: ${ACHIEVEMENTS.find((x) => x[0] === id)[1]}`);
+  try { localStorage.setItem(key, JSON.stringify(a)); } catch (e) { /* ignored */ }
+  msg(`ACHIEVEMENT: ${def[1]}`);
   Sfx.secret();
-  return true;
+  return def[1];
 }
 // cumulative counters (racks migrated, enemies stomped): unlocks at the target
 function count(key, target, id) {
@@ -2327,7 +2338,7 @@ function count(key, target, id) {
 // end of a level: the per-level achievements, as HTML lines for the end-of-level screen
 function levelAchievements(L) {
   const got = [];
-  const check = (cond, id) => { if (cond && unlock(id)) got.push(ACHIEVEMENTS.find((x) => x[0] === id)[1]); };
+  const check = (cond, id) => { const name = cond && unlock(id); if (name) got.push(name); };
   check(L.totalSpecials && L.migrated >= L.totalSpecials, 'fullMigration');
   check(L.totalSecrets && L.secrets >= L.totalSecrets, 'archaeologist');
   check(L.totalKills && L.kills >= L.totalKills, 'exterminator');
@@ -2336,15 +2347,18 @@ function levelAchievements(L) {
   check((L.def.bossType || L.def.miniType) && !L.hurt, 'untouchable');
   check(skill === 3, 'root');
   check(run && run.depth >= 5, 'deepDive');
+  const finale = L.enemies.some((e) => e.type === 'metal');   // the founder reached his phase 2
+  check(finale, 'ovhFinish');
+  check(finale && !P.dead, 'noPower');
   return got.length ? `<p class="story small">${got.map((n) => `ACHIEVEMENT UNLOCKED: <b>${n}</b>`).join('<br>')}</p>` : '';
 }
-function showAchievements() {
-  const a = readAch();
+function showAchievements(mod) {
+  const a = readAch(mod), list = achSet(mod)[1];
   showPanel(`
-    <h2>ACHIEVEMENTS ${ACHIEVEMENTS.filter((x) => a[x[0]]).length}/${ACHIEVEMENTS.length}</h2>
-    <table class="ctl ach">${ACHIEVEMENTS.map(([id, name, text]) => `<tr class="${a[id] ? 'got' : ''}"><td>${a[id] ? name : '???'}</td><td>${text}${a[id] ? ` (${a[id]})` : ''}</td></tr>`).join('')}</table>
-    <p class="hint">Migrated racks: ${(a.counts && a.counts.migrated) || 0}/25 | Stomped enemies: ${(a.counts && a.counts.stomp) || 0}/10</p>
-    <button data-act="title" class="big">BACK</button>
+    <h2>${mod ? 'OVHCLOUD ' : ''}ACHIEVEMENTS ${list.filter((x) => a[x[0]]).length}/${list.length}</h2>
+    <table class="ctl ach">${list.map(([id, name, text]) => `<tr class="${a[id] ? 'got' : ''}"><td>${a[id] ? name : '???'}</td><td>${text}${a[id] ? ` (${a[id]})` : ''}</td></tr>`).join('')}</table>
+    ${mod ? '' : `<p class="hint">Migrated racks: ${(a.counts && a.counts.migrated) || 0}/25 | Stomped enemies: ${(a.counts && a.counts.stomp) || 0}/10</p>`}
+    <button data-act="${mod ? 'ovh' : 'title'}" class="big">BACK</button>
   `);
 }
 
@@ -2386,7 +2400,8 @@ function showMod() {
     ${s ? `<button data-act="continueGame" data-arg="${MOD_FIRST}" class="big">CONTINUE ${getLevel(s.level).code}</button>` : ''}
     <button data-act="newGame" data-arg="${MOD_FIRST}" class="${s ? '' : 'big'}">NEW GAME</button>
     <div class="grid mod">${lvls}</div>
-    <p class="hint">Separate save, best times and ranks. Levels unlock as you progress.</p>
+    <p class="hint">Separate save, best times, ranks and achievements. Levels unlock as you progress.</p>
+    <button data-act="achievements" data-arg="ovh">ACHIEVEMENTS</button>
     <button data-act="title">BACK</button>
   `);
 }

@@ -79,7 +79,7 @@ inspiré d'Octave Klaba (« THE OVH FOUNDER »). Le branding est validé par l'u
 - [x] Étape 4 — Missions : habillages HDD / LTO / GE, nouveaux objectifs RAM et fuite de watercooling (L · reasoning → Opus)
 - [x] Étape 5 — Niveaux : RBX, vRack, Bare Metal générés ; GRA d'après le plan ; arène du QG (L · reasoning → Opus)
 - [x] Étape 6 — Boss THE OVH FOUNDER : phase 1, transformation métalleux, guitare à éclairs, voix gutturale, bandeau, fin (L · reasoning → Opus)
-- [ ] Étape 7 — Thème musical OVHcloud et 3 succès du mod (S · standard → Sonnet)
+- [x] Étape 7 — Thème musical OVHcloud et 3 succès du mod (S · standard → Sonnet)
 - [ ] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
 - [ ] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
 
