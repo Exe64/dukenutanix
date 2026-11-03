@@ -8,3 +8,6 @@ node_modules/
 
 # raw ElevenLabs takes of tools/gen-voices.js (paid, kept locally to avoid re-recording)
 tools/.voice-cache/
+
+# raw Suno exports, encoded into music/ by tools/encode-music.js
+music/src/

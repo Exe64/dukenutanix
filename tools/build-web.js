@@ -8,8 +8,10 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const dist = path.join(root, 'dist');
 fs.rmSync(dist, { recursive: true, force: true });
-for (const p of ['index.html', 'js', 'fonts', 'docs/icon.png']) {
-  fs.cpSync(path.join(root, p), path.join(dist, p), { recursive: true });
+for (const p of ['index.html', 'js', 'fonts', 'music', 'docs/icon.png']) {
+  if (!fs.existsSync(path.join(root, p))) continue;
+  // music/src holds the raw Suno exports (tools/encode-music.js): not shipped
+  fs.cpSync(path.join(root, p), path.join(dist, p), { recursive: true, filter: (f) => !f.startsWith(path.join(root, 'music', 'src')) });
 }
 // the version shown by the update check: the one of the desktop app (set from the git tag by the release workflow)
 const { version } = JSON.parse(fs.readFileSync(path.join(root, 'src-tauri', 'tauri.conf.json'), 'utf8'));

@@ -2007,12 +2007,15 @@ function applyLook(dt) {
 }
 
 // The music follows the game: the episode's (or the mod's) theme while playing, the boss
-// theme once a boss or mini-boss is engaged, silence in the menus and after the end of a level.
+// theme once a boss or mini-boss is engaged, the defend theme during the failover, the title
+// theme on the title screen and the level select, silence elsewhere (briefing, end of a level).
 function updateMusic() {
+  if (state === 'title' || state === 'select') { Sfx.music('title'); return; }
   if (state !== 'playing' && state !== 'paused') { Sfx.music(null); return; }
   const boss = L.enemies.some((e) => ETYPES[e.type].boss && alive(e) && e.state !== 'idle');
+  const o = L.obj, defend = o && o.type === 'defend' && o.started && !o.done && !o.failed;
   if (L.finaleT) Sfx.music('metal');   // THE OVH FOUNDER's phase 2
-  else Sfx.music(boss ? 'boss' : L.def.mod ? 'ovh' : 'ep' + (L.def.episode % 5));
+  else Sfx.music(boss ? 'boss' : defend ? 'defend' : L.def.mod ? 'ovh' : 'ep' + (L.def.episode % 5));
 }
 
 function update(dt) {
@@ -2068,7 +2071,7 @@ function step(ts) {
   last = ts;
   const shown = L && state !== 'title' && state !== 'loading' && state !== 'select';
   pollPad();
-  if (L) updateMusic();
+  updateMusic();
   const playing = state === 'playing';
   if (playing) applyLook(raw);
   acc += raw;
@@ -3027,6 +3030,8 @@ function onCheat(k) {
   }
 }
 
+// the browser only lets audio start after a gesture: the first one starts it (title music)
+for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, () => Sfx.init(), { once: true });
 window.addEventListener('keydown', (e) => {
   // typing in a text field (custom seed): Enter plays, everything else goes to the field
   // typing in a text field (custom seed, coop codes): everything goes to the field

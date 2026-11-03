@@ -97,6 +97,8 @@ const Sfx = (() => {
     ep4: { bpm: 120, root: 48, scale: MAJ, chords: [0, 4, 5, 3], bass: 'x.x.x.x.x.x.x.x.', arp: 'x.xxx.xxx.xxx.xx', kick: 'x..x..x.x..x..x.', snare: '....x.......x...', hat: 'xxxxxxxxxxxxxxxx' },
     ovh: { bpm: 124, root: 45, scale: MAJ, chords: [5, 3, 0, 4], bass: 'x.xx..x.x.xx..4.', arp: 'x.x.xxx.x.x.xxx.', kick: 'x...x...x...x...', snare: '....x.......x...', hat: '..x...x...x...x.' },
     metal: { bpm: 168, root: 40, scale: PHR, chords: [0, 0, 1, 6], bass: 'xxx.xxx.x3x2x1x.', arp: 'x.......x...x...', kick: 'xxx.xxx.xxx.xxx.', snare: '....x.......x...', hat: 'x.x.x.x.x.x.x.x.', power: true },
+    defend: { bpm: 160, root: 45, scale: MIN, chords: [0, 0, 5, 6], bass: 'xxxxxxxxxxxxxxxx', arp: 'x.x.x.x.x.x.x.x.', kick: 'x...x...x...x...', snare: '..x...x...x...x.', hat: 'xxxxxxxxxxxxxxxx' },
+    title: { bpm: 95, root: 40, scale: MIN, chords: [0, 5, 3, 4], bass: 'x.....x.x.......', arp: 'x...x...x...x...', kick: 'x.......x.......', snare: '....x.......x...', hat: '..x...x...x...x.' },
     boss: { bpm: 140, root: 38, scale: MIN, chords: [0, 1, 0, 6], bass: 'xxxxxxxxxxxxxxxx', arp: 'x.x.xx.xx.x.xx.x', kick: 'x.x.x.x.x.x.x.x.', snare: '....x..x....x..x', hat: '.x.x.x.x.x.x.x.x' },
   };
   const midi = (n) => 440 * 2 ** ((n - 69) / 12);
@@ -134,14 +136,54 @@ const Sfx = (() => {
     if (!theme || !ac) return;
     while (nextT < ac.currentTime + 0.12) { playStep(nextT); nextT += 60 / theme.bpm / 4; step++; }
   }
-  // music(name): a theme of THEMES (ep0..ep4, ovh, metal, boss), or null to stop; same name = no restart
-  function music(name) {
-    if (!ac || name === themeName) return;
-    themeName = name; theme = name ? THEMES[name] : null; step = 0; nextT = ac.currentTime + 0.05;
+  // tracker(name): plays the procedural theme `name` of THEMES, or stops with null
+  function tracker(name) {
+    theme = name ? THEMES[name] : null; step = 0; nextT = ac.currentTime + 0.05;
     if (!musicGain) { musicGain = ac.createGain(); musicGain.connect(master); }
     musicGain.gain.value = musicOn ? musicVol : 0;
     if (theme && !timer) timer = setInterval(schedule, 25);
     if (!theme && timer) { clearInterval(timer); timer = null; }
+  }
+
+  // The soundtrack: music/<theme>-1.mp3, -2.mp3... (Suno, tools/encode-music.js; js/music.js
+  // counts the versions), played by <audio> elements, which work from file:// where fetch does
+  // not. The versions take turns (a single one loops), a theme change crossfades over FADE s,
+  // and a theme without a file (or whose file fails) falls back to the tracker. About every
+  // 50 ms (on the real elapsed time: timers run late on a busy frame) fade() sets each element's
+  // volume from the fade, MUSIC ON/OFF and volume, N, and the ducking under the voices (duckEnd).
+  const FADE = 1.5;
+  const FILE_GAIN = 1;   // calibration knob: the files' level against the tracker's
+  let tracks = [], fadeTimer = null, fadeT = 0, duckEnd = 0, duckG = 1;
+  function playTrack(t) { t.retry = performance.now() + 1000; t.el.play().catch(() => { /* autoplay blocked: fade() retries */ }); }
+  function fade() {
+    const now = performance.now(), dt = Math.min(0.5, (now - fadeT) / 1000), level = musicOn && !muted ? musicVol * FILE_GAIN : 0;
+    fadeT = now;
+    const duck = ac.currentTime < duckEnd ? 0.35 : 1;
+    duckG += Math.max(-dt / 0.15, Math.min(dt / 0.15, duck - duckG));
+    for (const t of tracks) {
+      t.g += Math.max(-dt / FADE, Math.min(dt / FADE, t.target - t.g));
+      t.el.volume = Math.min(1, level * duckG * t.g);
+      if (t.target && t.el.paused && performance.now() > t.retry) playTrack(t);
+      if (!t.target && !t.g) { t.el.onerror = t.el.onended = null; t.el.pause(); t.el.removeAttribute('src'); t.el.load(); }
+    }
+    tracks = tracks.filter((t) => t.target || t.g);
+    if (!tracks.length) { clearInterval(fadeTimer); fadeTimer = null; }
+  }
+  // music(name): a theme (ep0..ep4, ovh, boss, metal, defend, title), or null to stop; same name = no restart
+  function music(name) {
+    if (!ac || name === themeName) return;
+    themeName = name;
+    tracker(null);
+    for (const t of tracks) t.target = 0;
+    if (!name) return;
+    const n = typeof MUSIC !== 'undefined' && MUSIC[name];
+    if (!n) { tracker(name); return; }
+    const t = { el: new Audio(`music/${name}-1.mp3`), v: 1, g: 0, target: 1, retry: 0 };
+    t.el.loop = n === 1;
+    t.el.onended = () => { t.v = t.v % n + 1; t.el.src = `music/${name}-${t.v}.mp3`; playTrack(t); };
+    t.el.onerror = () => { t.target = t.g = 0; if (themeName === name) tracker(name); };
+    tracks.push(t); playTrack(t);
+    if (!fadeTimer) { fadeT = performance.now(); fadeTimer = setInterval(fade, 50); }
   }
   function setMusic(on, vol) {
     musicOn = on; if (vol !== undefined) musicVol = vol;
@@ -172,6 +214,7 @@ const Sfx = (() => {
       src.connect(g); g.connect(out(pn));
       src.onended = () => { voiceSrcs = voiceSrcs.filter((s) => s !== src); };
       voiceSrcs.push(src); src.start();
+      if (!p) duckEnd = ac.currentTime + buf.duration / rate;
       if (!p && musicGain && musicOn) {
         const t = ac.currentTime, mg = musicGain.gain;
         mg.cancelScheduledValues(t); mg.setValueAtTime(mg.value, t);
@@ -192,7 +235,11 @@ const Sfx = (() => {
 
   return {
     init, music, setMusic, voice, stopVoice,
-    get musicState() { return { theme: themeName, on: musicOn, vol: musicVol, gain: musicGain ? musicGain.gain.value : null, notes: notesPlayed.n }; },
+    get musicState() {
+      const t = tracks.find((k) => k.target);
+      return { theme: themeName, on: musicOn, vol: musicVol, gain: musicGain ? musicGain.gain.value : null, notes: notesPlayed.n,
+        file: t ? t.el.src.split('/').pop() : null, fileVol: t ? +t.el.volume.toFixed(3) : null, tracks: tracks.length, duck: +duckG.toFixed(2) };
+    },
     toggleMute() {
       muted = !muted;
       if (master) master.gain.value = muted ? 0 : 0.55;

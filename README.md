@@ -8,9 +8,10 @@ A retro first-person shooter that runs in the browser, in the spirit of Duke Nuk
 A ransomware has seized the server rooms and its corrupted processes have taken physical form between the racks.
 The on-call admin, with his shades and his oversized ego, sets out to reboot everything: 5 episodes, 50 levels.
 
-No external assets: textures, logos, sprites, weapons and sounds are all generated in code
-(2D canvas + Web Audio API). The one exception is the voices: lines recorded once with ElevenLabs and embedded
-in `js/voices.js` by `tools/gen-voices.js`. No build step, no dependencies.
+No external assets: textures, logos, sprites, weapons and sound effects are all generated in code
+(2D canvas + Web Audio API). Two exceptions: the voices, lines recorded once with ElevenLabs and embedded in
+`js/voices.js` by `tools/gen-voices.js`, and the soundtrack, generated with Suno and kept in `music/`
+(encoded by `tools/encode-music.js`). No build step, no dependencies.
 
 Two visual styles, switched with **T**, from the title screen or from the pause menu (the choice is remembered):
 - **MODERN** (default): a real 3D renderer on the GPU (WebGL2, `js/gl.js`) at the screen's native resolution,
@@ -270,8 +271,10 @@ Also featured:
 - the admin's one-liners, shown as subtitles and spoken by his recorded voice (speech synthesis for a line
   without a clip); in the OVHCLOUD SPECIAL mod, the AWS, Azure and GCP technicians talk back. Voices generated
   with ElevenLabs.
-- procedural music, synthesized like the sound effects: a tracker-style loop per episode and a boss theme once the boss
-  is engaged (MUSIC ON / OFF and its volume in the pause menu).
+- a soundtrack generated with Suno: a theme per episode, the OVHcloud mod, the boss once engaged, the defend failover,
+  THE OVH FOUNDER's metal finale and the title screen, each in several versions played in turn, crossfaded from one
+  theme to the next and lowered under the voices (MUSIC ON / OFF and its volume in the pause menu). A theme without
+  a file falls back to the procedural tracker it replaced.
 
 ## Levels
 
@@ -319,11 +322,14 @@ js/lighting.js           lightmap baking, dynamic lights, bloom
 js/retro.js              RETRO renderer: 320x200, 256 color palette, COLORMAP, 35 Hz
 js/audio.js              synthesized sound effects, music, playback of the recorded voices
 js/voices.js             recorded voice lines (base64 MP3), written by tools/gen-voices.js
+js/music.js              versions of each soundtrack theme, written by tools/encode-music.js
+music/                   soundtrack (<theme>-<n>.mp3, Suno); music/src/ holds the raw exports, not versioned
 js/update.js             update check (desktop app: install; web: link to the release)
 js/version.js            game version, written by tools/build-web.js
 js/game.js               raycasting engine, AI, weapons, HUD, save game, game loop
 tools/validate-levels.js checks all 50 levels
 tools/gen-voices.js      records the voice lines with ElevenLabs (+ ffmpeg) into js/voices.js; --dry lists them
+tools/encode-music.js    encodes the Suno exports of music/src/ into music/ (96 kbps, 2:30 max) and js/music.js
 tools/build-web.js       copies the game into dist/ (packaged by the desktop app, zipped for the web release)
 fonts/                   Press Start 2P, bundled so the game works offline (SIL Open Font License)
 docs/icon.png            app icon

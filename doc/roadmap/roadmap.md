@@ -22,6 +22,14 @@ Mesurer le chargement et les fps sur plusieurs machines réelles et consigner le
 
 ---
 
+### [Issue: #32] Bande-son Suno [PRIORITÉ: MOYENNE] [Complexité: M] 🟢
+
+Plan : [`32-suno-soundtrack.md`](32-suno-soundtrack.md)
+
+Morceaux Suno (10 thèmes dont titre et defend, 2 versions chacun) à la place de la musique procédurale, gardée en secours.
+
+---
+
 ### [Issue: #26] Campagne en coop à 2 [PRIORITÉ: BASSE] [Complexité: XL] 🟢
 
 Plan : [`26-coop-2p.md`](26-coop-2p.md)
