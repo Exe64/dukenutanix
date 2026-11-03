@@ -2,8 +2,8 @@
 plan:
   id: '32'
   name: 32-suno-soundtrack.md
-  link: https://github.com/Exe64/dukenutanix/blob/main/doc/roadmap/32-suno-soundtrack.md
-status: active
+  link: https://github.com/Exe64/dukenutanix/blob/main/doc/roadmap/done/32-suno-soundtrack.md
+status: done
 enriched: 2026-11-03
 date: 2026-11-03
 description: >
@@ -54,7 +54,7 @@ Remplacer la musique procédurale par des morceaux générés avec Suno, un par 
 - [x] Étape 4 — Opérateur : 10 prompts Suno, 20 exports déposés dans `music/src/`, encodage (XS · standard → Sonnet)
 - [x] Étape 5 — README : crédit Suno, `music/`, poids de l'app (XS · standard → Sonnet)
 - [x] 🧪 Tests — Rédiger et exécuter la procédure de test
-- [ ] ✅ Validation — Vérifier les résultats des tests et clôturer
+- [x] ✅ Validation — Vérifier les résultats des tests et clôturer
 
 ## Décisions techniques
 
@@ -132,4 +132,4 @@ node tools/build-web.js && ls dist/music             # 19 fichiers, pas de src/
 ### Session 2026-11-03
 - ✅ Fait : cadrage, prompts Suno, issue #32, plan créé.
 - ✅ Fait : étapes 1 à 5 en one-shot. L'opérateur avait déjà déposé 19 exports Suno (`dn-*.mp3`, 3 à 6 min, 130 Mo) : déplacés dans `music/src/`, encodeur et lecteur adaptés à son nommage et à un nombre de versions variable. 🧪 Tests PASS.
-- 📋 Prochain : ✅ Validation (écoute en jeu, commit), puis clôture.
+- ✅ Validation : écoute en jeu validée par l'opérateur (volume conservé, `FILE_GAIN = 1`) ; commit 15bdc44 ; plan clôturé.

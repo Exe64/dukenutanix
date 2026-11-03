@@ -22,14 +22,6 @@ Mesurer le chargement et les fps sur plusieurs machines réelles et consigner le
 
 ---
 
-### [Issue: #32] Bande-son Suno [PRIORITÉ: MOYENNE] [Complexité: M] 🟢
-
-Plan : [`32-suno-soundtrack.md`](32-suno-soundtrack.md)
-
-Morceaux Suno (10 thèmes dont titre et defend, 2 versions chacun) à la place de la musique procédurale, gardée en secours.
-
----
-
 ### [Issue: #26] Campagne en coop à 2 [PRIORITÉ: BASSE] [Complexité: XL] 🟢
 
 Plan : [`26-coop-2p.md`](26-coop-2p.md)
@@ -57,6 +49,8 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
 ## Fait
 
 ### Plans livrés (2026-10-22 → 2026-11-03)
+- **[Issue: #32] `#32` — Bande-son Suno** (2026-11-03) 🔵 — 19 morceaux Suno (épisodes, mod OVH, boss, finale metal, écran titre, failover) dans `music/`, versions enchaînées, fondus, musique baissée sous les voix ; tracker procédural en secours ; `tools/encode-music.js`
+  [`32-suno-soundtrack.md`](done/32-suno-soundtrack.md)
 - **[Issue: #31] `#31` — Voix enregistrées** (2026-11-03) 🔵 — répliques de l'admin, cri de THE OVH FOUNDER et nouvelles répliques des techniciens AWS / Azure / GCP et de l'Architect, enregistrées avec ElevenLabs et embarquées dans `js/voices.js` ; `Sfx.voice` (musique atténuée, N/V, spatialisation, repli synthèse vocale) ; `tools/gen-voices.js`
   [`31-recorded-voices.md`](done/31-recorded-voices.md)
 - **[Issue: #30] `#30` — Mod OVHCLOUD SPECIAL** (2026-11-03) 🔵 — 5 niveaux OVHcloud (RBX, GRA d'après le plan réel, VRACK, BARE METAL, HQ), missions HDD / RAM / fuite / LTO / GE, techniciens AWS / Azure / GCP, mini-boss THE 1 TBPS, boss THE OVH FOUNDER qui finit en métalleux invincible ; codes iddad, comegetsome, idclev
