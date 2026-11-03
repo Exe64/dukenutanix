@@ -80,7 +80,7 @@ inspiré d'Octave Klaba (« THE OVH FOUNDER »). Le branding est validé par l'u
 - [x] Étape 5 — Niveaux : RBX, vRack, Bare Metal générés ; GRA d'après le plan ; arène du QG (L · reasoning → Opus)
 - [x] Étape 6 — Boss THE OVH FOUNDER : phase 1, transformation métalleux, guitare à éclairs, voix gutturale, bandeau, fin (L · reasoning → Opus)
 - [x] Étape 7 — Thème musical OVHcloud et 3 succès du mod (S · standard → Sonnet)
-- [ ] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
+- [x] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
 - [ ] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
 
 ## Décisions techniques
@@ -99,16 +99,49 @@ inspiré d'Octave Klaba (« THE OVH FOUNDER »). Le branding est validé par l'u
 ### Prérequis pour les tests
 
 ```bash
+# Node 22 + Playwright (pas une dépendance du jeu, installé à côté) avec son Chromium
+npm install --no-save playwright && npx playwright install chromium
+# sur EL10 sans root : LD_LIBRARY_PATH vers les libs extraites des RPM, NODE_PATH vers ce node_modules
 ```
 
 ### Procédure de test
 
 ```bash
+node tools/validate-levels.js   # les 50 niveaux de la campagne, les 5 du mod, 72 niveaux de run
+node tools/smoke-test.js        # E1M1 joué dans les deux styles
+# Scénario de bout en bout (script Playwright jetable, Chromium headless swiftshader,
+# piloté par window.__duke), dans MODERN puis RETRO, localStorage vidé :
+#  1. menu principal -> OVHCLOUD SPECIAL -> NEW GAME -> niveau d'accès par défaut -> briefing RBX -> ENTER
+#  2. RBX, GRA, VRACK, BARE METAL, HQ (actions.play(50..54)) : niveau chargé, objectif initialisé,
+#     capture d'écran, aucune erreur de page ni de console
+#  3. VRACK : 100 de dégâts à THE 1 TBPS avant puis après l'activation des 2 bornes VAC
+#  4. HQ : démarrer les 3 GE, amener le boss à 0 PV, frapper encore, le faire tirer,
+#     raccourcir le finale -> écran de fin
+#  5. retour au menu principal -> NEW GAME -> E1M1 de la campagne, avancer 1 s
 ```
 
 **Résultats attendus :**
+- `validate-levels` : RBX `hotswap`, GRA `leak`, VRACK `ram`, BARE METAL `backup`, HQ `power` OK, « Levels OK » ; empreinte des niveaux de la campagne inchangée.
+- `smoke-test` : « Smoke test OK » dans les deux styles.
+- Menu du mod avec le logo OVHcloud ; chaque niveau a `mod: 'ovh'`, l'épisode 5 et le thème musical `ovh`.
+- Objectifs : RBX serveur + HDD de rechange ; GRA 3 vannes et minuteur ; VRACK 3 serveurs `%`, 3 kits RAM, 2 bornes VAC et THE 1 TBPS ; BARE METAL bandes LTO, bibliothèque et minuteur ; HQ 3 GE et le boss `founder`.
+- VRACK : THE 1 TBPS ne prend que 10 % des dégâts tant que les 2 VAC sont éteintes, 100 % après.
+- HQ : à 0 PV le boss devient `metal`, garde ses PV sous les coups, tire des éclairs, bandeau « YOU HAVE NO POWER HERE », thème `metal`, terminal REBOOT verrouillé ; à la fin du finale, écran « UPTIME RESTORED » avec retour au menu du mod.
+- E1M1 : épisode 0, ni mod ni murs OVHcloud, thème de la campagne, inventaire de départ.
 
 ### Résultats joués et vérifiés
 
 | Date | Test | Attendu | Observé | Verdict |
 |------|------|---------|---------|---------|
+| 2026-11-02 | `validate-levels` | 55 niveaux + 72 de run OK | RBX 32x23 11 ennemis, GRA 48x34 23, VRACK 44x32 32, BARE METAL 51x37 42, HQ 40x30 11 ; « Levels OK (1727 ms) » ; empreinte campagne `03468c15…` identique à l'étape 5 | ✅ |
+| 2026-11-02 | `smoke-test` | E1M1 jouable dans les deux styles | modern 2.6 s, retro 3.69 s, « Smoke test OK » | ✅ |
+| 2026-11-02 | Menu OVHCLOUD SPECIAL (MODERN, RETRO) | logo, titre, NEW GAME -> briefing RBX | logo OVHcloud, « GOES TO THE CLOUD », briefing « RBX : ASSEMBLY WORKSHOP » | ✅ |
+| 2026-11-02 | Chargement des 5 niveaux (MODERN, RETRO) | mod `ovh`, épisode 5, bon objectif, 0 erreur | RBX `hotswap`, GRA `leak`, VRACK `ram`, BARE METAL `backup`, HQ `power` ; thème `ovh` ; 0 erreur de page ou de console | ✅ |
+| 2026-11-02 | Objectifs initialisés (MODERN, RETRO) | voir résultats attendus | RBX serveur + HDD ; GRA 3 vannes, 4:59 ; VRACK 3 serveurs, 3 kits, 2 VAC, mini-boss présent ; BARE METAL 5 bandes, bibliothèque, 5:00 ; HQ 3 GE, boss `founder` | ✅ |
+| 2026-11-02 | VRACK, bouclier de THE 1 TBPS (MODERN, RETRO) | 10 puis 100 PV perdus | 10 PV avant les VAC, 100 PV après (2/2 actives) ; HUD « VAC terminals 0/2 on, then destroy THE 1 TBPS » avant | ✅ |
+| 2026-11-02 | HQ, boss phase 2 (MODERN, RETRO) | `metal` invulnérable, éclairs, bandeau, REBOOT verrouillé | 3/3 GE ; `metal` à 2400 PV, inchangés après 2 coups de 99999 ; tirs `lightning` ; bandeau « YOU HAVE NO POWER HERE » ; finale 12 s ; REBOOT verrouillé ; thème `metal` (vérifié en RETRO) | ✅ |
+| 2026-11-02 | HQ, écran de fin (MODERN, RETRO) | « UPTIME RESTORED », retour au menu du mod | « UPTIME RESTORED / THE CLOUD IS SAFE », bouton MAIN MENU vers le menu du mod, succès WELCOME TO THE CLOUD et I HAVE THE POWER | ✅ |
+| 2026-11-02 | Campagne E1M1 après le mod (MODERN, RETRO) | démarrage normal | E1M1, épisode 0, pas de mod, murs de la campagne, thème `ep0`, 60 munitions et armes 1-2, sauvegarde de la campagne écrite, 0 erreur | ✅ |
+| 2026-11-02 | Captures d'écran (20) | rendu correct | logos OVHcloud, racks bleus, monstres et boss lisibles dans les deux styles ; en RETRO, les messages empilés en haut à gauche chevauchent la barre du boss juste après le 3e GE (mise en page partagée avec la campagne, non modifiée) | ✅ |
+| À faire | Écoute (humain) | thèmes `ovh` et `metal`, grognement et voix « YOU HAVE NO POWER HERE » | non testable : le navigateur de test n'a pas de sortie audio | ⏳ |
+| À faire | Ressenti sur un vrai écran (humain) | fluidité, lisibilité, équilibrage des 5 niveaux et du combat à 2400 PV | non testable : Chromium headless en rendu logiciel (~5 images/s) ; aucun niveau joué de bout en bout | ⏳ |
