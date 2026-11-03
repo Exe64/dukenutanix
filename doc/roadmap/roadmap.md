@@ -1,7 +1,7 @@
 # Roadmap Duke Nutanix
 
 > Backlog actif. L'historique détaillé est archivé dans `_archives/`.
-> Dernière mise à jour : 2026-11-02.
+> Dernière mise à jour : 2026-11-03.
 
 ## Contexte
 
@@ -19,6 +19,14 @@ La vision d'ensemble (multijoueur) est résumée dans [`ROADMAP.md`](../../ROADM
 Plan : [`22-modern-real-hw-benchmark.md`](22-modern-real-hw-benchmark.md)
 
 Mesurer le chargement et les fps sur plusieurs machines réelles et consigner les résultats. **Dépend de** : #2.
+
+---
+
+### [Issue: #31] Voix enregistrées [PRIORITÉ: MOYENNE] [Complexité: M] 🟢
+
+Plan : [`31-recorded-voices.md`](31-recorded-voices.md)
+
+Clips ElevenLabs embarqués pour l'admin, les techniciens AWS / Azure / GCP, l'AWS Solutions Architect et THE OVH FOUNDER, à la place de la synthèse vocale du navigateur.
 
 ---
 

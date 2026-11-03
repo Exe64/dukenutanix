@@ -9,7 +9,8 @@ A ransomware has seized the server rooms and its corrupted processes have taken 
 The on-call admin, with his shades and his oversized ego, sets out to reboot everything: 5 episodes, 50 levels.
 
 No external assets: textures, logos, sprites, weapons and sounds are all generated in code
-(2D canvas + Web Audio API, with the admin's voice provided by the browser's speech synthesis). No build step, no dependencies.
+(2D canvas + Web Audio API). The one exception is the voices: lines recorded once with ElevenLabs and embedded
+in `js/voices.js` by `tools/gen-voices.js`. No build step, no dependencies.
 
 Two visual styles, switched with **T**, from the title screen or from the pause menu (the choice is remembered):
 - **MODERN** (default): a real 3D renderer on the GPU (WebGL2, `js/gl.js`) at the screen's native resolution,
@@ -92,8 +93,8 @@ with [Tauri](https://tauri.app), so they stay small: a few MB, except the AppIma
 - **Windows**: SmartScreen shows "Windows protected your PC": click **More info** then **Run anyway**.
 - **macOS**: if it says the app is damaged or cannot be checked, move it to Applications and run
   `xattr -cr "/Applications/Duke Nutanix.app"` in a Terminal, or right-click the app and choose **Open**.
-- **Linux**: make the AppImage executable (`chmod +x Duke*.AppImage`). The admin's voice needs a browser
-  with speech synthesis; WebKitGTK has none, so on Linux the one-liners are subtitles only.
+- **Linux**: make the AppImage executable (`chmod +x Duke*.AppImage`). The voices are recorded clips and play
+  everywhere; a line without a clip falls back to speech synthesis, which WebKitGTK lacks (subtitle only).
 
 **Updates**: the desktop app checks for a new version at startup and offers it in a banner on the menus
 (download, install and restart in one click; every update is signed and verified before it is installed).
@@ -181,7 +182,7 @@ npx @tauri-apps/cli@2 build      # or "dev" to run it without packaging
 | Shift | Run |
 | Tab / M | Datacenter map |
 | Esc / P | Pause (mouse sensitivity, graphics, style) |
-| N / V | Mute sound / the admin's voice |
+| N / V | Mute sound / the voices |
 | G | Graphics quality (high / low) |
 | T | Style: modern / retro (Doom-like 320x200) |
 | F3 | Performance overlay: frame rate, frame and CPU time, draw calls, sprites, lightmap bake time |
@@ -266,7 +267,9 @@ Also featured:
 - explosive UPS batteries;
 - secret areas behind fake walls;
 - water coolers and energy drinks (turbo);
-- the admin's one-liners, shown as subtitles and spoken by speech synthesis.
+- the admin's one-liners, shown as subtitles and spoken by his recorded voice (speech synthesis for a line
+  without a clip); in the OVHCLOUD SPECIAL mod, the AWS, Azure and GCP technicians talk back. Voices generated
+  with ElevenLabs.
 - procedural music, synthesized like the sound effects: a tracker-style loop per episode and a boss theme once the boss
   is engaged (MUSIC ON / OFF and its volume in the pause menu).
 
@@ -314,11 +317,13 @@ js/objectives.js         level objectives: rules, timers, the data thief, HUD li
 js/gl.js                 MODERN renderer on the GPU (WebGL2)
 js/lighting.js           lightmap baking, dynamic lights, bloom
 js/retro.js              RETRO renderer: 320x200, 256 color palette, COLORMAP, 35 Hz
-js/audio.js              synthesized sound effects
+js/audio.js              synthesized sound effects, music, playback of the recorded voices
+js/voices.js             recorded voice lines (base64 MP3), written by tools/gen-voices.js
 js/update.js             update check (desktop app: install; web: link to the release)
 js/version.js            game version, written by tools/build-web.js
 js/game.js               raycasting engine, AI, weapons, HUD, save game, game loop
 tools/validate-levels.js checks all 50 levels
+tools/gen-voices.js      records the voice lines with ElevenLabs (+ ffmpeg) into js/voices.js; --dry lists them
 tools/build-web.js       copies the game into dist/ (packaged by the desktop app, zipped for the web release)
 fonts/                   Press Start 2P, bundled so the game works offline (SIL Open Font License)
 docs/icon.png            app icon

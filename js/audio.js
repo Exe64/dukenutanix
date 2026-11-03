@@ -145,7 +145,40 @@ const Sfx = (() => {
   }
   function setMusic(on, vol) {
     musicOn = on; if (vol !== undefined) musicVol = vol;
-    if (musicGain) musicGain.gain.value = musicOn ? musicVol : 0;
+    if (musicGain) { musicGain.gain.cancelScheduledValues(0); musicGain.gain.value = musicOn ? musicVol : 0; }
+  }
+
+  /* --------------------------------------------------------------- voices */
+  // Recorded lines (js/voices.js: text -> base64 MP3, made by tools/gen-voices.js), decoded on
+  // first use. voice(text, p, rate) returns false when the line has no clip, so the caller can
+  // fall back to speech synthesis. Without p it is the admin (or the boss) speaking: it cuts the
+  // voices still playing and ducks the music; with p it is a technician, placed like a sound.
+  const voiceBufs = {};
+  let voiceSrcs = [];
+  function stopVoice() {
+    for (const s of voiceSrcs) try { s.stop(); } catch (e) { /* already stopped */ }
+    voiceSrcs = [];
+  }
+  function voice(text, p, rate = 1) {
+    if (typeof VOICES === 'undefined' || !VOICES[text]) return false;
+    if (!ac || muted) return true;
+    voiceBufs[text] = voiceBufs[text] || ac.decodeAudioData(Uint8Array.from(atob(VOICES[text]), (c) => c.charCodeAt(0)).buffer);
+    voiceBufs[text].then((buf) => {
+      if (muted) return;
+      const [v, pn] = at(p);
+      if (!p) stopVoice();
+      const src = ac.createBufferSource(), g = ac.createGain();
+      src.buffer = buf; src.playbackRate.value = rate; g.gain.value = 1.4 * v;
+      src.connect(g); g.connect(out(pn));
+      src.onended = () => { voiceSrcs = voiceSrcs.filter((s) => s !== src); };
+      voiceSrcs.push(src); src.start();
+      if (!p && musicGain && musicOn) {
+        const t = ac.currentTime, mg = musicGain.gain;
+        mg.cancelScheduledValues(t); mg.setValueAtTime(mg.value, t);
+        mg.setTargetAtTime(musicVol * 0.35, t, 0.05); mg.setTargetAtTime(musicVol, t + buf.duration / rate, 0.25);
+      }
+    }).catch(() => { /* undecodable clip: the line stays a subtitle */ });
+    return true;
   }
 
   // A sound from point p ({x, y}, or none: at the player) gets [volume, pan]: the
@@ -158,11 +191,12 @@ const Sfx = (() => {
   }
 
   return {
-    init, music, setMusic,
+    init, music, setMusic, voice, stopVoice,
     get musicState() { return { theme: themeName, on: musicOn, vol: musicVol, gain: musicGain ? musicGain.gain.value : null, notes: notesPlayed.n }; },
     toggleMute() {
       muted = !muted;
       if (master) master.gain.value = muted ? 0 : 0.55;
+      if (muted) stopVoice();
       return muted;
     },
     fist() { noise(0.12, 900, 200, 0.4); tone('square', 180, 60, 0.08, 0.15); },

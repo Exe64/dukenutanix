@@ -5,3 +5,6 @@ node_modules/
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
+
+# raw ElevenLabs takes of tools/gen-voices.js (paid, kept locally to avoid re-recording)
+tools/.voice-cache/

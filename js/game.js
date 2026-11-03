@@ -102,6 +102,18 @@ const QUIPS = {
   thief: ['Hey! That disk is company property!', "You can run, but you can't hide from the audit log.", 'Nobody walks out with my data.'],
   defend: ['Nobody touches prod on my watch.', 'Ninety seconds. I can do ninety seconds.', 'Failover started. Come and get it.'],
 };
+// OVHCLOUD SPECIAL: what the hyperscalers' technicians say when they spot the admin and when they
+// fall (bark). Spoken only from a recorded clip (js/voices.js), one voice per vendor.
+const ENEMY_LINES = {
+  aws: { alert: ['Your egress fees are due.', "That'll be billed per second.", 'Have you considered a reserved instance?'],
+    death: ['Bill... shock...', 'My free tier... expired.'] },
+  architect: { alert: ["Let's whiteboard your migration.", "This isn't Well-Architected."],
+    death: ["I'll send you the invoice."] },
+  azure: { alert: ['Please restart to apply updates.', 'Your license does not cover this datacenter.', 'Have you tried turning prod off and on again?'],
+    death: ['Blue screen... of death.', 'Reboot... required.'] },
+  gcp: { alert: ['This datacenter is being sunset.', "Migrate now. We're deprecating you.", 'Your service is now in beta. Forever.'],
+    death: ['Deprecated... as announced.', 'Shutting down... in twelve months.'] },
+};
 let voiceOn = true;
 let lastQuip = -99;
 let adminVoice = null;
@@ -119,7 +131,7 @@ function quip(kind, chance = 1, force = false) {
   const text = list[Math.floor(Math.random() * list.length)];
   lastQuip = L.time;
   L.subtitle = { text, t: 3.2 };
-  if (voiceOn && window.speechSynthesis && window.SpeechSynthesisUtterance) {
+  if (voiceOn && !Sfx.voice(text) && window.speechSynthesis && window.SpeechSynthesisUtterance) {
     try {
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
@@ -130,13 +142,14 @@ function quip(kind, chance = 1, force = false) {
   }
 }
 
-// The final boss's battle cry, with a big banner: the speech synthesis at its lowest and
-// slowest over a distorted growl, or the growl alone without speech synthesis (WebKitGTK).
+// The final boss's battle cry, with a big banner: his recorded clip slowed down (or the speech
+// synthesis at its lowest and slowest) over a distorted growl, or the growl alone without either.
 function bossShout(text) {
   L.banner = { text, t: 5 };
   lastQuip = L.time + 3;   // no quip cuts it off for 7 s
-  const speech = voiceOn && window.speechSynthesis && window.SpeechSynthesisUtterance;
-  Sfx.growl(3, speech ? 0.5 : 0.8);
+  const clip = voiceOn && Sfx.voice(text, null, 0.8);
+  const speech = !clip && voiceOn && window.speechSynthesis && window.SpeechSynthesisUtterance;
+  Sfx.growl(3, clip || speech ? 0.5 : 0.8);
   if (!speech) return;
   try {
     speechSynthesis.cancel();
@@ -145,6 +158,16 @@ function bossShout(text) {
     if (adminVoice) u.voice = adminVoice;
     speechSynthesis.speak(u);
   } catch (e) { /* speech synthesis unavailable */ }
+}
+
+// A technician's line when he spots the admin or falls (ENEMY_LINES), from his recorded clip
+// only, at his position; a shared cooldown keeps a squad from talking over each other.
+let lastBark = -99;
+function bark(e, kind) {
+  const lines = ENEMY_LINES[e.type];
+  if (!voiceOn || !lines || L.time - lastBark < 3 || Math.random() > 0.4) return;
+  const list = lines[kind];
+  if (Sfx.voice(list[Math.floor(Math.random() * list.length)], e)) lastBark = L.time;
 }
 
 /* ---------------------------------------------------------------- canvas */
@@ -962,6 +985,7 @@ function killEnemy(e, how) {
   e.state = 'dying'; e.timer = 0.5; e.shrunk = 0;
   L.kills++;
   Sfx.enemyDeath(sndKind(e), e);
+  bark(e, 'death');
   if (how !== 'stomp') addFx(e.x, e.y, 'boom', 0.2 + T.z, T.boss ? 1.5 : 0.5);
   if (useGL) GLR.kill(e);
   Objectives.kill(L, e);
@@ -995,7 +1019,7 @@ function damageEnemy(e, dmg) {
   e.flash = shielded ? 0 : 0.08;
   e.alerted = true;
   if (e.hp <= 0) { if (T.phase2) bossPhase2(e); else killEnemy(e); return; }
-  if (e.state === 'idle') { e.state = 'chase'; Sfx.alert(sndKind(e), e); }
+  if (e.state === 'idle') { e.state = 'chase'; Sfx.alert(sndKind(e), e); bark(e, 'alert'); }
   if (Math.random() < T.pain) { e.painT = 0.22; Sfx.enemyPain(sndKind(e), e); if (e.state === 'attack' && !T.boss) e.state = 'chase'; }
 }
 
@@ -1127,7 +1151,7 @@ function updateEnemy(e, dt) {
   }
   if (e.state === 'idle') {
     if (e.sees || e.alerted) {
-      e.state = 'chase'; e.cd = rand(0.3, T.cd); Sfx.alert(sndKind(e), e);
+      e.state = 'chase'; e.cd = rand(0.3, T.cd); Sfx.alert(sndKind(e), e); bark(e, 'alert');
       if (T.boss && !L.bossSeen) { L.bossSeen = true; quip('boss', 1, true); }
     }
     return;
@@ -2296,6 +2320,7 @@ function showTitle() {
   if (coop) { Net.close(); coop = null; players = [P]; }
   document.exitPointerLock && document.exitPointerLock();
   if (window.speechSynthesis) speechSynthesis.cancel();
+  Sfx.stopVoice();
   vctx.setTransform(1, 0, 0, 1, 0, 0);
   vctx.fillStyle = '#000'; vctx.fillRect(0, 0, view.width, view.height);
   const s = readSave();
@@ -3042,8 +3067,9 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'v' || e.key === 'V') {
     voiceOn = !voiceOn;
     if (!voiceOn && window.speechSynthesis) speechSynthesis.cancel();
+    if (!voiceOn) Sfx.stopVoice();
     try { localStorage.setItem('dukenutanix.voice', voiceOn ? '1' : '0'); } catch (err) { /* ignored */ }
-    msg(voiceOn ? "Admin's voice on" : "Admin's voice off (subtitles kept)");
+    msg(voiceOn ? 'Voices on' : 'Voices off (subtitles kept)');
   }
 });
 window.addEventListener('keyup', (e) => {
