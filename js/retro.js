@@ -383,6 +383,11 @@ const Retro = (() => {
 
   function overlays() {
     const yellow = col('#ffe14a');
+    if (P.bsodT > 0 && !Comfort.reduced) {   // an Azure technician's blue screen, dithered over a quarter of the view, then an eighth
+      const c = col('#1a5fd0');
+      for (let y = 0; y < VHR; y += P.bsodT > 0.25 ? 2 : 4) for (let x = (y >> 1) & 1; x < SW; x += 2) fb[y * SW + x] = c;
+      center(':(', (VHR >> 1) - 20, 15, 2);
+    }
     const ob = coop && coop.role === 'guest' ? coop.hud : Objectives.hud(L);
     if (ob && !showMap && !(Objectives.urgent(L) && L.time % 0.6 < 0.2)) text(ob, 2, 2, col(L.obj.done && !(L.def.mod && L.bossAlive) ? '#3dff6a' : Objectives.urgent(L) ? '#ff3b3b' : '#20e8ff'));
     L.msgs.forEach((m, i) => text(m.text, 2, 10 + i * 7, yellow));
@@ -401,6 +406,7 @@ const Retro = (() => {
     right(`NUTANIX ${L.migrated}/${L.totalSpecials}`, 2, L.migrated === L.totalSpecials ? col('#b6a4ff') : col('#7855fa'));
     if (god) right('ROOT MODE', 9, col('#ffd700'));
     if (P.boostT > 0) right(`TURBO ${Math.ceil(P.boostT)}`, god ? 16 : 9, col('#3dff6a'));
+    if (P.slowT > 0) right(`LOCKED IN ${Math.ceil(P.slowT)}`, 9 + (god ? 7 : 0) + (P.boostT > 0 ? 7 : 0), col('#3a9bff'));
     const boss = L.enemies.find((e) => ETYPES[e.type].boss && alive(e) && e.state !== 'idle');
     if (boss) {
       const T = ETYPES[boss.type], f = Math.max(0, boss.hp / T.hp);

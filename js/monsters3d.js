@@ -504,150 +504,90 @@ const Monsters3D = (() => {
   }
 
   /* ---------------------------------------- OVHCLOUD SPECIAL monsters */
-  function gull() {
-    begin();
-    for (const s of [1, -1]) {
-      part(s > 0 ? 'legA' : 'legB', [0, s * 3, 16]);
-      tube([0, s * 3, 16], [1, s * 3, 9], 0.7, 0.6, '#e8a040');
-      box([2, s * 3, 8.5], [2, 1.5, 0.3], '#e8a040');
-    }
-    part('body', [0, 0, 22]);
-    ellipsoid([0, 0, 21], [12, 7, 7], '#f4f4f4', SKIN);
-    ellipsoid([-2, 0, 25], [9, 6, 3], '#9aa3ad', SKIN);
-    tube([-10, 0, 22], [-19, 0, 23], 4, 1.2, '#f4f4f4', SKIN);
-    part('head', [8, 0, 26]);
-    sp([12, 0, 29], 5.5, '#fafafa', SKIN);
-    tube([16.5, 0, 29], [25, 0, 27], 1.8, 0.6, '#f2c21a', SHELL);
-    sp([22, 0, 26.6], 0.9, '#e02020', {});
-    for (const s of [1, -1]) {
-      sp([15.5, s * 3.2, 31], 1.3, '#ffe14a', SHELL);
-      sp([16.6, s * 3.3, 31], 0.6, '#000000', {});
-      box([15.5, s * 3.2, 33], [1.6, 1.4, 0.35], '#333333', { yaw: -s * 0.4 });
-    }
-    for (const s of [1, -1]) {
-      part('wing', [0, s * 5, 25], { side: s });
-      box([-1, s * 16, 25], [5, 11, 0.8], '#9aa3ad', SKIN);
-      box([-2, s * 29, 25], [4, 3, 0.7], '#16181c', SKIN);
-      sp([-2, s * 30, 25.8], 0.8, '#ffffff', SKIN);
-    }
-    return model;
-  }
-
-  // also the puddle blob, scaled down
-  function blob() {
-    begin();
-    part('flame', [0, 0, 0], { k: 0 });   // the gel wobbles like the hot spot's flames
-    ellipsoid([0, 0, 14], [22, 24, 20], '#1f86e8', { gloss: 0.95, spec: 0.9, bump: 0.06, rng: rng(31) });
-    ellipsoid([4, 0, 20], [16, 17, 13], '#3aa0ff', { gloss: 0.95, spec: 0.9 });
-    const R = rng(5);
-    for (let k = 0; k < 8; k++) {
-      const a = R() * 6.28, z = 8 + R() * 22, r = Math.sqrt(Math.max(0, 1 - ((z - 14) / 20) ** 2));
-      sp([Math.cos(a) * 21 * r, Math.sin(a) * 23 * r, z], 1 + R(), '#d2f0ff', { gloss: 0.9, spec: 0.9 });
-    }
-    for (const s of [1, -1]) {
-      sp([17, s * 7, 25], 3.5, '#f2fbff', { gloss: 0.8, spec: 0.6 });
-      sp([20, s * 7, 25], 1.6, '#06204a', {});
-    }
-    ellipsoid([19, 0, 16], [1.5, 6, 2], '#06306a', {});
-    cable([[-4, 5, 32], [-8, 10, 42], [-16, 14, 42]], 1.6, '#1f6fe0', SHELL);
-    cable([[-4, -5, 32], [-8, -10, 42], [-16, -14, 40]], 1.6, '#d02828', SHELL);
-    for (const s of [1, -1]) box([-4, s * 5, 33], [2, 2, 1.5], '#c9cdd1', METAL);
-    part('armL', [0, 20, 22], { side: 1 });
-    ellipsoid([4, 22, 18], [5, 5, 8], '#2a92f2', { gloss: 0.95, spec: 0.9 });
-    part('club', [0, -20, 22], { side: -1 });
-    ellipsoid([4, -22, 18], [5, 5, 8], '#2a92f2', { gloss: 0.95, spec: 0.9 });
-    return model;
-  }
-
-  const STICKER = () => tex(16, 4, (g, w, h) => {
-    g.fillStyle = '#fff'; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#c21d1d'; g.font = 'bold 3px monospace'; g.fillText('admin/admin', 0.5, 3, 15);
+  // A name plate: the text centered on its colour (vests, badges, laptop lids, briefcases).
+  const PLATE = (bg, ink, text, w, h) => tex(w, h, (g) => {
+    g.fillStyle = bg; g.fillRect(0, 0, w, h);
+    g.fillStyle = ink; g.textAlign = 'center'; fitText(g, text, w / 2, h * 0.8, w - 1, h * 0.9);
   });
-  function mirai() {
-    begin();
-    const sticker = STICKER();
-    for (const s of [1, -1]) {
-      part(s > 0 ? 'legA' : 'legB', [0, s * 5, 20]);
-      tube([0, s * 5, 20], [0, s * 6, 2], 1.8, 1.6, '#9aa1a8', METAL);
-      box([2, s * 6, 1], [4, 3, 1], '#2b2f35', METAL);
-    }
-    part('body', [0, 0, 20]);
-    box([0, 0, 25], [6, 13, 7], '#e8e8e8', SHELL);
-    box([6.15, 0, 26], [0.2, 8, 2], '#ffffff', { tex: { front: sticker } });
-    for (let k = 0; k < 4; k++) box([6.1, -9 + k * 2.5, 21], [0.2, 0.7, 0.6], k === 2 ? '#ffb52e' : '#3dff6a', { emit: true });
-    for (const s of [1, -1]) tube([-3, s * 11, 32], [-4, s * 15, 44], 0.7, 0.5, '#222222');
-    tube([0, 0, 32], [0, 0, 40], 1.5, 1.5, '#9aa1a8', METAL);
-    part('head', [0, 0, 40]);
-    box([1, 0, 46], [11, 7, 6], '#f2f2f2', SHELL);
-    box([1, 0, 52.6], [13, 8, 0.6], '#d9dde2', SHELL);
-    tube([12, 0, 46], [13.6, 0, 46], 5.5, 5.5, '#1a1c20', METAL);
-    tube([13.5, 0, 46], [13.9, 0, 46], 3.5, 3.5, '#3050ff', { gloss: 0.95, spec: 1 });
-    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; sp([13.7, Math.cos(a) * 4.5, 46 + Math.sin(a) * 4.5], 0.6, '#ff2020', { emit: true }); }
-    box([12.2, -5, 50.5], [0.2, 0.8, 0.8], '#ff2020', { emit: true });
-    return model;
-  }
-
-  const TICKET = () => tex(30, 40, (g, w, h) => {
-    g.fillStyle = '#ece8d6'; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#1f58d6'; g.fillRect(0, 0, w, 6);
-    g.fillStyle = '#fff'; g.font = 'bold 4px monospace'; g.fillText('#4242', 2, 4.5);
-    g.fillStyle = '#9a9a8a'; for (let y = 26; y < 38; y += 3) g.fillRect(3, y, 22 - (y % 6) * 2, 1);
-    g.save(); g.translate(15, 32); g.rotate(-0.2);
-    g.strokeStyle = '#c21d1d'; g.lineWidth = 1; g.strokeRect(-11, -4, 22, 7);
-    g.fillStyle = '#c21d1d'; g.font = 'bold 5px monospace'; g.fillText('PENDING', -10, 1.5);
-    g.restore();
-    g.fillStyle = 'rgba(90,120,50,0.6)'; g.beginPath(); g.ellipse(25, 14, 2.5, 4, 0, 0, 7); g.fill();
-  });
-  const TICKET_BACK = () => tex(30, 40, (g, w, h) => {
-    g.fillStyle = '#e4e0cc'; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#555'; g.font = 'bold 4px monospace'; g.fillText('PRIORITY:', 4, 18); g.fillText('LOW', 11, 24);
-  });
-  function ticket() {
-    begin();
-    const front = TICKET(), back = TICKET_BACK();
-    for (const s of [1, -1]) {
-      part(s > 0 ? 'legA' : 'legB', [0, s * 6.5, 14]);
-      tube([0, s * 6.5, 14], [0, s * 6.5, 1.5], 2.5, 2.2, '#4a5a3a', SKIN);
-      box([2, s * 6.5, 1], [4, 3, 1], '#2a2a22');
-    }
-    part('body', [0, 0, 14]);
-    box([0, 0, 33], [1.5, 15, 20], '#ece8d6', { tex: { front, back }, gloss: 0.3, spec: 0.1 });
-    for (const s of [1, -1]) {
-      sp([1.6, s * 6, 43], 3, '#f2f2e0', { gloss: 0.6, spec: 0.4 });
-      sp([3.6, s * 6, 43], 1.2, '#a01010', {});
-    }
-    part('mouth', [1.8, 0, 36]);
-    ellipsoid([1.8, 0, 36], [0.6, 5, 1.6], '#3a1a1a', {});
-    for (const s of [1, -1]) {
-      part(s > 0 ? 'armL' : 'gun', [0, s * 15, 38], { side: s });
-      tube([0, s * 15, 38], [15, s * 15, 37], 2, 1.8, '#7a9a5a', SKIN);
-      sp([16, s * 15, 37], 2.6, '#8aaa6a', SKIN);
-    }
-    return model;
-  }
-
-  const ABUSE = () => tex(18, 5, (g, w, h) => {
-    g.fillStyle = '#c21d1d'; g.fillRect(0, 0, w, h);
-    g.fillStyle = '#fff'; g.font = 'bold 4.5px monospace'; g.fillText('ABUSE', 2.5, 4);
-  });
-  function abuse() {
-    begin();
-    const label = ABUSE(), sheet = { gloss: 0.3, spec: 0.2 };
-    part('body', [0, 0, 30]);
-    ellipsoid([0, 0, 38], [13, 14, 14], '#e8ecf2', sheet);
-    tube([0, 0, 38], [0, 0, 14], 13, 15, '#e8ecf2', { ...sheet, caps: false, sides: 16 });
-    box([13.6, 0, 30], [0.4, 9, 2.5], '#ffffff', { tex: { front: label }, yaw: 0 });
-    for (const s of [1, -1]) {
-      ellipsoid([12, s * 5, 41], [1.2, 3, 4], '#14161a', {});
-      sp([13, s * 5, 40], 1.2, '#ff3030', { emit: true });
-    }
-    ellipsoid([13, 0, 35.5], [0.8, 2, 1.6], '#14161a', {});
-    part('scarf', [0, 0, 14]);   // the hem swirls
-    for (let k = 0; k < 8; k++) {
-      const a = k / 8 * Math.PI * 2;
-      ellipsoid([Math.cos(a) * 13, Math.sin(a) * 14, 12], [4.5, 4.5, 5], '#e8ecf2', sheet);
-    }
-    return model;
+  // The hyperscaler technicians (TECHS and drawTech in textures.js): the data thief's body in
+  // the faction's colours, its name as text on the vest (front and back) or on the badge.
+  function tech(o) {
+    return () => {
+      begin();
+      const W = o.heavy ? 1.2 : 1, sx = 6.5 * W, sy = 11 * W;
+      for (const s of [1, -1]) {
+        part(s > 0 ? 'legA' : 'legB', [0, s * 5.5 * W, 22]);
+        box([0, s * 5.5 * W, 11.5], [3.5 * W, 3.5 * W, 10.5], o.legs, SKIN);
+        box([2, s * 5.5 * W, 1.2], [5, 4 * W, 1.2], '#111214', SKIN);
+      }
+      part('body', [0, 0, 22]);
+      box([0, 0, 32], [sx, sy, 11], o.top, SKIN);
+      if (o.vest) {
+        box([0, 0, 31.5], [sx + 0.3, sy + 0.3, 10.2], o.vest, SKIN);
+        box([sx + 0.4, 0, 39.5], [0.2, 3, 2.2], o.top);   // the open collar
+        box([sx + 0.4, 0, 33.5], [0.2, sy * 0.8, 3.2], o.vest, { tex: { front: PLATE(o.vest, o.ink, o.text, 18, 6) } });
+        box([-sx - 0.4, 0, 34], [0.2, sy * 0.9, 4.5], o.vest, { tex: { back: PLATE(o.vest, o.ink, o.text, 18, 8) } });
+        const n = o.band.length, bw = (sy + 0.5) / n;
+        for (const z of n > 1 ? [26, 40.5] : [26]) o.band.forEach((c, k) => box([0, -sy - 0.5 + (2 * k + 1) * bw, z], [sx + 0.5, bw, 1.1], c, { gloss: 0.8, spec: 0.7 }));
+      }
+      if (o.suit) {
+        box([sx + 0.2, 0, 38], [0.2, 3, 4.5], o.suit[0], SKIN);
+        box([sx + 0.4, 0, 35], [0.2, 0.9, 6.5], o.suit[1], { gloss: 0.6, spec: 0.4 });
+      }
+      if (o.badge) box([sx + 0.5, -5.5 * W, 33], [0.2, 3.5, 2.6], '#ffffff', { tex: { front: PLATE(o.badge[0], '#111214', o.badge[1], 10, 7) } });
+      part('head', [0, 0, 43]);
+      box([0, 0, 44], [2, 2.5, 2], o.skin, SKIN);
+      ellipsoid([0, 0, 50], [6.5, 6.5, 7.5], o.skin, SKIN);
+      if (o.cap) {
+        ellipsoid([-0.5, 0, 54.5], [7, 7, 4], o.cap, SKIN);
+        if (o.band.length > 1) o.band.forEach((c, k) => box([6.5, -5.5 + (2 * k + 1) * 1.375, 53.5], [3.5, 1.375, 0.4], c, SKIN));   // GCP: a 4-colour peak
+        else box([6.5, 0, 53.5], [3.5, 5.5, 0.4], o.cap, SKIN);
+      } else ellipsoid([-1, 0, 54], [6.6, 6.8, 4], o.hair, SKIN);
+      for (const s of [1, -1]) {
+        sp([6, s * 2.6, 51], 1, '#f2f2f2', { gloss: 0.8, spec: 0.6 });
+        sp([6.7, s * 2.6, 51], 0.5, '#1a1410', {});
+      }
+      box([6.2, 0, 46.5], [0.3, 1.8, 0.3], '#7a3a2a');
+      if (o.headset) {
+        cable([[0, 6.8, 50], [0, 5, 57], [0, -5, 57], [0, -6.8, 50]], 0.5, '#16181c');
+        for (const s of [1, -1]) sp([0, s * 6.9, 50], 1.8, '#16181c', {});
+        cable([[1, -6.9, 49], [5, -4, 46], [6.6, -1.5, 46.5]], 0.3, '#16181c');
+      }
+      part('armL', [0, sy + 2.5, 41], { side: 1 });
+      box([1, sy + 2.5, 33], [2.8, 2.8, 8], o.top, SKIN);
+      sp([1, sy + 2.5, 24.5], 2.4, o.skin, SKIN);
+      part('gun', [0, -sy - 2.5, 41], { side: -1 });
+      const y = -sy - 2.5;
+      box([1, y, 33], [2.8, 2.8, 8], o.top, SKIN);
+      sp([2, y, 24.5], 2.4, o.skin, SKIN);
+      switch (o.prop) {
+        case 'scanner':
+          box([5, y, 24], [5, 2, 2], '#2a2d33', METAL);
+          box([9.6, y, 25.5], [0.4, 1.2, 0.5], '#3dff6a', { emit: true });
+          break;
+        case 'tablet':
+          box([7, y, 24], [5, 6, 0.6], '#16181c', METAL);
+          box([7, y, 24.7], [4.4, 5.4, 0.1], '#1a5fd0', { emit: true });
+          break;
+        case 'pager':
+          box([4, y, 24], [2.5, 1.5, 3.5], '#16181c', METAL);
+          box([5.6, y, 25], [0.1, 1.2, 1.8], '#ff3030', { emit: true });
+          break;
+        case 'laptop':
+          box([6, y + 1, 23.5], [6, 7, 0.5], '#c9cdd1', METAL);
+          box([11.5, y + 1, 29], [0.4, 7, 5.5], '#2a2d33', { ...METAL, tex: { front: PLATE('#2a2d33', o.label[0], o.label[1], 14, 8) } });
+          break;
+        case 'wrench':
+          box([4, y, 24], [1.6, 0.8, 2], '#ea4335');
+          box([10, y, 24], [5, 0.7, 0.9], '#9aa1a8', METAL);
+          tube([15, y, 24], [15.5, y, 24], 2.6, 2.6, '#9aa1a8', METAL);
+          break;
+        default:   // the briefcase
+          box([3, y, 17], [2, 8, 6], '#3a2614', { gloss: 0.5, spec: 0.3 });
+          box([5.1, y, 17], [0.2, 6, 3], '#ffffff', { tex: { front: PLATE(o.label[0], '#ffffff', o.label[1], 12, 6) } });
+      }
+      return model;
+    };
   }
 
   const TBPS = () => tex(24, 9, (g, w, h) => {
@@ -777,8 +717,9 @@ const Monsters3D = (() => {
   /* --------------------------------------------------------------- build */
   // {type: {parts: [{anim, pivot, side, k, first, count}]}, data, atlas, stride}
   function build() {
-    const makers = { bug, drone, bot, troll, spam, spaghetti, hotspot, storm, bitrot, shadowit, thief, gull, blob, mirai, ticket, abuse, tbps, founder, metal };
+    const makers = { bug, drone, bot, troll, spam, spaghetti, hotspot, storm, bitrot, shadowit, thief, tbps, founder, metal };
     for (const [k, pal] of Object.entries(BOSS_PAL)) makers[k] = boss(pal);
+    for (const [k, o] of Object.entries(TECHS)) makers[k] = tech(o);
     const models = {}, chunks = [];
     let n = 0;
     for (const [k, fn] of Object.entries(makers)) {
@@ -804,7 +745,6 @@ const Monsters3D = (() => {
       }
       data.set(v, o); o += v.length; delete p.verts;
     }
-    models.puddle = models.blob;
     return { models, data, atlas, stride: STRIDE };
   }
 

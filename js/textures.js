@@ -1149,161 +1149,135 @@ function drawThief(g, phase, atk, v = 0, dir = 1) {
 
 /* ----------------------------------------- OVHCLOUD SPECIAL monsters */
 
-// Gravelines seagull: a herring gull, wings spread, yellow beak with its red spot. It flies
-// (enemyZ in game.js): the sprite is the bird alone.
-function drawGull(g, phase, atk, v = 0, dir = 1) {
-  const f = FACE_SHIFT[v] * dir, back = v >= 3, prof = v === 2, hx = 32 + f;
-  const up = [phase ? -9 : 5, -14, 10, 2][atk];   // wing tips: flapping, raised, swept down on the strike, gliding
-  const wing = (s) => {
-    const tx = prof ? 32 - dir * 12 : 32 + s * (30 - v * 3), ty = (prof ? 24 : 36) + up;
-    g.fillStyle = '#9aa3ad';
-    g.beginPath(); g.moveTo(32 + s * 3, 35); g.lineTo(tx, ty); g.lineTo((32 + tx) / 2, 43 + up * 0.3); g.lineTo(32 + s * 3, 44); g.fill();
-    g.fillStyle = '#16181c';
-    g.beginPath(); g.moveTo(tx, ty); g.lineTo(tx + (32 - tx) * 0.25, ty + (35 - ty) * 0.25 - 1); g.lineTo(tx + (32 - tx) * 0.2, ty + 5); g.fill();
-    ell(g, tx + (32 - tx) * 0.12, ty + 2, 1, 1, '#fff');
-  };
-  if (prof) wing(-dir); else { wing(-1); wing(1); }
-  // legs: tucked in flight, talons out on the strike
-  const claw = atk === 2 ? 7 : 2;
-  for (const s of prof ? [0] : [-1, 1]) ln(g, 32 + s * 3, 48, 32 + s * (3 + claw) + (prof ? dir * claw : 0), 53 + claw * 0.6, '#e8a040', 1.6);
-  // body, tail, grey mantle
-  if (prof) { g.fillStyle = '#e8ecef'; g.beginPath(); g.moveTo(32 - dir * 9, 40); g.lineTo(32 - dir * 20, 38); g.lineTo(32 - dir * 18, 45); g.fill(); }
-  ell(g, 32, 43, prof ? 13 : 9, 8, '#f4f4f4');
-  ell(g, 32, 46, prof ? 10 : 7, 4, '#dde2e6');
-  if (back) ell(g, 32, 40, 9, 6, '#9aa3ad');
-  else if (prof) ell(g, 32 - dir * 3, 39, 9, 3.5, '#9aa3ad');
-  // head and its beak (an angry glare)
-  ell(g, hx, 33, 6.5, 6, '#fafafa');
-  if (!back) {
-    const open = atk === 2 ? 3 : atk === 1 ? 1.5 : 0;
-    if (prof || v === 1) {
-      const bx = hx + dir * 5;
-      g.fillStyle = '#f2c21a'; g.beginPath(); g.moveTo(bx, 32); g.lineTo(bx + dir * 9, 34 - open); g.lineTo(bx, 35); g.fill();
-      g.beginPath(); g.moveTo(bx, 35); g.lineTo(bx + dir * 8, 35 + open); g.lineTo(bx, 37); g.fill();
-      ell(g, bx + dir * 6, 35.5 + open * 0.5, 1, 0.9, '#e02020');
+// The technicians of the competing hyperscalers: one body in its faction's colours, with
+// the faction's name as plain text (never a logo) on the vest, the badge or the prop.
+// o: {heavy, skin, hair, top, legs, vest (hi-vis vest, its name on the chest and the back),
+// ink (the vest's lettering), band (colours of the reflective band), cap, suit [shirt, tie],
+// badge [colour, text], headset, prop: scanner | tablet | wrench | laptop | briefcase | pager,
+// label [colour, text] (on the laptop lid or the briefcase)}
+const TECHS = {
+  aws: { skin: '#e0b08a', hair: '#3a2a1e', top: '#1a1c20', legs: '#2a2d33', vest: '#e06a00', ink: '#111214', band: ['#d9dde2'], cap: '#16181c', prop: 'scanner', text: 'AWS' },
+  architect: { heavy: true, skin: '#d9a47e', hair: '#5a4632', top: '#1d1f24', legs: '#1d1f24', suit: ['#f2f2f2', '#f08000'], badge: ['#f08000', 'AWS'], prop: 'laptop', label: ['#f08000', 'AWS'] },
+  azure: { skin: '#c98e66', hair: '#20160e', top: '#13294b', legs: '#2a3550', vest: '#0078d4', ink: '#ffffff', band: ['#cfe6ff'], cap: '#0078d4', prop: 'tablet', text: 'AZURE' },
+  consultant: { heavy: true, skin: '#e8b996', hair: '#8a6a3a', top: '#1c3f7a', legs: '#1c3f7a', suit: ['#dcecff', '#50e6ff'], badge: ['#0078d4', 'AZURE'], prop: 'briefcase', label: ['#0078d4', 'AZURE'] },
+  gcp: { skin: '#f0c49c', hair: '#6b4428', top: '#f1f3f4', legs: '#3c4043', vest: '#3c4043', ink: '#ffffff', band: ['#ea4335', '#fbbc04', '#34a853', '#4285f4'], cap: '#f1f3f4', prop: 'wrench', text: 'GCP' },
+  sre: { heavy: true, skin: '#b07850', hair: '#1a1410', top: '#5f6368', legs: '#26282d', vest: '#5f6368', ink: '#ffffff', band: ['#ea4335', '#fbbc04', '#34a853', '#4285f4'], headset: true, prop: 'pager', text: 'GCP' },
+};
+function drawTech(o) {
+  return (g, phase, atk, v = 0, dir = 1) => {
+    const back = v >= 3, f = FACE_SHIFT[v] * dir * 0.6, lo = phase ? 3 : -3, w = o.heavy ? 3 : 0;
+    // legs and shoes
+    g.fillStyle = o.legs; g.fillRect(23 - w, 44, 8 + w * 0.6, 17 + Math.min(0, lo)); g.fillRect(33 + w * 0.4, 44, 8 + w * 0.6, 17 - Math.max(0, lo));
+    g.fillStyle = '#111214'; g.fillRect(22 - w, 60 + Math.min(0, lo), 10 + w * 0.6, 4); g.fillRect(32 + w * 0.4, 60 - Math.max(0, lo), 10 + w * 0.6, 4);
+    // torso, then the left arm swinging (the right one holds the prop)
+    g.fillStyle = o.top; g.beginPath(); g.moveTo(18 - w, 46); g.lineTo(20 - w, 22); g.lineTo(44 + w, 22); g.lineTo(46 + w, 46); g.closePath(); g.fill();
+    g.fillRect(12 - w, 24 + (phase ? 2 : 0), 7, 15); ell(g, 15.5 - w, 40 + (phase ? 2 : 0), 3, 3, o.skin);
+    if (o.suit && !back) {
+      // shirt, tie and lapels
+      g.fillStyle = o.suit[0]; g.beginPath(); g.moveTo(27 + f, 22); g.lineTo(37 + f, 22); g.lineTo(32 + f, 38); g.fill();
+      g.fillStyle = o.suit[1]; g.beginPath(); g.moveTo(31 + f, 24); g.lineTo(33 + f, 24); g.lineTo(34 + f, 36); g.lineTo(32 + f, 39); g.lineTo(30 + f, 36); g.fill();
+      ln(g, 27 + f, 22, 31 + f, 40, 'rgba(0,0,0,0.5)', 1); ln(g, 37 + f, 22, 33 + f, 40, 'rgba(0,0,0,0.5)', 1);
+      g.fillStyle = 'rgba(0,0,0,0.5)'; g.fillRect(31.5 + f, 40, 1, 6);
+    }
+    if (o.vest) {
+      // hi-vis vest: open at the front over the shirt, its reflective band and the name
+      g.fillStyle = o.vest; g.beginPath(); g.moveTo(18 - w, 46); g.lineTo(20.5 - w, 23); g.lineTo(43.5 + w, 23); g.lineTo(46 + w, 46); g.closePath(); g.fill();
+      if (!back) { g.fillStyle = o.top; g.beginPath(); g.moveTo(28 + f, 23); g.lineTo(36 + f, 23); g.lineTo(32 + f, 29); g.fill(); }
+      const bw = (46 + w - (18 - w)) / o.band.length;
+      o.band.forEach((c, k) => { g.fillStyle = c; g.fillRect(18 - w + k * bw, 41, bw + 0.2, 2.5); });
+      if (o.band.length > 1) o.band.forEach((c, k) => { g.fillStyle = c; g.fillRect(20.5 - w + k * (bw - 1.25), 23, bw - 1.25, 3); });   // GCP: its 4 colours on the shoulders too
+      g.fillStyle = o.ink;
+      g.textAlign = 'center'; const tx = 32 + (back ? 0 : f * 0.5);
+      fitText(g, o.text, tx, back ? 35 : 37.5, 22 + w * 2, back ? 10 : 8.5);
+      g.textAlign = 'left';
+    }
+    if (o.badge && !back) {
+      // the lanyard badge, the name in big letters on its colour
+      ln(g, 28 + f, 22, 38.5 + f * 0.5, 30, '#16181c', 0.8);
+      g.fillStyle = '#f2f2f2'; g.fillRect(34 + f * 0.5, 30, 11, 9);
+      g.fillStyle = o.badge[0]; g.fillRect(34 + f * 0.5, 30, 11, 4);
+      g.fillStyle = '#111214'; g.textAlign = 'center'; fitText(g, o.badge[1], 39.5 + f * 0.5, 38.4, 10, 4.5); g.textAlign = 'left';
+    }
+    if (o.headset && !back) { ln(g, 26 + f * 0.8, 20, 34 + f, 22, '#16181c', 1); ell(g, 34.5 + f, 22, 1.2, 1.2, '#16181c'); }
+    // head: neck, face, hair or cap
+    const hx = 32 + f * 0.4;
+    g.fillStyle = o.skin; g.fillRect(29 + f * 0.3, 18, 6, 5);
+    ell(g, hx, 13, 7.5, 8.5, o.skin);
+    if (o.cap) {
+      ell(g, hx, 8, 8, 5, o.cap); g.fillStyle = o.cap; g.fillRect(hx - 8, 8, 16, 2);
+      if (o.band.length > 1) o.band.forEach((c, k) => { g.fillStyle = c; g.fillRect(hx - 8 + k * 4, 6, 4, 4); });   // a 4-colour crown
+      if (!back) { g.fillStyle = o.cap; g.fillRect(hx - 6 + f * 0.6, 9, 12, 2); g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(hx - 6 + f * 0.6, 10.5, 12, 0.6); }
+      else { g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(hx - 2, 10, 4, 2); ell(g, hx, 15, 7, 5, o.hair); }
     } else {
-      g.fillStyle = '#f2c21a'; g.beginPath(); g.moveTo(hx - 2, 34); g.lineTo(hx + 2, 34); g.lineTo(hx, 41 + open); g.fill();
-      ell(g, hx, 38.5 + open * 0.5, 1, 1, '#e02020');
+      ell(g, hx, 7, 7.6, 3.6, o.hair); g.fillRect(hx - 7.5, 7, 2, 5); g.fillRect(hx + 5.5, 7, 2, 5);
+      if (back) ell(g, hx, 12, 7.5, 7.5, o.hair);
+    }
+    if (o.headset) { g.strokeStyle = '#16181c'; g.lineWidth = 1.2; g.beginPath(); g.ellipse(hx, 12, 8.4, 9, 0, Math.PI, 0); g.stroke(); ell(g, hx - 8, 13, 1.8, 2.5, '#16181c'); ell(g, hx + 8, 13, 1.8, 2.5, '#16181c'); }
+    eyes(v, dir, hx - 3 + f * 0.5, hx + 3 + f * 0.5, (x) => { g.fillStyle = '#fff'; g.fillRect(x - 1.2, 12, 2.6, 2); g.fillStyle = '#1a1410'; g.fillRect(x - 0.3, 12.3, 1.2, 1.4); g.fillStyle = o.hair; g.fillRect(x - 1.5, 10.6, 3, 0.8); });
+    if (!back) {
+      if (atk === 2) ell(g, hx + f * 0.5, 18, 1.8, 1.4, '#3a0a0a');   // shouting
+      else { g.fillStyle = '#7a3a2a'; g.fillRect(hx - 2 + f * 0.5, 17.6, 4, 0.8); }
+    }
+    techProp(g, o, atk, back);
+  };
+}
+// The prop in the technician's right hand, by attack pose (0 none, 1 wind-up, 2 strike or
+// shot, 3 recovery): melee props swing, ranged ones aim and flash.
+function techProp(g, o, atk, back) {
+  const flash = (x, y, c) => {
+    if (atk === 1) ell(g, x, y, 2, 2, c);
+    else if (atk === 2) { ell(g, x, y, 5, 5, c); ell(g, x, y, 2.5, 2.5, '#fff'); }
+    else if (atk === 3) ell(g, x + 1, y - 2, 3, 2, 'rgba(170,170,170,0.6)');
+  };
+  const arm = (x, y) => { g.fillStyle = o.top; g.fillRect(45 + (o.heavy ? 3 : 0), 24, 7, 10); ln(g, 48.5 + (o.heavy ? 3 : 0), 32, x, y, o.top, 5); ell(g, x, y, 2.6, 2.6, o.skin); };
+  switch (o.prop) {
+    case 'scanner':   // a handheld card reader: it bills the player
+      arm(52, 36);
+      g.fillStyle = '#2a2d33'; g.fillRect(48, 33, 12, 6); g.fillRect(50, 38, 4, 5);
+      g.fillStyle = '#3dff6a'; g.fillRect(52, 34, 4, 1.5);
+      flash(61, 36, o.vest);
+      break;
+    case 'tablet':
+      arm(51, 35);
+      g.fillStyle = '#16181c'; g.fillRect(46, 28, 14, 10);
+      g.fillStyle = back ? '#3a3f46' : '#1a5fd0'; g.fillRect(47, 29, 12, 8);
+      if (!back) { g.fillStyle = '#fff'; g.font = 'bold 6px monospace'; g.fillText(':(', 48, 35); }
+      flash(53, 26, '#5aa8ff');
+      break;
+    case 'pager': {
+      arm(52, 30 - (atk ? 4 : 0));
+      const y = 24 - (atk ? 4 : 0);
+      g.fillStyle = '#16181c'; g.fillRect(48, y, 9, 7);
+      g.fillStyle = atk === 2 || atk === 1 ? '#ff3030' : '#9aff6a'; g.fillRect(49, y + 1, 7, 3);
+      flash(52.5, y - 3, '#ea4335');
+      break;
+    }
+    case 'laptop':
+      arm(50, 38);
+      g.fillStyle = '#c9cdd1'; g.fillRect(44, 36, 18, 2);
+      g.fillStyle = back ? '#9aa1a8' : '#2a2d33'; g.fillRect(45, 24, 16, 12);
+      if (!back) { g.fillStyle = o.label[0]; g.textAlign = 'center'; fitText(g, o.label[1], 53, 32.5, 14, 6); g.textAlign = 'left'; }
+      flash(53, 21, o.label[0]);
+      break;
+    default: {   // melee: the wrench or the briefcase, swung
+      const [x, y, a] = [[52, 36, 0.2], [55, 22, -0.9], [50, 40, 1.1], [54, 38, 0.5]][atk];
+      arm(x, y);
+      g.save(); g.translate(x, y); g.rotate(a);
+      if (o.prop === 'wrench') {
+        g.fillStyle = '#9aa1a8'; g.fillRect(-1.5, -14, 3, 15);
+        g.beginPath(); g.arc(0, -15, 3.5, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#3c4043'; g.fillRect(-1, -19, 2, 4);
+        g.fillStyle = '#ea4335'; g.fillRect(-1.6, -3, 3.2, 4);
+      } else {
+        g.fillStyle = '#16181c'; g.fillRect(-2, -2, 4, 2);
+        g.fillStyle = '#3a2614'; g.fillRect(-9, 0, 18, 13);
+        g.fillStyle = '#c9a227'; g.fillRect(-7, 2, 2, 1.5); g.fillRect(5, 2, 2, 1.5);
+        g.fillStyle = o.label[0]; g.fillRect(-7, 5, 14, 6);
+        g.fillStyle = '#fff'; g.textAlign = 'center'; fitText(g, o.label[1], 0, 9.8, 13, 5); g.textAlign = 'left';
+      }
+      g.restore();
     }
   }
-  eyes(v, dir, hx - 3, hx + 3, (x) => {
-    ell(g, x, 31.5, 1.5, 1.5, '#ffe14a'); ell(g, x, 31.5, 0.7, 0.7, '#000');
-    ln(g, x - 2, 29.5 + (x < hx ? 0 : 1), x + 2, 29.5 + (x < hx ? 1 : 0), '#333', 0.8);
-  });
-}
-
-// Watercooling blob: a lump of leaked coolant gel, its quick-connect fittings and the cold
-// (blue) and hot (red) hoses still stuck in it. Rises up, then slams down.
-function drawBlob(g, phase, atk, v = 0, dir = 1) {
-  const f = FACE_SHIFT[v] * dir, back = v >= 3;
-  const [w, h] = [[24 + phase * 2, 25 - phase * 2], [19, 33], [30, 18], [25, 23]][atk];
-  const top = 64 - h * 1.8;
-  ell(g, 32, 62, w + 5, 3, 'rgba(40,140,255,0.5)');
-  if (atk === 2) for (const s of [-1, 1]) { ell(g, 32 + s * (w + 4), 52, 2, 3, '#4aa8ff'); ell(g, 32 + s * (w + 9), 56, 1.5, 2, '#4aa8ff'); }
-  cable(g, [[30, top + 4], [22, top - 6], [12, top - 2]], '#1f6fe0', 3);
-  cable(g, [[36, top + 4], [44, top - 4], [52, top]], '#d02828', 3);
-  for (const x of [12, 52]) { g.fillStyle = '#c9cdd1'; g.fillRect(x - 2, top - 4, 4, 4); }
-  ell(g, 32, 64 - h * 0.8, w, h, '#1f86e8');
-  ell(g, 30, 64 - h * 0.95, w * 0.75, h * 0.7, '#3aa0ff');
-  ell(g, 32 - w * 0.5, top + h * 0.35, 2.5, 4.5, 'rgba(230,245,255,0.85)');
-  const R = rng(9 + phase);
-  for (let i = 0; i < 7; i++) ell(g, 32 + (R() - 0.5) * w * 1.4, 64 - R() * h * 1.2, 1 + R() * 1.2, 1 + R() * 1.2, 'rgba(210,240,255,0.7)');
-  if (back) return;
-  const ey = top + h * 0.6;
-  eyes(v, dir, 26 + f, 38 + f, (x) => { ell(g, x, ey, 3.5, 4, '#f2fbff'); ell(g, x + f * 0.15, ey + 0.5, 1.6, 2, '#06204a'); });
-  ell(g, 32 + f, ey + 8, 5, [1.5, 2.5, 4, 2.5][atk], '#06306a');
-}
-
-// Mirai IoT camera: a cheap bullet camera with the factory password still on its sticker,
-// walking on its mounting bracket. Fires bursts of junk packets from its lens.
-function drawMirai(g, phase, atk, v = 0, dir = 1) {
-  const back = v >= 3, prof = v === 2, f = FACE_SHIFT[v] * dir;
-  const lo = phase ? 3 : -3;
-  // legs (the bracket) and the router-like body
-  g.fillStyle = '#9aa1a8'; g.fillRect(25, 44, 4, 18 + lo); g.fillRect(35, 44, 4, 18 - lo);
-  g.fillStyle = '#2b2f35'; g.fillRect(22, 61 + lo, 9, 3 - Math.max(0, lo)); g.fillRect(33, 61 - lo, 9, 3 - Math.max(0, -lo));
-  g.fillStyle = '#e8e8e8'; g.fillRect(19, 32, 26, 14);
-  g.fillStyle = '#c9cdd1'; g.fillRect(19, 44, 26, 2);
-  ln(g, 21, 32, 17, 20, '#222', 1.5); ln(g, 43, 32, 47, 20, '#222', 1.5);
-  if (!back) {
-    for (let k = 0; k < 4; k++) { g.fillStyle = (k + phase) % 3 ? '#3dff6a' : '#ffb52e'; g.fillRect(23 + k * 4, 41, 2, 1.5); }
-    g.fillStyle = '#fff'; g.fillRect(24 + f * 0.4, 34, 16, 5);
-    g.fillStyle = '#c21d1d'; g.font = 'bold 3px monospace'; g.fillText('admin/admin', 24.5 + f * 0.4, 37.8);
-  }
-  g.fillStyle = '#9aa1a8'; g.fillRect(30, 26, 4, 7);
-  // the camera housing, its sunshield, the lens with its IR LEDs
-  if (prof) {
-    g.fillStyle = '#f2f2f2'; g.fillRect(14, 12, 36, 14);
-    g.fillStyle = '#d9dde2'; g.fillRect(12, 9, 40, 3);
-    g.fillStyle = '#1a1c20'; g.fillRect(dir > 0 ? 50 : 10, 13, 4, 12);
-    if (atk === 2) ell(g, dir > 0 ? 56 : 8, 19, 5, 5, '#fff');
-  } else if (back) {
-    g.fillStyle = '#e8e8e8'; ell(g, 32, 18, 14, 9, '#e8e8e8');
-    g.fillStyle = '#d9dde2'; g.fillRect(17, 8, 30, 3);
-    cable(g, [[32, 20], [36, 28], [32, 32]], '#222', 1.5);
-  } else {
-    const cx = 32 + f * 0.5;
-    ell(g, cx, 18, 14, 9, '#f2f2f2');
-    g.fillStyle = '#d9dde2'; g.fillRect(16 + f * 0.5, 8, 32, 3);
-    ell(g, cx, 19, 7, 7, '#1a1c20');
-    ell(g, cx, 19, 4, 4, ['#2040c0', '#5070ff', '#fff', '#2040c0'][atk]);
-    ell(g, cx - 1.3, 17.7, 1.2, 1.2, 'rgba(255,255,255,0.7)');
-    for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; ell(g, cx + Math.cos(a) * 5.6, 19 + Math.sin(a) * 5.6, 0.7, 0.7, atk === 1 ? '#ff6a6a' : '#a01010'); }
-    ell(g, cx + 9, 14, 1, 1, phase ? '#ff2020' : '#600');
-    if (atk === 3) ell(g, cx, 12, 4, 2.5, 'rgba(170,170,170,0.6)');
-  }
-}
-
-// Zombie support ticket: a stale ticket risen from the queue, PENDING for years, arms out.
-function drawTicket(g, phase, atk, v = 0, dir = 1) {
-  const f = FACE_SHIFT[v] * dir, back = v >= 3;
-  const lo = phase ? 3 : -3;
-  g.fillStyle = '#4a5a3a'; g.fillRect(23, 50, 5, 14 + Math.min(0, lo)); g.fillRect(36, 50, 5, 14 - Math.max(0, lo));
-  // arms reaching out (raised on the attack)
-  const ay = [0, -6, -10, -3][atk];
-  g.fillStyle = '#7a9a5a'; g.fillRect(4, 28 + ay + phase, 12, 5); g.fillRect(48, 28 + ay - phase, 12, 5);
-  ell(g, 4, 30 + ay + phase, 3, 3.5, '#8aaa6a'); ell(g, 60, 30 + ay - phase, 3, 3.5, '#8aaa6a');
-  // the ticket: a sheet with a dog-ear
-  g.fillStyle = '#ece8d6'; g.beginPath(); g.moveTo(13, 8); g.lineTo(44, 8); g.lineTo(51, 15); g.lineTo(51, 52); g.lineTo(13, 52); g.fill();
-  g.fillStyle = '#c8c2a8'; g.beginPath(); g.moveTo(44, 8); g.lineTo(44, 15); g.lineTo(51, 15); g.fill();
-  ell(g, 19, 47, 4, 2.5, 'rgba(90,120,50,0.6)'); ell(g, 45, 24, 2.5, 4, 'rgba(90,120,50,0.5)');
-  if (back) {
-    g.fillStyle = '#9a9a8a'; g.fillRect(16, 10, 3, 1);
-    g.fillStyle = '#555'; g.font = 'bold 4px monospace'; g.fillText('PRIORITY:', 17, 26); g.fillText('LOW', 25, 32);
-    return;
-  }
-  g.fillStyle = '#1f58d6'; g.fillRect(13, 8, 31, 6);
-  g.fillStyle = '#fff'; g.font = 'bold 4px monospace'; g.fillText('#4242', 15 + f * 0.3, 12.5);
-  g.fillStyle = '#9a9a8a'; for (let y = 36; y < 50; y += 3) g.fillRect(16, y, 30 - (y % 6) * 2, 1);
-  g.save(); g.translate(33 + f * 0.3, 42); g.rotate(-0.2);
-  g.strokeStyle = '#c21d1d'; g.lineWidth = 1; g.strokeRect(-11, -4, 22, 7);
-  g.fillStyle = '#c21d1d'; g.font = 'bold 5px monospace'; g.fillText('PENDING', -10, 1.5);
-  g.restore();
-  // undead face
-  eyes(v, dir, 25 + f, 39 + f, (x) => { ell(g, x, 21, 3.5, x < 32 + f ? 3.5 : 2.5, '#f2f2e0'); ell(g, x, 21.5, 1.3, 1.3, '#a01010'); });
-  ell(g, 32 + f, 29, 5, [1.5, 2.5, 3.5, 2.5][atk], '#3a1a1a');
-}
-
-// Abuse report: a ghostly complaint form with its red ABUSE header, floating, firing orbs.
-function drawAbuse(g, phase, atk, v = 0, dir = 1) {
-  const f = FACE_SHIFT[v] * dir, back = v >= 3;
-  const col = '#e8ecf2';
-  g.fillStyle = col;
-  g.beginPath(); g.moveTo(14, 26); g.arc(32, 26, 18, Math.PI, 0); g.lineTo(50, 50);
-  const flare = atk === 2 ? 4 : 0;
-  for (let k = 0; k < 4; k++) {
-    const x = 50 - k * 9;
-    g.quadraticCurveTo(x - 2.25, 58 + flare + (k + phase) % 2 * 4, x - 4.5, 50 + flare * 0.5);
-    g.quadraticCurveTo(x - 6.75, 46, x - 9, 50);
-  }
-  g.closePath(); g.fill();
-  ell(g, 26, 18, 6, 7, 'rgba(255,255,255,0.7)');
-  if (back) { g.fillStyle = '#b8bcc4'; for (let y = 22; y < 46; y += 4) g.fillRect(20, y, 24, 1); return; }
-  g.fillStyle = '#c21d1d'; g.fillRect(16, 31, 32, 7);
-  g.fillStyle = '#fff'; g.font = 'bold 6px monospace'; g.fillText('ABUSE', 19 + f * 0.3, 37);
-  g.fillStyle = '#b8bcc4'; for (let y = 41; y < 49; y += 3) g.fillRect(20, y, 24, 1);
-  eyes(v, dir, 26 + f, 38 + f, (x) => { ell(g, x, 22, 3, 4.5, '#14161a'); ell(g, x, 23, 1.3, 1.6, ['#ff3030', '#ff8a2a', '#ffe14a', '#ff3030'][atk]); });
-  ell(g, 32 + f, 28.5, 2, [1, 1.5, 2.2, 1.5][atk], '#14161a');
 }
 
 // THE 1 TBPS: a hulk packed with packets, its throughput on a chest display. Shielded until
@@ -1862,18 +1836,14 @@ function buildAssets() {
   Assets.enemies.bitrot = buildEnemySprites(drawBitrot, ['#1d2a4a', '#4a7a2a', '#6b4a2a', '#2a2a2a'], 23);
   Assets.enemies.shadowit = buildEnemySprites(drawShadowIT, ['#1a1426', '#2c2240', '#e8c21a', '#555'], 24);
   Assets.enemies.thief = buildEnemySprites(drawThief, ['#3a3f4a', '#1a1c20', '#9aa1a8', '#f2f2f2'], 25);
-  // OVHCLOUD SPECIAL (MOD_ENEMIES in game.js); the puddles are small blobs
+  // OVHCLOUD SPECIAL (MOD_ENEMIES in game.js)
+  let ts = 34;
+  for (const [k, o] of Object.entries(TECHS)) Assets.enemies[k] = buildEnemySprites(drawTech(o), [o.vest || o.top, o.top, o.legs, o.skin], ts++);
   Object.assign(Assets.enemies, {
-    gull: buildEnemySprites(drawGull, ['#f4f4f4', '#9aa3ad', '#f2c21a', '#16181c'], 26),
-    blob: buildEnemySprites(drawBlob, ['#1f86e8', '#3aa0ff', '#1f6fe0', '#d02828'], 27),
-    mirai: buildEnemySprites(drawMirai, ['#f2f2f2', '#9aa1a8', '#1a1c20', '#e8e8e8'], 28),
-    ticket: buildEnemySprites(drawTicket, ['#ece8d6', '#1f58d6', '#7a9a5a', '#c21d1d'], 29),
-    abuse: buildEnemySprites(drawAbuse, ['#e8ecf2', '#c21d1d', '#b8bcc4', '#14161a'], 30),
     tbps: buildEnemySprites(drawTbps, ['#2a2f3a', '#f2f2f2', '#e8741a', '#2a7de1'], 31),
     founder: buildEnemySprites(drawFounder, ['#000e9c', '#3ad0ff', '#3a3f4a', '#1b2440'], 32),
     metal: buildEnemySprites(drawMetalhead, ['#15161a', '#c8a26e', '#2a2c33', '#6b4428'], 33),
   });
-  Assets.enemies.puddle = Assets.enemies.blob;
   Assets.items = {};
   for (const k of '+HAascruFMLejkgKGYlhwv') Assets.items[k] = makeSprite(drawItem(k), true);
   Assets.decor = buildDecor();
@@ -1889,6 +1859,7 @@ function buildAssets() {
     fire: [0, 1].map((i) => makeSprite((g) => { ell(g, 32, 32, 10 + i, 10 + i, '#c8300a'); ell(g, 32, 33, 7, 7, '#ff8a1a'); ell(g, 32, 34, 4, 4, '#ffe890'); })),
     rot: orbSprite('#c8ff7a', '#3a6a1a', 8),
     ice: orbSprite('#e8fbff', '#3ad0ff', 8),
+    bsod: orbSprite('#cfe6ff', '#0a5fd0', 6),
     // THE OVH FOUNDER's guitar lightning: a crackling ball of jagged bolts
     lightning: [0, 1].map((i) => makeSprite((g) => {
       ell(g, 32, 32, 9, 9, 'rgba(180,140,255,0.45)');
@@ -1902,11 +1873,6 @@ function buildAssets() {
       ell(g, 32, 32, 3.5, 3.5, '#fff');
     }, true)),
     packet: makeSprite((g) => { g.fillStyle = '#f2f2f2'; g.fillRect(22, 26, 20, 13); g.fillStyle = '#2a7de1'; g.fillRect(22, 26, 20, 4); g.fillStyle = '#ffe14a'; g.fillRect(24, 32, 16, 1.5); g.fillRect(24, 35, 10, 1.5); }, true),
-    plus1: makeSprite((g) => { ell(g, 32, 32, 15, 13, '#ffe14a'); g.fillStyle = '#1f58d6'; g.font = 'bold 15px monospace'; g.textAlign = 'center'; g.fillText('+1', 32, 37); g.textAlign = 'left'; }, true),
-    update: makeSprite((g) => {
-      g.fillStyle = '#f2f2f2'; g.fillRect(4, 18, 56, 24); g.beginPath(); g.moveTo(14, 42); g.lineTo(10, 50); g.lineTo(22, 42); g.fill();
-      g.fillStyle = '#c21d1d'; g.font = 'bold 9px monospace'; g.textAlign = 'center'; g.fillText('any', 32, 28); g.fillText('update?', 32, 38); g.textAlign = 'left';
-    }, true),
     plug: [0, 1].map((i) => makeSprite((g) => { g.save(); g.translate(32, 32); g.rotate(i * Math.PI / 2); g.fillStyle = '#e8c21a'; g.fillRect(-4, -8, 8, 10); g.fillStyle = 'rgba(220,240,255,0.9)'; g.fillRect(-5, 2, 10, 7); g.fillStyle = '#c9a227'; for (let k = -4; k < 5; k += 2) g.fillRect(k, 7, 1, 2); g.restore(); }, true)),
     card: [0, 1, 2, 3].map((i) => makeSprite((g) => { g.save(); g.translate(32, 32); g.rotate(i * Math.PI / 4); g.fillStyle = '#e8c21a'; g.fillRect(-10, -6, 20, 12); g.fillStyle = '#222'; g.fillRect(-10, -3, 20, 3); g.fillStyle = '#c9a227'; g.fillRect(-7, 1, 5, 3); g.restore(); }, true)),
     nut: [0, 1, 2, 3].map((i) => makeSprite((g) => drawCageNut(g, 32, 32, 1.3, i * Math.PI / 8))),

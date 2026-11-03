@@ -93,7 +93,7 @@ const EPISODES = [
   // the OVHCLOUD SPECIAL mod (MOD_LEVELS below); `mod` is the flag the textures, monsters,
   // objectives and music key on (L.def.mod)
   { name: 'OVHCLOUD SPECIAL', mod: 'ovh', boss: 'founder', ambient: 0.9,
-    intro: 'Event day at OVHcloud: the datacenters from Roubaix to Gravelines are overrun, and the founder himself is behind it.' },
+    intro: 'Event day at OVHcloud: technicians from the competing hyperscalers have taken the datacenters from Roubaix to Gravelines, and the founder himself is waiting at the end.' },
 ];
 // "EPISODE 2: COOLING ZONE", or the mod's name alone
 const episodeLabel = (ep) => (EPISODES[ep].mod ? EPISODES[ep].name : `EPISODE ${ep + 1}: ${EPISODES[ep].name}`);
@@ -292,9 +292,9 @@ const LEVEL_COUNT = 50;
 const MOD_FIRST = LEVEL_COUNT, MOD_EP = 5;
 const MOD_LEVELS = [
   { code: 'RBX', name: 'ASSEMBLY WORKSHOP', tpl: 2, objective: 'hotswap', weapons: 'FM',
-    intro: 'Roubaix, the assembly workshop where the servers are built by hand. Something has crawled into the production line.' },
+    intro: 'Roubaix, the assembly workshop where the servers are built by hand. Technicians in orange, blue and four-colour vests are touring the production line, and they did not sign the visitor log.' },
   { code: 'GRA', name: 'GRAVELINES CAMPUS', tpl: 13, objective: 'leak',
-    intro: 'Gravelines: four buildings of server rooms by the sea, a cooling tower and the generators out in the yard. The seagulls are not friendly.',
+    intro: 'Gravelines: four buildings of server rooms by the sea, a cooling tower and the generators out in the yard. The AWS, Azure and GCP crews came for a site visit and have no intention of leaving.',
     // after the site plan: GRA4 yard and long aisles (top left), the generator hall and the
     // workshop, GRA1 (Salle HT, the "piscine", G1xx), GRA3.4 / 3.3 / 3.1-3.2, GRA2 and Room 0
     // (the exit, red badge), the south yards with the cooling tower

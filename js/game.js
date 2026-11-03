@@ -51,17 +51,19 @@ Object.assign(ETYPES, {
 });
 // The data thief of the thief objective never fights: he runs for the exit (js/objectives.js).
 ETYPES.thief = { name: 'Data thief', hp: 60, speed: 2.4, radius: 0.3, scale: 0.95, z: 0, flee: true, dmg: [0, 0], atkRange: 0, cd: 9, sight: 20, pain: 0.3 };
-// OVHCLOUD SPECIAL: spawnEnemy swaps the 5 base monsters for the mod's (MOD_ENEMIES), with close
-// stats. snd: their sound family. The blob splits into 2 puddles when it dies, the seagull
-// glides high and swoops on its prey (enemyZ), and THE 1 TBPS shrugs off most of the damage
-// until the VAC terminals of its level are on (js/objectives.js).
+// OVHCLOUD SPECIAL: spawnEnemy swaps the 5 base monsters for the technicians of the competing
+// hyperscalers (MOD_ENEMIES), with close stats; on the mod's maps every other troll holds an AWS
+// Solutions Architect instead (loadLevel). snd: their sound family. hit: what their hits do
+// on top of the damage (hitEffect), summon: who they call as reinforcements (spawnMinions),
+// deprecated: vanishes and reappears nearby (updateEnemy). THE 1 TBPS shrugs off most of the
+// damage until the VAC terminals of its level are on (js/objectives.js).
 Object.assign(ETYPES, {
-  gull: { ...ETYPES.bug, name: 'Gravelines seagull', speed: 2.4, z: 0.3, swoop: true, snd: 'bug' },
-  blob: { ...ETYPES.troll, name: 'Watercooling blob', split: 'puddle', snd: 'bug' },
-  puddle: { ...ETYPES.bug, name: 'Puddle blob', hp: 30, speed: 2.0, radius: 0.25, scale: 0.5, dmg: [4, 8], snd: 'bug' },
-  mirai: { ...ETYPES.bot, name: 'Mirai IoT camera', burst: 4, dmg: [4, 7], shot: 'packet', snd: 'bot' },
-  ticket: { ...ETYPES.spam, name: 'Zombie support ticket', shot: 'plus1', shot2: 'update', shotScale: 0.4, snd: 'bot' },
-  abuse: { ...ETYPES.drone, name: 'Abuse report', snd: 'drone' },
+  aws: { ...ETYPES.drone, name: 'AWS technician', z: 0, hover: false, scale: 0.95, shotZ: 0.55, shot: 'card', hit: 'egress', snd: 'bot' },
+  architect: { ...ETYPES.bot, name: 'AWS Solutions Architect', hp: 150, radius: 0.38, scale: 1.1, dmg: [8, 14], burst: 1, cd: 2.6, pain: 0.25, shotZ: 0.6, shot: 'card', summon: 'aws', drop: false, snd: 'bot' },
+  azure: { ...ETYPES.spam, name: 'Azure technician', scale: 0.95, shotZ: 0.55, shot: 'bsod', hit: 'bsod', snd: 'bot' },
+  consultant: { ...ETYPES.troll, name: 'Azure license consultant', hit: 'lockin', snd: 'bug' },
+  gcp: { ...ETYPES.bug, name: 'GCP technician', speed: 2.4, scale: 0.95, deprecated: true, snd: 'bug' },
+  sre: { ...ETYPES.bot, name: 'GCP SRE', scale: 1.1, burst: 4, dmg: [4, 7], shot: 'packet', snd: 'bot' },
   tbps: { ...MINI_BASE, name: 'THE 1 TBPS', tag: 'VOLUMETRIC DDOS', hp: 800, speed: 0.9, scale: 1.5, dmg: [4, 7], shot: 'packet', fan: 5, burst: 2, shotSpeed: 11, shotScale: 0.3, cd: 2.4, vac: true },
   // The final boss cannot die: at 0 HP he turns into his `phase2` (bossPhase2), untouchable
   // (invuln), and the mod's end screen follows FINALE seconds later.
@@ -69,7 +71,7 @@ Object.assign(ETYPES, {
   metal: { ...BOSS_BASE, name: 'THE OVH FOUNDER', tag: 'YOU HAVE NO POWER HERE', hp: 2400, speed: 0.8, scale: 1.6, dmg: [6, 10], shot: 'lightning', fan: 3, shotSpeed: 13, shotScale: 0.45, cd: 1.1, invuln: true },
 });
 const FINALE = 12;
-const MOD_ENEMIES = { bug: 'gull', troll: 'blob', bot: 'mirai', spam: 'ticket', drone: 'abuse' };
+const MOD_ENEMIES = { bug: 'gcp', troll: 'consultant', bot: 'sre', spam: 'azure', drone: 'aws' };
 const ENEMY_CHARS = { b: 'bug', d: 'drone', o: 'bot', t: 'troll', m: 'spam', y: 'thief' };
 const ITEM_CHARS = '+HAascrukgjFMKGYL';
 const OBJ_ITEMS = 'lhwv';   // objective items (tapes, spare disk, stolen disk, RAM kits): not counted in the items score
@@ -295,7 +297,7 @@ function loadLevel(idx) {
     secrets: 0, totalSecrets: 0, migrated: 0, totalSpecials: 0,
     msgs: [], titleT: 5, subtitle: null, keys: { red: false, blue: false }, bossAlive: false, bossSeen: false,
   };
-  let start = null;
+  let start = null, heavies = 0;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const c = rows[y][x], i = y * w + x;
     L.variant[i] = ((x * 7919 + y * 104729) >>> 3) % 251;
@@ -314,7 +316,7 @@ function loadLevel(idx) {
     if (c === 'P') start = { x: x + 0.5, y: y + 0.5 };
     else if (c === 'Z') spawnEnemy(def.bossType || 'ransomware', x + 0.5, y + 0.5);
     else if (c === 'V') spawnEnemy(def.miniType || 'spaghetti', x + 0.5, y + 0.5);
-    else if (ENEMY_CHARS[c]) { if (keepEnemy(c, x, y, skill)) spawnEnemy(ENEMY_CHARS[c], x + 0.5, y + 0.5); }
+    else if (ENEMY_CHARS[c]) { if (keepEnemy(c, x, y, skill)) spawnEnemy(def.mod && c === 't' && heavies++ % 2 ? 'architect' : ENEMY_CHARS[c], x + 0.5, y + 0.5); }
     else if (ITEM_CHARS.includes(c)) { L.items.push({ x: x + 0.5, y: y + 0.5, type: c, taken: false }); L.totalItems++; }
     else if (OBJ_ITEMS.includes(c)) L.items.push({ x: x + 0.5, y: y + 0.5, type: c, taken: false, obj: true });
     else if (c === 'z') L.zones.push({ x: x + 0.5, y: y + 0.5, i });
@@ -339,7 +341,7 @@ function loadLevel(idx) {
     if (RH.d > best) { best = RH.d; P.a = a; }
   }
   Object.assign(P, { bobPhase: 0, bobAmt: 0, wAnim: 0, fireCd: 0, raise: 1, flashT: 0, hurtT: 0, pickT: 0, dead: false, deadT: 0, spin: 0,
-    faceMood: '', faceT: 0, look: 0, lookT: 0, hurtDir: 0, shake: 0, boostT: 0, nutT: 0, pitch: 0 });
+    faceMood: '', faceT: 0, look: 0, lookT: 0, hurtDir: 0, shake: 0, boostT: 0, nutT: 0, pitch: 0, slowT: 0, bsodT: 0 });
   players = [P];
   computeFlow();
   Objectives.init(L);
@@ -509,7 +511,7 @@ function saveComfort() { try { localStorage.setItem('dukenutanix.comfort', JSON.
 let aimMode = 'free';
 const freeAim = () => useGL && aimMode === 'free';
 // height span of a target ([bottom, top], in the 0..1 room height)
-const enemySpan = (e) => { const T = ETYPES[e.type], z = T.swoop ? enemyZ(e, T) : T.z; return [z, z + T.scale * (e.shrunk > 0 ? 0.4 : 1)]; };
+const enemySpan = (e) => { const T = ETYPES[e.type]; return [T.z, T.z + T.scale * (e.shrunk > 0 ? 0.4 : 1)]; };
 
 // Remappable actions (KeyboardEvent.code values, so WASD stays in place on AZERTY),
 // saved in dukenutanix.keys. Escape always pauses; N, G, T, V and F3 stay fixed.
@@ -636,6 +638,8 @@ function bestWeapon() {
 }
 
 function updatePlayer(dt) {
+  if (P.slowT > 0) P.slowT -= dt;
+  if (P.bsodT > 0) P.bsodT -= dt;
   if (P.dead) { P.deadT += dt; return; }
   const turn = (held('turnRight') ? 1 : 0) - (held('turnLeft') ? 1 : 0);
   P.a += turn * 2.8 * dt;
@@ -648,7 +652,7 @@ function updatePlayer(dt) {
   const run = held('run') || pad.run;
   if (P.boostT > 0) P.boostT -= dt;
   if (len > 0) {
-    const sp = (run ? 5.6 : 3.8) * (P.boostT > 0 ? 1.45 : 1) * (L.obj && L.obj.carry ? 0.85 : 1) * (L.obj && L.obj.water ? 1 - 0.3 * L.obj.water : 1) * dt / len;
+    const sp = (run ? 5.6 : 3.8) * (P.boostT > 0 ? 1.45 : 1) * (P.slowT > 0 ? 0.55 : 1) * (L.obj && L.obj.carry ? 0.85 : 1) * (L.obj && L.obj.water ? 1 - 0.3 * L.obj.water : 1) * dt / len;
     moveEntity(P, mx * sp, my * sp, 0.28, true);
     P.bobPhase += dt * (run ? 11 : 8);
     P.bobAmt = Math.min(1, P.bobAmt + dt * 4);
@@ -889,6 +893,23 @@ function damagePlayer(dmg, fromX, fromY) {
   }
 }
 
+// OVHCLOUD SPECIAL: what a hyperscaler technician's hit does on top of the damage. EGRESS FEES
+// take ~4% of the current weapon's ammo, a blue screen flashes for half a second (none with
+// reduced effects), LICENSE LOCK-IN slows the player down for 3 s.
+function hitEffect(kind, pl) {
+  if (pl !== P || P.dead || god) return;
+  if (kind === 'egress') {
+    const a = WEAPONS[INV.cur].ammo, n = a ? Math.min(INV.ammo[a], Math.ceil(AMMO_MAX[a] * 0.04)) : 0;
+    if (!n) return;
+    INV.ammo[a] -= n;
+    msg(`EGRESS FEES: -${n} ${AMMO_LABELS.find((l) => l[1] === a)[0]}`);
+  } else if (kind === 'bsod') P.bsodT = 0.5;
+  else if (kind === 'lockin') {
+    if (!(P.slowT > 0)) msg('LICENSE LOCK-IN: you are slowed down!');
+    P.slowT = 3;
+  }
+}
+
 /* ----------------------------------------------------- explosions & barrels */
 
 function damageBarrel(b, dmg) {
@@ -943,14 +964,6 @@ function killEnemy(e, how) {
   if (how !== 'stomp') addFx(e.x, e.y, 'boom', 0.2 + T.z, T.boss ? 1.5 : 0.5);
   if (useGL) GLR.kill(e);
   Objectives.kill(L, e);
-  if (T.split) {
-    for (const s of [1, -1]) {
-      let x = e.x + s * 0.3, y = e.y + s * 0.2;
-      if (blocked(x, y, 0.25)) { x = e.x; y = e.y; }
-      const b = spawnEnemy(T.split, x, y);
-      b.state = 'chase'; b.alerted = true;
-    }
-  }
   if (T.drop && Math.random() < 0.7) L.items.push({ x: e.x, y: e.y, type: 'a', taken: false, drop: true });
   if (T.mini) {
     L.bossAlive = L.enemies.some((o) => o !== e && alive(o) && ETYPES[o.type].boss);
@@ -1055,7 +1068,7 @@ function enemyFire(e) {
   const ang = Math.atan2(tg.y - e.y, tg.x - e.x);
   const shoot = (a, kind, speed, scale) => {
     L.proj.push({ x: e.x + Math.cos(a) * T.radius, y: e.y + Math.sin(a) * T.radius, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, kind,
-      dmg: randi(T.dmg[0], T.dmg[1]), owner: 'enemy', z: T.shotZ - scale / 2, scale, life: 5, t: 0 });
+      dmg: randi(T.dmg[0], T.dmg[1]), owner: 'enemy', z: T.shotZ - scale / 2, scale, life: 5, t: 0, hit: T.hit });
   };
   Sfx.enemyShoot(sndKind(e), e);
   if (T.boss) {
@@ -1063,17 +1076,21 @@ function enemyFire(e) {
     for (let k = 0; k < n; k++) shoot(ang + (k - (n - 1) / 2) * 0.13, T.shot, T.shotSpeed || 7.5, T.shotScale || 0.5);
     e.attacks++;
     if (T.minion && e.attacks % 4 === 0) spawnMinions(e);
+  } else if (T.summon) {
+    shoot(ang + rand(-0.05, 0.05), T.shot, 10, 0.3);
+    // the architect calls one reinforcement every third shot, 2 in all (as many as the old blob's puddles)
+    if (++e.attacks % 3 === 0 && e.attacks <= 6) spawnMinions(e, T.summon, 1);
   } else if (T.fan) {
-    for (let k = 0; k < T.fan; k++) shoot(ang + (k - (T.fan - 1) / 2) * 0.18, T.shot2 && k % 2 ? T.shot2 : T.shot, 9, T.shotScale || 0.22);
+    for (let k = 0; k < T.fan; k++) shoot(ang + (k - (T.fan - 1) / 2) * 0.18, T.shot, 9, T.shotScale || 0.22);
   } else if (T.shot === 'orb') shoot(ang + rand(-0.05, 0.05), 'orb', 7, 0.35);
   else shoot(ang + rand(-0.07, 0.07), T.shot, 12, 0.25);
 }
 
-function spawnMinions(boss) {
-  const type = ETYPES[boss.type].minion, kind = (L.def.mod && MOD_ENEMIES[type]) || type;
+function spawnMinions(boss, type = ETYPES[boss.type].minion, count = 2) {
+  const kind = (L.def.mod && MOD_ENEMIES[type]) || type;
   const n = L.enemies.filter((o) => o.type === kind && alive(o)).length;
   if (n >= 6) return;
-  for (let k = 0; k < 2; k++) {
+  for (let k = 0; k < count; k++) {
     for (let tries = 0; tries < 12; tries++) {
       const a = Math.random() * Math.PI * 2, r = rand(1.2, 2.5);
       const x = boss.x + Math.cos(a) * r, y = boss.y + Math.sin(a) * r;
@@ -1110,6 +1127,22 @@ function updateEnemy(e, dt) {
     return;
   }
   e.animT += dt;
+  if (e.fade > 0) {
+    // a DEPRECATED GCP technician (below) fades out and comes back in a free, reachable cell
+    // 2 to 5 cells away, never next to a player; the fade runs on through pain
+    e.fade -= dt;
+    if (e.fade <= 0.4 && !e.moved) {
+      e.moved = true;
+      for (let tries = 0; tries < 16; tries++) {
+        const a = Math.random() * Math.PI * 2, r = rand(2, 5);
+        const x = ((e.x + Math.cos(a) * r) | 0) + 0.5, y = ((e.y + Math.sin(a) * r) | 0) + 0.5;
+        if (x < 0 || y < 0 || x >= L.w || y >= L.h || L.flow[(y | 0) * L.w + (x | 0)] < 0 || blocked(x, y, T.radius)) continue;
+        if (players.some((pl) => !pl.dead && Math.hypot(pl.x - x, pl.y - y) < 2)) continue;
+        e.x = x; e.y = y;
+        break;
+      }
+    }
+  }
   if (e.painT > 0) { e.painT -= dt; return; }
   const shrunk = e.shrunk > 0;
   if (shrunk) { e.shrunk -= dt; if (e.shrunk <= 0) msg(`${T.name} decompressed itself!`); }
@@ -1137,12 +1170,22 @@ function updateEnemy(e, dt) {
     }
     e.tpT = rand(4, 6.5);
   }
+  if (T.deprecated) {
+    // the GCP technician gets DEPRECATED: it fades out (enemyFade) and moves (above)
+    if (e.fade > 0) return;
+    if (e.sees && (e.tpT -= dt) <= 0) {
+      e.fade = 0.8; e.moved = false; e.tpT = rand(5, 9);
+      addFx(e.x, e.y, 'plasmaHit', 0.5, 0.4, 1.2);
+      if (!(L.deprecMsgT > L.time)) { L.deprecMsgT = L.time + 12; msg(`${T.name}: DEPRECATED, moved to another region!`); }
+    }
+  }
 
   if (!shrunk && e.cd <= 0 && e.sees) {
     if (T.melee) {
       if (dist < T.atkRange + 0.25) {
         e.state = 'attack'; e.timer = 0.45; e.cd = T.cd; e.face = Math.atan2(dy, dx);
         hurtPlayer(tg, randi(T.dmg[0], T.dmg[1]), e.x, e.y);
+        if (T.hit) hitEffect(T.hit, tg);
         Sfx.melee(e);
         return;
       }
@@ -1173,7 +1216,7 @@ function updateEnemy(e, dt) {
   }
   const mdx = tx - e.x, mdy = ty - e.y, md = Math.hypot(mdx, mdy);
   if (md < 0.01) return;
-  const sp = T.speed * (shrunk ? 0.7 : 1) * (T.swoop && e.sees && dist < 3 ? 1.5 : 1) * dt;
+  const sp = T.speed * (shrunk ? 0.7 : 1) * dt;
   const r = shrunk ? 0.12 : T.radius;
   const ox = e.x, oy = e.y;
   e.face = Math.atan2(mdy, mdx);
@@ -1250,6 +1293,7 @@ function updateProjectiles(dt) {
         if (hit) {
           p.dead = true;
           hurtPlayer(hit, p.dmg, p.x - p.vx, p.y - p.vy);
+          if (p.hit) hitEffect(p.hit, hit);
           addFx(p.x, p.y, 'boom', p.z, 0.2);
         }
         continue;
@@ -1471,11 +1515,12 @@ function collectSprites(add, retro, gpu) {
     else if (e.state === 'dying') spr = S.die[e.timer > 0.25 ? 0 : 1];
     else if (e.state === 'attack') spr = Array.isArray(R.atk) ? R.atk[retro ? attackFrame(e, T) : 1] : R.atk;   // MODERN: the strike
     else if (e.state === 'idle') spr = R.walk[0];
-    else spr = R.walk[((e.animT * (T.hover || T.swoop ? 6 : e.shrunk > 0 ? 10 : 4)) | 0) % 2];
+    else spr = R.walk[((e.animT * (T.hover ? 6 : e.shrunk > 0 ? 10 : 4)) | 0) % 2];
     let z = enemyZ(e, T);
     let scale = T.scale;
     if (e.state === 'dead') { z = 0; scale = Math.max(0.8, T.scale * 0.7); }
     if (e.shrunk > 0 && alive(e)) { scale *= e.shrunk < 1 ? 0.3 + 0.7 * (1 - e.shrunk) : 0.3; z = 0; }
+    if (alive(e)) scale *= enemyFade(e);
     add(e.x, e.y, spr, scale, z, e.flash > 0);
   }
   for (const p of L.proj) add(p.x, p.y, frameOf(Assets.proj[p.kind], p.t, 16), p.scale || 0.35, p.z, false, true);
@@ -1487,9 +1532,10 @@ function collectSprites(add, retro, gpu) {
   }
 }
 
-// Height of a monster's feet: drones bob, seagulls glide high and swoop down on their target.
+// Size factor of a DEPRECATED GCP technician fading out, then back in (updateEnemy).
+const enemyFade = (e) => (e.fade > 0 ? Math.max(0.02, Math.abs(e.fade - 0.4) / 0.4) : 1);
+// Height of a monster's feet: drones bob.
 function enemyZ(e, T) {
-  if (T.swoop) return e.state === 'attack' ? 0.02 : T.z * Math.min(1, Math.max(0, ((e.dist || 9) - 0.9) / 2.5)) + Math.sin(e.animT * 4 + e.x) * 0.03;
   return T.z + (T.hover ? Math.sin(e.animT * 3 + e.x) * 0.05 : 0);
 }
 
@@ -1777,6 +1823,7 @@ function drawOverlayText(g) {
   g.fillText(`NUTANIX ${L.migrated}/${L.totalSpecials}`, W - 6, 12);
   if (god) { g.fillStyle = '#ffd700'; g.fillText('ROOT MODE', W - 6, 21); }
   if (P.boostT > 0) { g.fillStyle = '#3dff6a'; g.fillText(`TURBO ${Math.ceil(P.boostT)}`, W - 6, god ? 30 : 21); }
+  if (P.slowT > 0) { g.fillStyle = '#3a9bff'; g.fillText(`LOCKED IN ${Math.ceil(P.slowT)}`, W - 6, 21 + (god ? 9 : 0) + (P.boostT > 0 ? 9 : 0)); }
   const boss = L.enemies.find((e) => ETYPES[e.type].boss && alive(e) && e.state !== 'idle');
   if (boss) {
     const T = ETYPES[boss.type];
@@ -1869,6 +1916,10 @@ function present() {
   if (showMap) drawMap(g);
   if (P.hurtT > 0 && !Comfort.reduced) { g.fillStyle = `rgba(255,0,0,${P.hurtT * 0.8})`; g.fillRect(0, 0, W, VH); }
   if (P.pickT > 0 && !Comfort.reduced) { g.fillStyle = `rgba(255,230,80,${P.pickT * 0.5})`; g.fillRect(0, 0, W, VH); }
+  if (P.bsodT > 0 && !Comfort.reduced) {   // an Azure technician's blue screen
+    g.fillStyle = `rgba(16,90,210,${P.bsodT * 0.9})`; g.fillRect(0, 0, W, VH);
+    g.font = `8px ${FONT}`; g.textAlign = 'center'; g.fillStyle = `rgba(255,255,255,${P.bsodT * 1.6})`; g.fillText(':(', W / 2, HORIZ - 24);
+  }
   if (P.dead) { g.fillStyle = `rgba(120,0,0,${Math.min(0.6, P.deadT * 0.4)})`; g.fillRect(0, 0, W, VH); }
   const alarm = Objectives.alarm(L);
   if (alarm && !Comfort.reduced) { g.fillStyle = `rgba(255,20,10,${alarm})`; g.fillRect(0, 0, W, VH); }

@@ -102,7 +102,8 @@ The web version only points to the new release.
 From the source, open `index.html` in a browser, or serve the folder:
 
 ```sh
-python3 -m http.server 8000
+# a plain `python3 -m http.server` lets the browser keep old JS files: this one sends no-store
+python3 -c "import http.server as h; h.SimpleHTTPRequestHandler.end_headers = lambda s: (s.send_header('Cache-Control', 'no-store'), h.BaseHTTPRequestHandler.end_headers(s)); h.test(h.SimpleHTTPRequestHandler, port=8000)"
 # then open http://localhost:8000
 ```
 
