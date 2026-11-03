@@ -573,6 +573,12 @@ function actOnCell(cx, cy, who = P) {
       msg(d.lock === 'red' ? 'Access denied: RED BADGE required' : 'Access denied: BLUE BADGE required');
       return;
     }
+    // HQ in the mod: the generators first, then the boss
+    if (d.lock && L.def.mod && L.obj && L.obj.type === 'power' && !L.obj.done) {
+      Sfx.deny();
+      msg('Start the 3 generators first');
+      return;
+    }
     if (d.secret) {
       L.secrets++;
       Sfx.secret();

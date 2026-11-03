@@ -285,20 +285,95 @@ function getLevel(i) {
 const LEVEL_COUNT = 50;
 
 // OVHCLOUD SPECIAL: a 5-level event mod, indices MOD_FIRST.. after the campaign, with its
-// own save (see saveKey in game.js). Placeholder maps for now: each level is generated
-// from a campaign template (`tpl`: size, enemies, weapons) with its own seed.
+// own save (see saveKey in game.js). Each level takes a campaign template (`tpl`: size,
+// enemies); RBX, VRACK and BARE METAL are generated from it with their own seed and
+// `weapons` (the mod starts with the pistol), GRA and HQ are hand-drawn (`map`, with their
+// mission tiles: the 3 valves, the 3 GE, and their weapons).
 const MOD_FIRST = LEVEL_COUNT, MOD_EP = 5;
 const MOD_LEVELS = [
-  { code: 'RBX', name: 'ASSEMBLY WORKSHOP', tpl: 2, objective: 'hotswap',
+  { code: 'RBX', name: 'ASSEMBLY WORKSHOP', tpl: 2, objective: 'hotswap', weapons: 'FM',
     intro: 'Roubaix, the assembly workshop where the servers are built by hand. Something has crawled into the production line.' },
   { code: 'GRA', name: 'GRAVELINES CAMPUS', tpl: 13, objective: 'leak',
-    intro: 'Gravelines: four buildings of server rooms by the sea, a cooling tower and the generators out in the yard. The seagulls are not friendly.' },
-  { code: 'VRACK', name: 'NETWORK CORE', tpl: 24, objective: 'ram', miniboss: 'tbps',
+    intro: 'Gravelines: four buildings of server rooms by the sea, a cooling tower and the generators out in the yard. The seagulls are not friendly.',
+    // after the site plan: GRA4 yard and long aisles (top left), the generator hall and the
+    // workshop, GRA1 (Salle HT, the "piscine", G1xx), GRA3.4 / 3.3 / 3.1-3.2, GRA2 and Room 0
+    // (the exit, red badge), the south yards with the cooling tower
+    map: [
+      '################################################',
+      '#A.H#.....x..x..x.#.CC.CC.#....x.......x.......#',
+      '#k.c?..b..........#.CC.CC.#.P..................#',
+      '#...#.....x..x..x.#.......D...x....x....t......#',
+      '#####..........d..#.CC.CC.#....................#',
+      '#.................D.CC.CC.#..K.....x.....x.....#',
+      '#..x..x...x..x.b..#.......#......d.............#',
+      '#########D############D#############D###########',
+      '#.................#...a...#......#.............#',
+      '#.RRRRRR...RRRRRR.#.CC.CC.#B.....D.RR..RR..RR..#',
+      '#.RRRRRR.o.RRRRRR.#.CC.CC.#......#.RR..RR..RR.d#',
+      '#........b........D.......#..t...#.RR..RR..RR..#',
+      '#.SSSSSS...SSSSSS.###D#####B..+.B#......o......#',
+      '#.SSSSSS...SSSSSS.#.x..x..####~###.SS..SS..SS..#',
+      '#....m......+.....#.......D......#.SS..SS..SS.b#',
+      '#.RRRRRR...RRRRRR.#.x..x..#..CC..D.SS..SS..SS..#',
+      '#.RRRRRR...RRRRRR.#.g.e...#..CC..#.............#',
+      '#....a.......b....#.......#...b..#..+....a.....#',
+      '####D############~####D#############D###########',
+      '#.......#....#............#.....s......#.......#',
+      '#.NNNNN.#.RR.#.RRRR..RRRR.#.NN.RRR.RRR.#.NNNNN.#',
+      '#.......#.RR.#.RRRR..RRRR.#.NN.RRR.RRR.#.......#',
+      '#.NNNNN.#.RR.#......o.....#............1...o...#',
+      '#...r...D....D.SSSS..SSSS.#.NN.SSS.SSS.#.......X',
+      '#.NNNNN.#.RR.#.SSSS..SSSS.#.NN.SSS.SSS.#.NNNNN.#',
+      '#..t....#.RR.#....m.......#......d.....#..A..H.#',
+      '#.NNNNN.#.RR.#.RRRR..RRRR.#.NN.RRR.RRR.#.NNNNN.#',
+      '#.......#..b.#.....c......#....b.......#.......#',
+      '####D##############D############D###############',
+      '#.....a...................#....................#',
+      '#..xx...xx...xx...xx......D..CCCC....C.C.C.....#',
+      '#....b..........H....s....#..CCCC....C.C.C..t..#',
+      '#..xx...xx...xx...xx......#....................#',
+      '###################################~############',
+    ] },
+  { code: 'VRACK', name: 'NETWORK CORE', tpl: 24, objective: 'ram', miniboss: 'tbps', weapons: 'GY',
     intro: 'The vRack backbone. Every packet of every customer goes through here, and right now one terabit per second of them is aimed at you.' },
-  { code: 'BARE METAL', name: 'DEDICATED SERVERS', tpl: 36, objective: 'backup',
+  { code: 'BARE METAL', name: 'DEDICATED SERVERS', tpl: 36, objective: 'backup', weapons: 'L',
     intro: 'Rows of bare metal servers as far as the eye can see. The customers want their backups, and they want them now.' },
   { code: 'HQ', name: 'HEADQUARTERS', tpl: 49, objective: 'power', boss: true,
-    intro: "The headquarters. The lights are out, the guitars are plugged in, and THE OVH FOUNDER is waiting for you on stage." },
+    intro: "The headquarters. The lights are out, the guitars are plugged in, and THE OVH FOUNDER is waiting for you on stage.",
+    // the lobby between two generator halls, the GE yard (red badge), then the arena (locked
+    // until the generators run, see actOnCell in game.js) and its stage
+    map: [
+      '########################################',
+      '#...........#..............#...........#',
+      '#.CC.....CC.#..RRR....RRR..#.CC.....CC.#',
+      '#.CC..b..CC.D......P.......D.CC..b..CC.#',
+      '#...........#..SSS....SSS..#...........#',
+      '#...xx.xx...#..............#...xx.xx...#',
+      'J...........#....+....a....#...........J',
+      '#.CC.....CC.#######D#####J##.CC.....CC.#',
+      '#.CC..t..CC.#..............#.CC..t..CC.#',
+      '#...........#..CC......CC..#...........#',
+      '#..a.....+..#......r.......#..+.....a..#',
+      '#.CC.....CC.#..CC......CC..#.CC.....CC.#',
+      '#.CC..d..CC.#..o........m..#.CC..d..CC.#',
+      '###################1####################',
+      '#......................................#',
+      '#.H..................................H.#',
+      '#......................................#',
+      '#....##.......##........##.......##....#',
+      '#....##..k....##........##....k..##....#',
+      '#......................................#',
+      '#..c..........b..........b..........c..#',
+      '#......................................#',
+      '#...................Z..................#',
+      '#....##.......##........##.......##....#',
+      '#....##..B....##........##....B..##....#',
+      '#......................................#',
+      '#.s....WWW..................WWW.....s..#',
+      '#......WWW..........H.......WWW........#',
+      '#......................................#',
+      '###################X####################',
+    ] },
 ];
 const MOD_COUNT = MOD_LEVELS.length;
 // the mod's missions: OVHcloud versions of 3 campaign objectives, and 2 of its own
@@ -319,7 +394,8 @@ function modLevel(i) {
   spec.objective = m.objective;
   spec.boss = m.boss ? EPISODES[MOD_EP].boss : null;
   spec.miniboss = m.miniboss || null;
-  let map = LevelGen.generate(spec).map;
+  if (m.weapons) spec.weapons = [...m.weapons];
+  let map = m.map ? LevelGen.placeSpecials(m.map, spec.seed + 17) : LevelGen.generate(spec).map;
   // THE 1 TBPS needs its 2 VAC terminals (tools/validate-levels.js checks they are there)
   if (spec.miniboss === 'tbps') map = LevelGen.placeObjective(map, 'vac', spec.seed + 31) || map;
   // the mission, then the guardian of the REBOOT terminal (it has to go too)

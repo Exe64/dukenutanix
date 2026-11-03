@@ -30,6 +30,7 @@ for (const i of indices) {
     if (!line || span !== cells.length - 1) { r.ok = false; r.errors.push('objective ram: the servers are not side by side in a row'); }
   }
   if (def.miniType && n('V') !== 1) { r.ok = false; r.errors.push(`expected 1 mini-boss, found ${n('V')}`); }
+  if (def.bossType && n('Z') !== 1) { r.ok = false; r.errors.push(`expected 1 boss, found ${n('Z')}`); }
   const need = LevelGen.OBJ_NEEDS[def.objective];
   if (need) for (const [ch, , cnt] of [...(need.walls || []), ...(need.floor || []).map(([c, k]) => [c, null, k])]) {
     if (n(ch) !== cnt) { r.ok = false; r.errors.push(`objective ${def.objective}: expected ${cnt} x ${ch}, found ${n(ch)}`); }
