@@ -40,16 +40,17 @@ inspiré d'Octave Klaba (« THE OVH FOUNDER »). Le branding est validé par l'u
 ### Inclus
 - **Accès** : entrée « OVHCLOUD SPECIAL » au menu principal ; meilleurs temps, sauvegarde et 3 succès propres au mod ; campagne Nutanix intacte.
 - **Habillage** : racks et murs bleu OVHcloud (#000E9C), logo redessiné en tracés canvas d'après la référence (murs, écrans, écran titre), tuyaux de watercooling ; racks à migrer « Nutanix on OVHcloud ».
-- **Monstres** (remplacent les 5 de base, stats proches) :
+- **Monstres** — techniciens des hyperscalers concurrents (révision du 2026-11-03, remplacent la mouette, le blob, la caméra Mirai, le ticket zombie et l'Abuse report) ; couleurs reconnaissables et nom en texte sur le badge et le gilet, **sans logo officiel** :
 
-  | Monstre | Remplace | Particularité |
-  |---|---|---|
-  | Mouette de Gravelines | bug (mêlée rapide) | pique en vol |
-  | Blob de watercooling | troll (mêlée lourde) | se divise en 2 petites flaques à sa mort |
-  | Caméra Mirai | bot (rafale) | rafales de paquets |
-  | Ticket zombie | spammer (éventail) | lance des « +1 » / « any update? » |
-  | Abuse report | drone (volant) | orbes |
-  | THE 1 TBPS (mini-boss, niveau 3) | — | dégâts réduits tant que les 2 bornes VAC du niveau ne sont pas activées |
+  | Faction | Ennemi | Rôle | Particularité |
+  |---|---|---|---|
+  | AWS (orange / noir) | Technicien AWS | base, à distance | ses tirs « EGRESS FEES » retirent aussi un peu de munitions |
+  | AWS | Solutions Architect | lourd | appelle des renforts (techniciens AWS) |
+  | Azure (bleu) | Technicien Azure | base, à distance | son tir provoque un bref « écran bleu » |
+  | Azure | Consultant licences | lourd, mêlée | « LICENSE LOCK-IN » : ralentit le joueur quelques secondes |
+  | GCP (rouge / jaune / vert / bleu) | Technicien GCP | rapide | « DEPRECATED » : disparaît puis réapparaît ailleurs |
+  | GCP | SRE | lourd | tire en rafales |
+  | — | THE 1 TBPS (mini-boss, niveau 3) | inchangé | dégâts réduits tant que les 2 bornes VAC ne sont pas activées |
 
 - **Missions** : remplacement de HDD (`hotswap`), backup sur bande LTO (`backup`), démarrage du groupe électrogène (`power`) ; nouvelles : **ajout de RAM** (barrettes à insérer dans 3 serveurs d'une rangée) et **fuite de watercooling** (3 vannes à fermer avant l'inondation, minuteur).
 - **Niveaux** :
@@ -63,7 +64,7 @@ inspiré d'Octave Klaba (« THE OVH FOUNDER »). Le branding est validé par l'u
   | 5 | Le QG | arène dessinée à la main | GE, puis le boss |
 
 - **Boss final « THE OVH FOUNDER »** (ressemblance d'après les photos de référence : cheveux châtains courts, lunettes rectangulaires sombres, visage rond, barbe de quelques jours, blazer marine sur t-shirt noir, chino beige) :
-  - Phase 1 : méca à watercooling, jets d'eau glacée, sbires.
+  - Phase 1 (révision du 2026-11-03, le méca est abandonné) : **Octave en personne**, grande silhouette en blazer et lunettes d'après la photo ; lance des serveurs et des tuyaux de watercooling, appelle des techniciens « transfuges ».
   - À 0 PV : invulnérable, **se transforme en métalleux** (cheveux longs, t-shirt noir, guitare électrique) dont la guitare **lance des éclairs**, yeux rouges qui brillent, crie « **YOU HAVE NO POWER HERE** » d'une voix gutturale (bandeau à l'écran) ; puis l'écran de fin du mod.
 
 ### Hors scope
@@ -80,7 +81,9 @@ inspiré d'Octave Klaba (« THE OVH FOUNDER »). Le branding est validé par l'u
 - [x] Étape 5 — Niveaux : RBX, vRack, Bare Metal générés ; GRA d'après le plan ; arène du QG (L · reasoning → Opus)
 - [x] Étape 6 — Boss THE OVH FOUNDER : phase 1, transformation métalleux, guitare à éclairs, voix gutturale, bandeau, fin (L · reasoning → Opus)
 - [x] Étape 7 — Thème musical OVHcloud et 3 succès du mod (S · standard → Sonnet)
-- [x] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
+- [ ] Étape 8 — Révision des monstres : 6 techniciens AWS / Azure / GCP (RETRO 8 rotations + 3 frames d'attaque, MODERN), mécaniques egress fees / renforts / écran bleu / lock-in / deprecated / rafale ; la mouette, le blob, la caméra, le ticket et l'Abuse report sont retirés (L · reasoning → Opus)
+- [ ] Étape 9 — Révision du boss, phase 1 : Octave en personne (blazer, lunettes), projectiles serveurs et tuyaux, renforts transfuges ; phase 2 métalleux inchangée (M · reasoning → Opus)
+- [ ] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
 - [ ] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
 
 ## Décisions techniques
@@ -92,6 +95,8 @@ inspiré d'Octave Klaba (« THE OVH FOUNDER »). Le branding est validé par l'u
 | Voix gutturale | `speechSynthesis` (pitch 0, débit lent) superposée à un grognement WebAudio distordu ; grognement seul si la synthèse vocale manque (WebKitGTK) | Pas d'asset audio, marche dans le navigateur et Tauri |
 | Phase 2 du boss | Invulnérable ~12 s sous les éclairs, puis écran de fin ; une mort pendant la phase 2 mène aussi à l'écran de fin | « Impossible de le tuer » ; la fin arrive dans tous les cas |
 | Nom affiché | « THE OVH FOUNDER » | Choix de l'utilisateur |
+| Ennemis concurrents | Couleurs + nom en texte, pas de logo AWS / Azure / GCP | Reconnaissable sans reproduire de marque déposée dans un contenu d'événement OVHcloud (choix de l'utilisateur, 2026-11-03) |
+| Boss phase 1 | Octave à pied, plus de méca | Retour de l'utilisateur : la représentation « méca » ne lui plaît pas |
 | SBG 2021 | Exclu | Incident réel avec pertes clients, déplacé pour un événement de la marque |
 
 ## Tests
