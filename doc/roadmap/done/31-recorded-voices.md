@@ -2,8 +2,8 @@
 plan:
   id: '31'
   name: 31-recorded-voices.md
-  link: https://github.com/Exe64/dukenutanix/blob/main/doc/roadmap/31-recorded-voices.md
-status: active
+  link: https://github.com/Exe64/dukenutanix/blob/main/doc/roadmap/done/31-recorded-voices.md
+status: done
 enriched: 2026-11-03
 date: 2026-11-03
 description: >
@@ -56,7 +56,7 @@ Remplacer la synthèse vocale du navigateur (voix différente selon l'OS, absent
 - [x] Étape 5 — Opérateur : souscription Starter, choix des 5 voix, `--test` puis lot complet ; intégration de `js/voices.js` (XS · standard → Sonnet)
 - [x] Étape 6 — README et `index.html` (XS · standard → Sonnet)
 - [x] 🧪 Tests — Rédiger et exécuter la procédure de test
-- [ ] ✅ Validation — Vérifier les résultats des tests et clôturer
+- [x] ✅ Validation — Vérifier les résultats des tests et clôturer
 
 ## Décisions techniques
 
@@ -131,4 +131,4 @@ node tools/smoke-test.js
 ### Session 2026-11-03
 - ✅ Fait : cadrage, issue #31, plan créé. Étapes 1, 2, 3, 4 et 6 implémentées en one-shot et vérifiées avec un faux clip.
 - ✅ Fait : voix choisies et validées par l'opérateur ; cri du boss passé sur `eleven_v3` ; garde ffmpeg ; génération complète (75 clips) ; 🧪 Tests finaux PASS.
-- 📋 Prochain : ✅ Validation (écoute en jeu par l'opérateur, commit), puis clôture.
+- ✅ Validation : écoute en jeu validée par l'opérateur (« parfait ») ; commit c2af293 ; plan clôturé.
