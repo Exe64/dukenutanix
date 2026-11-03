@@ -2923,9 +2923,9 @@ function lockPointer() {
 
 let cheatBuf = '';
 function onCheat(k) {
-  cheatBuf = (cheatBuf + k.toLowerCase()).slice(-8);
-  if (cheatBuf.endsWith('iddqd')) { god = !god; msg(god ? 'ROOT MODE enabled (sudo su)' : 'ROOT MODE disabled'); }
-  if (cheatBuf.endsWith('idkfa')) {
+  cheatBuf = (cheatBuf + k.toLowerCase()).slice(-12);
+  if (cheatBuf.endsWith('iddqd') || cheatBuf.endsWith('iddad')) { god = !god; msg(god ? 'ROOT MODE enabled (sudo su)' : 'ROOT MODE disabled'); }
+  if (cheatBuf.endsWith('idkfa') || cheatBuf.endsWith('comegetsome')) {
     INV.weapons = INV.weapons.map(() => true);
     INV.ammo = { ...AMMO_MAX }; INV.armor = 200;
     L.keys.red = L.keys.blue = true;
