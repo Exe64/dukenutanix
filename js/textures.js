@@ -1339,38 +1339,62 @@ function founderHead(g, cx, cy, v, dir, long, mouth) {
   else { g.fillStyle = '#9a5a4a'; g.fillRect(cx - 2 + f, cy + 5, 4, 0.8); g.fillRect(cx + 2 + f, cy + 4.4, 0.8, 0.8); }
 }
 
-// THE OVH FOUNDER, phase 1: at the controls of a watercooling mech, under its glass dome.
-// The arm cannons fire jets of icy coolant (wind-up drips, the jet, the mist).
+// THE OVH FOUNDER's ammunition, also in his hands: a 1U server (grey chassis, drive bays,
+// LEDs) and a segment of the blue watercooling pipe between its two fittings.
+function drawServer(g, x, y, s, rot) {
+  g.save(); g.translate(x, y); g.rotate(rot); g.scale(s, s);
+  g.fillStyle = '#9aa1a8'; g.fillRect(-12, -4, 24, 8);
+  g.fillStyle = '#c9ced4'; g.fillRect(-12, -4, 24, 1.5);
+  g.fillStyle = '#2a2d33'; g.fillRect(-11, -1.5, 22, 4.5);
+  g.fillStyle = '#6a7078'; for (let k = 0; k < 4; k++) g.fillRect(-10 + k * 4, -1, 3.2, 3.5);
+  g.fillStyle = '#000e9c'; g.fillRect(6, -1.5, 5, 4.5);
+  g.fillStyle = '#3dff6a'; g.fillRect(7, -0.5, 1.2, 1.2); g.fillStyle = '#5aa8ff'; g.fillRect(9, -0.5, 1.2, 1.2);
+  g.restore();
+}
+function drawPipe(g, x, y, s, rot) {
+  g.save(); g.translate(x, y); g.rotate(rot); g.scale(s, s);
+  g.fillStyle = '#1f6fe0'; g.fillRect(-10, -3, 20, 6);
+  g.fillStyle = '#5aa8ff'; g.fillRect(-10, -3, 20, 1.5);
+  g.fillStyle = '#c9cdd1'; g.fillRect(-13, -4, 4, 8); g.fillRect(9, -4, 4, 8);
+  g.fillStyle = '#8a9099'; g.fillRect(-13, 2.5, 4, 1.5); g.fillRect(9, 2.5, 4, 1.5);
+  g.restore();
+}
+
+// THE OVH FOUNDER, phase 1: the founder himself, navy blazer over a black tee, beige chinos,
+// a watercooling pipe in his left hand. He throws servers and pipes: a server over his
+// shoulder (wind-up), the throw, the follow-through.
 function drawFounder(g, phase, atk, v = 0, dir = 1) {
-  const back = v >= 3, f = FACE_SHIFT[v] * dir * 0.6;
-  const lo = phase ? 4 : -4;
-  // legs and feet
-  g.fillStyle = '#3a3f4a'; g.fillRect(14, 46, 12, 15 + Math.min(0, lo)); g.fillRect(38, 46, 12, 15 - Math.max(0, lo));
-  g.fillStyle = '#20242c'; g.fillRect(11, 60 + Math.min(0, lo), 18, 4); g.fillRect(35, 60 - Math.max(0, lo), 18, 4);
-  // the chassis, blue with its coolant loop
-  g.fillStyle = '#000e9c'; g.fillRect(10, 30, 44, 18);
-  g.fillStyle = '#2b4bff'; g.fillRect(10, 30, 44, 2);
-  if (back) { g.fillStyle = '#16181c'; for (let k = 0; k < 3; k++) { ell(g, 20 + k * 12, 40, 4.5, 4.5, '#16181c'); ell(g, 20 + k * 12, 40, 1.5, 1.5, '#9aa1a8'); } }
-  else drawOvhLogo(g, 24.5 + f * 0.5, 36, 9, false);
-  cable(g, [[12, 46], [7, 38], [12, 31]], '#3ad0ff', 2.2);
-  cable(g, [[52, 46], [57, 38], [52, 31]], '#3ad0ff', 2.2);
-  // the founder in his cockpit: navy blazer, black tee
-  g.fillStyle = '#1b2440'; g.beginPath(); g.moveTo(19, 31); g.lineTo(22, 22); g.lineTo(42, 22); g.lineTo(45, 31); g.fill();
-  if (!back) { g.fillStyle = '#111214'; g.beginPath(); g.moveTo(28 + f, 22); g.lineTo(36 + f, 22); g.lineTo(32 + f, 31); g.fill(); }
-  founderHead(g, 32 + f * 0.5, 14, v, dir, false, atk === 2 ? 1 : 0);
-  // the dome
-  ell(g, 32, 17, 15, 15, 'rgba(160,225,255,0.22)');
-  g.strokeStyle = '#9aa1a8'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(32, 17, 15, 15, 0, Math.PI * 0.95, Math.PI * 2.05); g.stroke();
-  if (!back) ell(g, 25, 9, 3, 5, 'rgba(255,255,255,0.35)');
-  // the coolant cannons
-  for (const x of [5, 59]) {
-    g.fillStyle = '#2b2f3a'; g.fillRect(x - 5, 28, 10, 18);
-    g.fillStyle = '#9aa1a8'; g.fillRect(x - 4, 44, 8, 5);
-    ell(g, x, 51, 3, 2, '#3ad0ff');
-    if (atk === 1) { ell(g, x, 55, 1.5, 2.5, '#bff4ff'); ell(g, x + 1, 60, 1, 1.6, '#bff4ff'); }
-    else if (atk === 2) { ell(g, x, 56, 5, 6, '#3ad0ff'); ell(g, x, 56, 3, 4, '#e8fbff'); }
-    else if (atk === 3) ell(g, x, 55, 5, 3, 'rgba(220,245,255,0.55)');
-  }
+  const back = v >= 3, f = FACE_SHIFT[v] * dir * 0.6, navy = '#1b2440', skin = '#e9b994';
+  const lo = phase ? 3 : -3, sw = phase ? 2 : -1;
+  // chinos and sneakers
+  g.fillStyle = '#c8a26e'; g.fillRect(22, 44, 9, 16 + Math.min(0, lo)); g.fillRect(33, 44, 9, 16 - Math.max(0, lo));
+  g.fillStyle = '#16181c'; g.fillRect(20, 59 + Math.min(0, lo), 12, 3); g.fillRect(32, 59 - Math.max(0, lo), 12, 3);
+  g.fillStyle = '#e8e8e8'; g.fillRect(20, 62 + Math.min(0, lo), 12, 1.5); g.fillRect(32, 62 - Math.max(0, lo), 12, 1.5);
+  // the blazer, open on the black tee, its lapels and button
+  g.fillStyle = navy; g.beginPath(); g.moveTo(17, 47); g.lineTo(19, 22); g.lineTo(45, 22); g.lineTo(47, 47); g.closePath(); g.fill();
+  if (!back) {
+    g.fillStyle = '#15161a'; g.beginPath(); g.moveTo(27 + f, 22); g.lineTo(37 + f, 22); g.lineTo(34.5 + f, 47); g.lineTo(29.5 + f, 47); g.fill();
+    g.fillStyle = '#2a3660';
+    g.beginPath(); g.moveTo(26 + f, 22); g.lineTo(29 + f, 22); g.lineTo(30 + f, 36); g.lineTo(27 + f, 29); g.fill();
+    g.beginPath(); g.moveTo(35 + f, 22); g.lineTo(38 + f, 22); g.lineTo(37 + f, 29); g.lineTo(34 + f, 36); g.fill();
+    ell(g, 35.5 + f, 40, 0.9, 0.9, '#0d1222');
+  } else ln(g, 32, 34, 32, 47, '#0d1222', 1);
+  // left arm swinging, the pipe in its hand
+  g.fillStyle = navy; g.fillRect(13, 23 + sw, 6, 17);
+  drawPipe(g, 16, 46 + sw, 0.62, Math.PI / 2);
+  ell(g, 16, 41 + sw, 2.6, 2.6, skin);
+  // right arm by attack pose
+  if (atk === 1) {
+    ln(g, 47, 26, 52, 12, navy, 6); ell(g, 52, 10, 2.6, 2.6, skin);
+    drawServer(g, 52, 6, 0.75, -0.25);
+  } else if (atk === 2) {
+    ln(g, 47, 26, 55, 28, navy, 6); ell(g, 56, 28, 2.6, 2.6, skin);
+    g.fillStyle = 'rgba(255,255,255,0.6)'; g.fillRect(44, 15, 8, 1); g.fillRect(46, 19, 6, 1); g.fillRect(43, 23, 7, 1);
+    drawServer(g, 53, 18, 0.75, 0.35);
+  } else if (atk === 3) {
+    ln(g, 47, 26, 53, 36, navy, 6); ell(g, 53.5, 38, 2.6, 2.6, skin);
+  } else { g.fillStyle = navy; g.fillRect(45, 23 - sw, 6, 17); ell(g, 48, 41 - sw, 2.6, 2.6, skin); }
+  founderHead(g, 32 + f * 0.5, 13, v, dir, false, atk === 2 ? 1 : 0);
 }
 
 // Phase 2: the metalhead. Long hair, black tee, beige chinos, an electric guitar on a tan
@@ -1841,7 +1865,7 @@ function buildAssets() {
   for (const [k, o] of Object.entries(TECHS)) Assets.enemies[k] = buildEnemySprites(drawTech(o), [o.vest || o.top, o.top, o.legs, o.skin], ts++);
   Object.assign(Assets.enemies, {
     tbps: buildEnemySprites(drawTbps, ['#2a2f3a', '#f2f2f2', '#e8741a', '#2a7de1'], 31),
-    founder: buildEnemySprites(drawFounder, ['#000e9c', '#3ad0ff', '#3a3f4a', '#1b2440'], 32),
+    founder: buildEnemySprites(drawFounder, ['#1b2440', '#c8a26e', '#9aa1a8', '#1f6fe0'], 32),
     metal: buildEnemySprites(drawMetalhead, ['#15161a', '#c8a26e', '#2a2c33', '#6b4428'], 33),
   });
   Assets.items = {};
@@ -1858,7 +1882,9 @@ function buildAssets() {
     zeroday: orbSprite('#e0ffff', '#008aa8', 10),
     fire: [0, 1].map((i) => makeSprite((g) => { ell(g, 32, 32, 10 + i, 10 + i, '#c8300a'); ell(g, 32, 33, 7, 7, '#ff8a1a'); ell(g, 32, 34, 4, 4, '#ffe890'); })),
     rot: orbSprite('#c8ff7a', '#3a6a1a', 8),
-    ice: orbSprite('#e8fbff', '#3ad0ff', 8),
+    // THE OVH FOUNDER's throws, tumbling
+    server: [0, 1, 2, 3].map((i) => makeSprite((g) => drawServer(g, 32, 32, 1.6, i * Math.PI / 4), true)),
+    pipe: [0, 1, 2, 3].map((i) => makeSprite((g) => drawPipe(g, 32, 32, 1.6, i * Math.PI / 4), true)),
     bsod: orbSprite('#cfe6ff', '#0a5fd0', 6),
     // THE OVH FOUNDER's guitar lightning: a crackling ball of jagged bolts
     lightning: [0, 1].map((i) => makeSprite((g) => {

@@ -67,7 +67,8 @@ Object.assign(ETYPES, {
   tbps: { ...MINI_BASE, name: 'THE 1 TBPS', tag: 'VOLUMETRIC DDOS', hp: 800, speed: 0.9, scale: 1.5, dmg: [4, 7], shot: 'packet', fan: 5, burst: 2, shotSpeed: 11, shotScale: 0.3, cd: 2.4, vac: true },
   // The final boss cannot die: at 0 HP he turns into his `phase2` (bossPhase2), untouchable
   // (invuln), and the mod's end screen follows FINALE seconds later.
-  founder: { ...BOSS_BASE, name: 'THE OVH FOUNDER', tag: 'WATERCOOLING MECH', hp: 2400, dmg: [9, 14], shot: 'ice', shotSpeed: 9, shotScale: 0.4, minion: 'troll', phase2: 'metal' },
+  // He throws servers and watercooling pipes in turn and calls technicians who defect to OVHcloud.
+  founder: { ...BOSS_BASE, name: 'THE OVH FOUNDER', tag: 'FOUNDER MODE', hp: 2400, dmg: [11, 17], shot: ['server', 'pipe'], fan: 3, shotZ: 0.7, shotSpeed: 9, shotScale: 0.5, minion: ['aws', 'azure', 'gcp'], phase2: 'metal' },
   metal: { ...BOSS_BASE, name: 'THE OVH FOUNDER', tag: 'YOU HAVE NO POWER HERE', hp: 2400, speed: 0.8, scale: 1.6, dmg: [6, 10], shot: 'lightning', fan: 3, shotSpeed: 13, shotScale: 0.45, cd: 1.1, invuln: true },
 });
 const FINALE = 12;
@@ -998,13 +999,13 @@ function damageEnemy(e, dmg) {
   if (Math.random() < T.pain) { e.painT = 0.22; Sfx.enemyPain(sndKind(e), e); if (e.state === 'attack' && !T.boss) e.state = 'chase'; }
 }
 
-// THE OVH FOUNDER at 0 HP: he leaves the mech as a metalhead, roars, and the finale starts.
+// THE OVH FOUNDER at 0 HP: he turns into a metalhead, roars, and the finale starts.
 function bossPhase2(e) {
   e.type = ETYPES[e.type].phase2;
   Object.assign(e, { hp: ETYPES[e.type].hp, state: 'chase', painT: 0, shots: 0, cd: 2, flash: 0 });
   addFx(e.x, e.y, 'bigBoom', 0.6, 1.2, 2);
   P.shake = 1;
-  L.kills++;   // the mech counts as destroyed; L.bossAlive stays true so REBOOT stays locked
+  L.kills++;   // phase 1 counts as a kill; L.bossAlive stays true so REBOOT stays locked
   for (const o of L.enemies) if (o !== e && alive(o)) { o.hp = 0; killEnemy(o); }
   L.finaleT = FINALE;
   bossShout('YOU HAVE NO POWER HERE');
@@ -1073,7 +1074,8 @@ function enemyFire(e) {
   Sfx.enemyShoot(sndKind(e), e);
   if (T.boss) {
     const n = T.fan || (e.type === 'zeroday' ? 7 : 5);
-    for (let k = 0; k < n; k++) shoot(ang + (k - (n - 1) / 2) * 0.13, T.shot, T.shotSpeed || 7.5, T.shotScale || 0.5);
+    const kinds = [].concat(T.shot);
+    for (let k = 0; k < n; k++) shoot(ang + (k - (n - 1) / 2) * 0.13, kinds[k % kinds.length], T.shotSpeed || 7.5, T.shotScale || 0.5);
     e.attacks++;
     if (T.minion && e.attacks % 4 === 0) spawnMinions(e);
   } else if (T.summon) {
@@ -1086,23 +1088,27 @@ function enemyFire(e) {
   else shoot(ang + rand(-0.07, 0.07), T.shot, 12, 0.25);
 }
 
+// type: one type, or a list the minions are picked from in turn (then only the ones this boss
+// called count, 6 alive at most: the map's own technicians share their types).
 function spawnMinions(boss, type = ETYPES[boss.type].minion, count = 2) {
-  const kind = (L.def.mod && MOD_ENEMIES[type]) || type;
-  const n = L.enemies.filter((o) => o.type === kind && alive(o)).length;
+  const kinds = [].concat(type).map((t) => (L.def.mod && MOD_ENEMIES[t]) || t);
+  const own = Array.isArray(type);
+  const n = L.enemies.filter((o) => (own ? o.called === boss : kinds.includes(o.type)) && alive(o)).length;
   if (n >= 6) return;
-  for (let k = 0; k < count; k++) {
+  for (let k = 0; k < count && !(own && n + k >= 6); k++) {
+    const kind = kinds[(boss.attacks + k) % kinds.length];
     for (let tries = 0; tries < 12; tries++) {
       const a = Math.random() * Math.PI * 2, r = rand(1.2, 2.5);
       const x = boss.x + Math.cos(a) * r, y = boss.y + Math.sin(a) * r;
       if (!blocked(x, y, 0.35) && hasLOS(boss.x, boss.y, x, y)) {
-        const b = spawnEnemy(type, x, y);
-        b.state = 'chase'; b.alerted = true;
+        const b = spawnEnemy(kind, x, y);
+        b.state = 'chase'; b.alerted = true; b.called = boss;
         addFx(x, y, 'plasmaHit', 0.2, 0.4);
         break;
       }
     }
   }
-  msg(`${ETYPES[boss.type].name} calls for reinforcements!`, true);
+  msg(kinds.length > 1 ? `Hyperscaler technicians defect to ${ETYPES[boss.type].name}!` : `${ETYPES[boss.type].name} calls for reinforcements!`, true);
 }
 
 function updateEnemy(e, dt) {

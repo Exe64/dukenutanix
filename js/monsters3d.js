@@ -648,40 +648,46 @@ const Monsters3D = (() => {
     } else sp([3, 1, 54.5], 3, '#7a5032', SKIN);   // the quiff
     for (const s of [1, -1]) {
       box([6.2, s * 2.8, 47.5], [0.4, 2.3, 1.5], '#16181c', METAL);
-      box([6.5, s * 2.8, 47.5], [0.2, 1.8, 1.0], long ? '#ff2020' : '#4a6a8a', long ? { emit: true } : { gloss: 0.9, spec: 0.9 });
+      if (long) box([6.5, s * 2.8, 47.5], [0.2, 1.8, 1.0], '#ff2020', { emit: true });
+      else { box([6.5, s * 2.8, 47.5], [0.2, 1.8, 1.0], '#e9b994', SKIN); box([6.65, s * 2.8, 47.4], [0.15, 0.6, 0.6], '#2a1c14', SKIN); }   // clear lenses, his eyes
       box([3, s * 6.3, 48], [3, 0.3, 0.3], '#16181c');
     }
     sp([6.9, 0, 45.2], 1.1, '#d29a74', SKIN);
     box([6.1, 0, 42.8], [0.4, 1.8, long ? 1.2 : 0.3], long ? '#3a0a0a' : '#9a5a4a');
   }
-  const OVH_PLATE = () => tex(22, 9, (g, w, h) => { g.fillStyle = '#000e9c'; g.fillRect(0, 0, w, h); drawOvhLogo(g, 7.5, 1.5, 6, false); });
-  // Phase 1: in the cockpit of a watercooling mech, with coolant cannons.
+  const SERVER = () => tex(24, 4, (g, w, h) => {
+    g.fillStyle = '#2a2d33'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#6a7078'; for (let k = 0; k < 4; k++) g.fillRect(1 + k * 4, 0.6, 3.2, 2.8);
+    g.fillStyle = '#000e9c'; g.fillRect(18, 0.4, 5, 3.2);
+    g.fillStyle = '#3dff6a'; g.fillRect(19, 1.4, 1, 1); g.fillStyle = '#5aa8ff'; g.fillRect(21, 1.4, 1, 1);
+  });
+  // Phase 1: the founder himself, navy blazer open on a black tee, beige chinos, a watercooling
+  // pipe in his left hand and a server in his right, raised to throw it.
   function founder() {
     begin();
-    const plate = OVH_PLATE();
+    const navy = '#1b2440';
     for (const s of [1, -1]) {
-      part(s > 0 ? 'legA' : 'legB', [0, s * 12, 18]);
-      box([0, s * 12, 9], [6, 6, 9], '#3a3f4a', METAL);
-      box([2, s * 12, 1.5], [9, 8, 1.5], '#20242c', METAL);
+      part(s > 0 ? 'legA' : 'legB', [0, s * 5, 22]);
+      box([0, s * 5, 12], [3.5, 3.6, 10], '#c8a26e', SKIN);
+      box([1.5, s * 5, 1.6], [5, 3.8, 1.3], '#16181c', SKIN);
+      box([1.5, s * 5, 0.3], [5.1, 3.9, 0.3], '#e8e8e8', SKIN);
     }
-    part('body', [0, 0, 18]);
-    box([0, 0, 25], [11, 22, 9], '#000e9c', { ...METAL, tex: { front: plate } });
-    box([0, 0, 34.4], [11.2, 22.2, 0.8], '#2b4bff', METAL);
-    for (const y of [-12, 0, 12]) tube([-11, y, 25], [-11.8, y, 25], 4, 4, '#16181c', METAL);
-    for (const s of [1, -1]) cable([[6, s * 22, 18], [3, s * 26, 25], [6, s * 22, 33]], 1.2, '#3ad0ff', { emit: true });
-    box([0, 0, 38], [5, 9, 3.5], '#1b2440', SKIN);
-    box([5.1, 0, 38], [0.3, 3, 3.2], '#111214', SKIN);
-    // the dome's roll cage
-    cable([[0, -13, 35], [0, -10, 50], [0, 0, 58], [0, 10, 50], [0, 13, 35]], 0.7, '#9aa1a8', METAL);
-    cable([[-12, 0, 35], [-9, 0, 51], [0, 0, 58], [9, 0, 51], [12, 0, 35]], 0.7, '#9aa1a8', METAL);
+    part('body', [0, 0, 22]);
+    box([0, 0, 30.5], [5.5, 11, 9.5], navy, SKIN);
+    box([5.6, 0, 31], [0.2, 2.6, 8.5], '#15161a', SKIN);   // the tee between the lapels
+    for (const s of [1, -1]) box([5.65, s * 3.6, 36], [0.2, 1.2, 4], '#2a3660', SKIN);
+    sp([5.6, -3, 26], 0.6, '#0d1222', {});
     part('head', [0, 0, 40]);
     founderHead(false);
-    for (const s of [1, -1]) {
-      part(s > 0 ? 'armL' : 'gun', [0, s * 27, 34], { side: s });
-      box([0, s * 27, 26], [6, 5, 9], '#2b2f3a', METAL);
-      tube([2, s * 27, 18], [13, s * 27, 18], 3.5, 3.5, '#9aa1a8', METAL);
-      tube([12.8, s * 27, 18], [13.2, s * 27, 18], 2.4, 2.4, '#3ad0ff', { emit: true });
-    }
+    part('armL', [0, 13, 39], { side: 1 });
+    box([0, 13, 32], [3, 3, 7.5], navy, SKIN);
+    sp([0.5, 13, 23.5], 2.4, '#e9b994', SKIN);
+    tube([1, 13, 14], [1, 13, 33], 1.6, 1.6, '#1f6fe0', { gloss: 0.8, spec: 0.6 });
+    for (const z of [14, 31]) tube([1, 13, z], [1, 13, z + 2.5], 2.1, 2.1, '#c9cdd1', METAL);
+    part('gun', [0, -13, 39], { side: -1 });
+    box([0, -13, 32], [3, 3, 7.5], navy, SKIN);
+    sp([0.5, -13, 23.5], 2.4, '#e9b994', SKIN);
+    box([3, -13, 20], [5, 7, 1.6], '#9aa1a8', { ...METAL, tex: { front: SERVER() } });
     return model;
   }
   // Phase 2: the metalhead, black tee, beige chinos, an electric guitar on a tan strap.

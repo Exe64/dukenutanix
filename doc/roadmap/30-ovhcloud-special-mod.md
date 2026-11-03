@@ -82,7 +82,7 @@ inspiré d'Octave Klaba (« THE OVH FOUNDER »). Le branding est validé par l'u
 - [x] Étape 6 — Boss THE OVH FOUNDER : phase 1, transformation métalleux, guitare à éclairs, voix gutturale, bandeau, fin (L · reasoning → Opus)
 - [x] Étape 7 — Thème musical OVHcloud et 3 succès du mod (S · standard → Sonnet)
 - [x] Étape 8 — Révision des monstres : 6 techniciens AWS / Azure / GCP (RETRO 8 rotations + 3 frames d'attaque, MODERN), mécaniques egress fees / renforts / écran bleu / lock-in / deprecated / rafale ; la mouette, le blob, la caméra, le ticket et l'Abuse report sont retirés (L · reasoning → Opus)
-- [ ] Étape 9 — Révision du boss, phase 1 : Octave en personne (blazer, lunettes), projectiles serveurs et tuyaux, renforts transfuges ; phase 2 métalleux inchangée (M · reasoning → Opus)
+- [x] Étape 9 — Révision du boss, phase 1 : Octave en personne (blazer, lunettes), projectiles serveurs et tuyaux, renforts transfuges ; phase 2 métalleux inchangée (M · reasoning → Opus)
 - [ ] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
 - [ ] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
 
