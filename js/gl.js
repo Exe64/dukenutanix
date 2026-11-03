@@ -1666,6 +1666,9 @@ const GLR = (() => {
       case 'mouth': sz = 1 + atk * 1.8; break;
       case 'flame': sz = 1 + 0.08 * Math.sin(t * 9 + p.k * 1.7) + atk * 0.15; sxy = 1 + 0.05 * Math.sin(t * 7 + p.k); break;
       case 'bolt': sz = Math.sin(t * 23 + e.x) > -0.4 || atk ? 1 : 0.001; break;
+      case 'bang': a = 0.12 + Math.sin(t * 9) * 0.22; break;   // headbanging
+      case 'guitar': a = Math.sin(t * 6) * 0.05 - atk * 0.45; break;
+      case 'zap': sz = atk && Math.sin(t * 40) > -0.5 ? 1 : 0.001; break;
       default: break;
     }
     if (!a && !dz && sz === 1 && sxy === 1) return null;

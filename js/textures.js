@@ -1336,6 +1336,101 @@ function drawTbps(g, phase, atk, v = 0, dir = 1) {
   g.fillStyle = '#ffe14a'; g.font = 'bold 5px monospace'; g.fillText('SYN', 1, 10 - phase * 2); g.fillText('ACK', 52, 8 + phase * 2);
 }
 
+// THE OVH FOUNDER's head, a friendly caricature: round face, light stubble, dark rectangular
+// glasses, short brown hair (phase 1) or a long metal mane (phase 2, with red glowing eyes).
+// mouth: 0 closed smile .. 2 wide open (shouting).
+function founderHead(g, cx, cy, v, dir, long, mouth) {
+  const f = FACE_SHIFT[v] * dir * 0.45, back = v >= 3, hair = '#6b4428';
+  if (long) { g.fillStyle = hair; g.beginPath(); g.moveTo(cx - 9, cy - 4); g.lineTo(cx + 9, cy - 4); g.lineTo(cx + 11, cy + 15); g.lineTo(cx - 11, cy + 15); g.fill(); }
+  ell(g, cx - 7, cy + 1, 1.6, 2.4, '#dba783'); ell(g, cx + 7, cy + 1, 1.6, 2.4, '#dba783');
+  ell(g, cx, cy, 7.5, 8.5, '#e9b994');
+  ell(g, cx + f, cy + 4.5, 6, 3.8, 'rgba(105,75,55,0.3)');   // stubble
+  // hair: short with a little quiff, or long and parted in the middle
+  ell(g, cx, cy - 6, 7.8, 3.8, hair);
+  if (long) for (const s of [-1, 1]) { g.fillRect(cx + s * 7.5 - 1.5, cy - 5, 3, 16); g.fillRect(cx + s * 9 - 1.5, cy + 4, 3, 10); }
+  else { g.fillRect(cx - 7.5, cy - 6, 2, 5); g.fillRect(cx + 5.5, cy - 6, 2, 5); ell(g, cx + 1 + f, cy - 8.5, 4, 2.2, '#7a5032'); }
+  if (back) { ell(g, cx, cy - 1, 7.6, 8, hair); if (long) g.fillRect(cx - 9, cy, 18, 14); return; }
+  // glasses, nose, mouth
+  const ey = cy - 0.5, glow = long ? '#ff2020' : null;
+  eyes(v, dir, cx - 3.4 + f, cx + 3.4 + f, (x) => {
+    if (glow) ell(g, x, ey, 4.5, 3.5, 'rgba(255,40,30,0.45)');
+    g.fillStyle = glow || 'rgba(170,200,230,0.35)'; g.fillRect(x - 2.6, ey - 1.6, 5.2, 3.2);
+    g.strokeStyle = '#16181c'; g.lineWidth = 1; g.strokeRect(x - 2.6, ey - 1.6, 5.2, 3.2);
+    if (!glow) { g.fillStyle = '#2a1a10'; g.fillRect(x - 0.6, ey - 0.5, 1.2, 1.2); }
+  });
+  if (v !== 2) { g.fillStyle = '#16181c'; g.fillRect(cx - 0.8 + f, ey - 1, 1.6, 0.8); }
+  else { g.fillStyle = '#16181c'; g.fillRect(cx + f - dir * 1, ey - 0.5, -dir * 5, 0.8); }
+  g.fillStyle = '#d29a74'; g.fillRect(cx - 0.8 + f * 1.3, cy + 1, 1.6, 2.5);
+  if (mouth) ell(g, cx + f, cy + 5, 2.6, mouth * 1.4, '#3a0a0a');
+  else { g.fillStyle = '#9a5a4a'; g.fillRect(cx - 2 + f, cy + 5, 4, 0.8); g.fillRect(cx + 2 + f, cy + 4.4, 0.8, 0.8); }
+}
+
+// THE OVH FOUNDER, phase 1: at the controls of a watercooling mech, under its glass dome.
+// The arm cannons fire jets of icy coolant (wind-up drips, the jet, the mist).
+function drawFounder(g, phase, atk, v = 0, dir = 1) {
+  const back = v >= 3, f = FACE_SHIFT[v] * dir * 0.6;
+  const lo = phase ? 4 : -4;
+  // legs and feet
+  g.fillStyle = '#3a3f4a'; g.fillRect(14, 46, 12, 15 + Math.min(0, lo)); g.fillRect(38, 46, 12, 15 - Math.max(0, lo));
+  g.fillStyle = '#20242c'; g.fillRect(11, 60 + Math.min(0, lo), 18, 4); g.fillRect(35, 60 - Math.max(0, lo), 18, 4);
+  // the chassis, blue with its coolant loop
+  g.fillStyle = '#000e9c'; g.fillRect(10, 30, 44, 18);
+  g.fillStyle = '#2b4bff'; g.fillRect(10, 30, 44, 2);
+  if (back) { g.fillStyle = '#16181c'; for (let k = 0; k < 3; k++) { ell(g, 20 + k * 12, 40, 4.5, 4.5, '#16181c'); ell(g, 20 + k * 12, 40, 1.5, 1.5, '#9aa1a8'); } }
+  else drawOvhLogo(g, 24.5 + f * 0.5, 36, 9, false);
+  cable(g, [[12, 46], [7, 38], [12, 31]], '#3ad0ff', 2.2);
+  cable(g, [[52, 46], [57, 38], [52, 31]], '#3ad0ff', 2.2);
+  // the founder in his cockpit: navy blazer, black tee
+  g.fillStyle = '#1b2440'; g.beginPath(); g.moveTo(19, 31); g.lineTo(22, 22); g.lineTo(42, 22); g.lineTo(45, 31); g.fill();
+  if (!back) { g.fillStyle = '#111214'; g.beginPath(); g.moveTo(28 + f, 22); g.lineTo(36 + f, 22); g.lineTo(32 + f, 31); g.fill(); }
+  founderHead(g, 32 + f * 0.5, 14, v, dir, false, atk === 2 ? 1 : 0);
+  // the dome
+  ell(g, 32, 17, 15, 15, 'rgba(160,225,255,0.22)');
+  g.strokeStyle = '#9aa1a8'; g.lineWidth = 1.5; g.beginPath(); g.ellipse(32, 17, 15, 15, 0, Math.PI * 0.95, Math.PI * 2.05); g.stroke();
+  if (!back) ell(g, 25, 9, 3, 5, 'rgba(255,255,255,0.35)');
+  // the coolant cannons
+  for (const x of [5, 59]) {
+    g.fillStyle = '#2b2f3a'; g.fillRect(x - 5, 28, 10, 18);
+    g.fillStyle = '#9aa1a8'; g.fillRect(x - 4, 44, 8, 5);
+    ell(g, x, 51, 3, 2, '#3ad0ff');
+    if (atk === 1) { ell(g, x, 55, 1.5, 2.5, '#bff4ff'); ell(g, x + 1, 60, 1, 1.6, '#bff4ff'); }
+    else if (atk === 2) { ell(g, x, 56, 5, 6, '#3ad0ff'); ell(g, x, 56, 3, 4, '#e8fbff'); }
+    else if (atk === 3) ell(g, x, 55, 5, 3, 'rgba(220,245,255,0.55)');
+  }
+}
+
+// Phase 2: the metalhead. Long hair, black tee, beige chinos, an electric guitar on a tan
+// strap whose headstock throws the lightning; the eyes glow red behind the glasses.
+function drawMetalhead(g, phase, atk, v = 0, dir = 1) {
+  const back = v >= 3, f = FACE_SHIFT[v] * dir * 0.6;
+  const lo = phase ? 3 : -3, bang = atk ? 2 : phase ? 1 : -1;   // headbanging
+  // chinos and sneakers
+  g.fillStyle = '#c8a26e'; g.fillRect(23, 42, 8, 18 + Math.min(0, lo)); g.fillRect(33, 42, 8, 18 - Math.max(0, lo));
+  g.fillStyle = '#16181c'; g.fillRect(21, 59 + Math.min(0, lo), 11, 3); g.fillRect(32, 59 - Math.max(0, lo), 11, 3);
+  g.fillStyle = '#e8e8e8'; g.fillRect(21, 62 + Math.min(0, lo), 11, 1.5); g.fillRect(32, 62 - Math.max(0, lo), 11, 1.5);
+  // black tee and bare forearms
+  g.fillStyle = '#15161a'; g.fillRect(20, 23, 24, 21); g.fillRect(15, 23, 6, 9); g.fillRect(43, 23, 6, 9);
+  ell(g, 17, 36, 2.5, 5, '#e9b994'); ell(g, 47, 36, 2.5, 5, '#e9b994');
+  founderHead(g, 32 + f * 0.5, 13 + bang, v, dir, true, atk === 2 ? 2 : atk ? 1 : 0);
+  if (back) { g.fillStyle = '#d9a441'; g.save(); g.translate(32, 33); g.rotate(-0.75); g.fillRect(-15, -1.5, 30, 3); g.restore(); return; }
+  // strap, guitar body, neck up to the right, headstock
+  g.fillStyle = '#d9a441'; g.save(); g.translate(32 + f * 0.4, 31); g.rotate(0.75); g.fillRect(-15, -1.5, 30, 3); g.restore();
+  const gx = 26 + f * 0.5, gy = 41;
+  ln(g, gx + 4, gy - 3, 56, 18, '#7a5230', 3);
+  for (let k = 0; k < 5; k++) { const t = 0.15 + k * 0.17; g.fillStyle = '#d9d9d9'; g.fillRect(gx + 4 + (52 - gx) * t - 0.5, gy - 3 + (21 - gy) * t - 0.5, 1, 1); }
+  g.fillStyle = '#1a1c20'; g.save(); g.translate(57, 17); g.rotate(-0.6); g.fillRect(-2, -4, 5, 7); g.restore();
+  ell(g, gx, gy, 9, 7, '#2a2c33'); ell(g, gx - 2, gy + 2, 7, 5, '#2a2c33');
+  ell(g, gx + 1, gy, 4, 3, '#0a0a0c');
+  g.fillStyle = '#c9cdd1'; g.fillRect(gx - 3, gy - 1, 6, 1); g.fillRect(gx - 4, gy + 3, 6, 1);
+  ell(g, 45, 22, 2.5, 2.5, '#e9b994'); ell(g, gx + 4, gy - 1, 2.5, 2.5, '#e9b994');   // fretting and strumming hands
+  // the lightning from the headstock
+  if (atk) {
+    const bolt = (x, y, n, w, col) => { g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(x, y); const R = rng(n); for (let k = 0; k < 4; k++) { x += (R() - 0.6) * 4; y -= 3; g.lineTo(x, y); } g.stroke(); };
+    if (atk === 2) { ell(g, 57, 14, 5, 5, 'rgba(180,140,255,0.5)'); bolt(57, 14, 3, 2.5, '#b48cff'); bolt(57, 14, 3, 1, '#fff'); bolt(57, 14, 9, 1.2, '#e0d4ff'); }
+    else ell(g, 58, 14, atk === 1 ? 2.5 : 4, atk === 1 ? 2.5 : 4, atk === 1 ? '#e0d4ff' : 'rgba(180,140,255,0.5)');
+  }
+}
+
 /* ------------------------------------------------- volumetric decor props */
 
 // Faces are small canvases drawn in a design space (w x h), at TS x resolution.
@@ -1775,6 +1870,8 @@ function buildAssets() {
     ticket: buildEnemySprites(drawTicket, ['#ece8d6', '#1f58d6', '#7a9a5a', '#c21d1d'], 29),
     abuse: buildEnemySprites(drawAbuse, ['#e8ecf2', '#c21d1d', '#b8bcc4', '#14161a'], 30),
     tbps: buildEnemySprites(drawTbps, ['#2a2f3a', '#f2f2f2', '#e8741a', '#2a7de1'], 31),
+    founder: buildEnemySprites(drawFounder, ['#000e9c', '#3ad0ff', '#3a3f4a', '#1b2440'], 32),
+    metal: buildEnemySprites(drawMetalhead, ['#15161a', '#c8a26e', '#2a2c33', '#6b4428'], 33),
   });
   Assets.enemies.puddle = Assets.enemies.blob;
   Assets.items = {};
@@ -1791,6 +1888,19 @@ function buildAssets() {
     zeroday: orbSprite('#e0ffff', '#008aa8', 10),
     fire: [0, 1].map((i) => makeSprite((g) => { ell(g, 32, 32, 10 + i, 10 + i, '#c8300a'); ell(g, 32, 33, 7, 7, '#ff8a1a'); ell(g, 32, 34, 4, 4, '#ffe890'); })),
     rot: orbSprite('#c8ff7a', '#3a6a1a', 8),
+    ice: orbSprite('#e8fbff', '#3ad0ff', 8),
+    // THE OVH FOUNDER's guitar lightning: a crackling ball of jagged bolts
+    lightning: [0, 1].map((i) => makeSprite((g) => {
+      ell(g, 32, 32, 9, 9, 'rgba(180,140,255,0.45)');
+      const R = rng(61 + i);
+      for (let k = 0; k < 4; k++) {
+        let a = R() * Math.PI * 2, x = 32, y = 32;
+        g.strokeStyle = k % 2 ? '#b48cff' : '#fff'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(x, y);
+        for (let j = 0; j < 4; j++) { a += (R() - 0.5) * 1.6; x += Math.cos(a) * 4; y += Math.sin(a) * 4; g.lineTo(x, y); }
+        g.stroke();
+      }
+      ell(g, 32, 32, 3.5, 3.5, '#fff');
+    }, true)),
     packet: makeSprite((g) => { g.fillStyle = '#f2f2f2'; g.fillRect(22, 26, 20, 13); g.fillStyle = '#2a7de1'; g.fillRect(22, 26, 20, 4); g.fillStyle = '#ffe14a'; g.fillRect(24, 32, 16, 1.5); g.fillRect(24, 35, 10, 1.5); }, true),
     plus1: makeSprite((g) => { ell(g, 32, 32, 15, 13, '#ffe14a'); g.fillStyle = '#1f58d6'; g.font = 'bold 15px monospace'; g.textAlign = 'center'; g.fillText('+1', 32, 37); g.textAlign = 'left'; }, true),
     update: makeSprite((g) => {

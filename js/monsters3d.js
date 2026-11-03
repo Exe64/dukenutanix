@@ -693,10 +693,91 @@ const Monsters3D = (() => {
     return model;
   }
 
+  // THE OVH FOUNDER's head (see founderHead in textures.js): round face, light stubble, dark
+  // rectangular glasses, short brown hair, or a long mane and red glowing lenses (phase 2).
+  function founderHead(long) {
+    const hair = '#6b4428';
+    box([0, 0, 40], [2, 2.5, 2], '#e9b994', SKIN);
+    ellipsoid([0, 0, 47], [6.5, 6.5, 7.5], '#e9b994', SKIN);
+    ellipsoid([1, 0, 43.5], [5.8, 6.2, 3.6], '#c99c7c', SKIN);   // stubble
+    ellipsoid([-1, 0, 51.5], [6.4, 6.8, 4.2], hair, SKIN);
+    if (long) {
+      ellipsoid([-2, 0, 48], [5.5, 7, 7], hair, SKIN);
+      box([-3, 0, 38], [3, 8, 7], hair, SKIN);
+      for (const s of [1, -1]) box([1, s * 7, 42], [3, 1.6, 8], hair, SKIN);
+    } else sp([3, 1, 54.5], 3, '#7a5032', SKIN);   // the quiff
+    for (const s of [1, -1]) {
+      box([6.2, s * 2.8, 47.5], [0.4, 2.3, 1.5], '#16181c', METAL);
+      box([6.5, s * 2.8, 47.5], [0.2, 1.8, 1.0], long ? '#ff2020' : '#4a6a8a', long ? { emit: true } : { gloss: 0.9, spec: 0.9 });
+      box([3, s * 6.3, 48], [3, 0.3, 0.3], '#16181c');
+    }
+    sp([6.9, 0, 45.2], 1.1, '#d29a74', SKIN);
+    box([6.1, 0, 42.8], [0.4, 1.8, long ? 1.2 : 0.3], long ? '#3a0a0a' : '#9a5a4a');
+  }
+  const OVH_PLATE = () => tex(22, 9, (g, w, h) => { g.fillStyle = '#000e9c'; g.fillRect(0, 0, w, h); drawOvhLogo(g, 7.5, 1.5, 6, false); });
+  // Phase 1: in the cockpit of a watercooling mech, with coolant cannons.
+  function founder() {
+    begin();
+    const plate = OVH_PLATE();
+    for (const s of [1, -1]) {
+      part(s > 0 ? 'legA' : 'legB', [0, s * 12, 18]);
+      box([0, s * 12, 9], [6, 6, 9], '#3a3f4a', METAL);
+      box([2, s * 12, 1.5], [9, 8, 1.5], '#20242c', METAL);
+    }
+    part('body', [0, 0, 18]);
+    box([0, 0, 25], [11, 22, 9], '#000e9c', { ...METAL, tex: { front: plate } });
+    box([0, 0, 34.4], [11.2, 22.2, 0.8], '#2b4bff', METAL);
+    for (const y of [-12, 0, 12]) tube([-11, y, 25], [-11.8, y, 25], 4, 4, '#16181c', METAL);
+    for (const s of [1, -1]) cable([[6, s * 22, 18], [3, s * 26, 25], [6, s * 22, 33]], 1.2, '#3ad0ff', { emit: true });
+    box([0, 0, 38], [5, 9, 3.5], '#1b2440', SKIN);
+    box([5.1, 0, 38], [0.3, 3, 3.2], '#111214', SKIN);
+    // the dome's roll cage
+    cable([[0, -13, 35], [0, -10, 50], [0, 0, 58], [0, 10, 50], [0, 13, 35]], 0.7, '#9aa1a8', METAL);
+    cable([[-12, 0, 35], [-9, 0, 51], [0, 0, 58], [9, 0, 51], [12, 0, 35]], 0.7, '#9aa1a8', METAL);
+    part('head', [0, 0, 40]);
+    founderHead(false);
+    for (const s of [1, -1]) {
+      part(s > 0 ? 'armL' : 'gun', [0, s * 27, 34], { side: s });
+      box([0, s * 27, 26], [6, 5, 9], '#2b2f3a', METAL);
+      tube([2, s * 27, 18], [13, s * 27, 18], 3.5, 3.5, '#9aa1a8', METAL);
+      tube([12.8, s * 27, 18], [13.2, s * 27, 18], 2.4, 2.4, '#3ad0ff', { emit: true });
+    }
+    return model;
+  }
+  // Phase 2: the metalhead, black tee, beige chinos, an electric guitar on a tan strap.
+  function metal() {
+    begin();
+    for (const s of [1, -1]) {
+      part(s > 0 ? 'legA' : 'legB', [0, s * 4.5, 22]);
+      box([0, s * 4.5, 12], [3.2, 3.2, 10], '#c8a26e', SKIN);
+      box([1.5, s * 4.5, 1.6], [5, 3.4, 1.3], '#16181c', SKIN);
+      box([1.5, s * 4.5, 0.3], [5.1, 3.5, 0.3], '#e8e8e8', SKIN);
+    }
+    part('body', [0, 0, 22]);
+    box([0, 0, 31], [5, 10, 9], '#15161a', SKIN);
+    box([0, 0, 22.5], [5.1, 9.6, 1.2], '#c8a26e', SKIN);
+    cable([[5.4, 8, 40], [6, 0, 31], [5.4, -8, 23]], 0.8, '#d9a441', SKIN);
+    for (const s of [1, -1]) box([0, s * 11.5, 36], [3, 2.5, 3.5], '#15161a', SKIN);
+    part('bang', [0, 0, 39]);
+    founderHead(true);
+    part('guitar', [0, 0, 30]);
+    for (const s of [1, -1]) tube([0, s * 11.5, 33], s > 0 ? [8, 4, 26] : [8, -13, 38], 1.6, 1.4, '#e9b994', SKIN);
+    ellipsoid([7.5, 5, 23], [1.8, 8, 6], '#2a2c33', { gloss: 0.85, spec: 0.8 });
+    ellipsoid([7.5, 2, 28], [1.7, 6, 4.5], '#2a2c33', { gloss: 0.85, spec: 0.8 });
+    ellipsoid([8.8, 4, 23], [0.8, 4, 3], '#0a0a0c', {});
+    tube([8, 1, 26], [9, -22, 46], 1.2, 1, '#7a5230', SKIN);
+    box([9, -24, 48], [0.8, 2, 3], '#1a1c20', METAL);
+    sp([9, 4, 26], 2, '#e9b994', SKIN); sp([8.5, -13, 38], 2, '#e9b994', SKIN);
+    part('zap', [9, -25, 50]);
+    cable([[9, -25, 50], [11, -22, 54], [9, -26, 57], [12, -23, 61]], 0.6, '#e0d4ff', { emit: true });
+    sp([9, -25, 50], 1.8, '#b48cff', { emit: true });
+    return model;
+  }
+
   /* --------------------------------------------------------------- build */
   // {type: {parts: [{anim, pivot, side, k, first, count}]}, data, atlas, stride}
   function build() {
-    const makers = { bug, drone, bot, troll, spam, spaghetti, hotspot, storm, bitrot, shadowit, thief, gull, blob, mirai, ticket, abuse, tbps };
+    const makers = { bug, drone, bot, troll, spam, spaghetti, hotspot, storm, bitrot, shadowit, thief, gull, blob, mirai, ticket, abuse, tbps, founder, metal };
     for (const [k, pal] of Object.entries(BOSS_PAL)) makers[k] = boss(pal);
     const models = {}, chunks = [];
     let n = 0;

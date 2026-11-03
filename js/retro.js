@@ -390,6 +390,11 @@ const Retro = (() => {
       center(L.def.name, 34, col('#3dff6a'), 2);
       center(episodeLabel(L.def.episode), 50, col('#9aa3ad'));
     }
+    if (L.banner && L.banner.t > 0) {
+      const by = VHR - 48;   // under the boss, above the subtitles
+      rect(0, by, SW, 22, 0); rect(0, by, SW, 1, col('#ff2a2a')); rect(0, by + 21, SW, 1, col('#ff2a2a'));
+      center(L.banner.text, by + 4, col(L.time % 0.2 < 0.1 ? '#ff2a2a' : '#ffe14a'), 2);
+    }
     if (L.subtitle && L.subtitle.t > 0) center(L.subtitle.text, VHR - 18, 15);
     const right = (s, y, c) => text(s, SW - 2 - textW(s), y, c);
     right(WEAPONS[INV.cur].name, VHR - 8, col('#9aa3ad'));

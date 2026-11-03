@@ -208,5 +208,26 @@ const Sfx = (() => {
     slurp() { noise(0.4, 600, 1200, 0.25, 'bandpass', 4); tone('sine', 300, 500, 0.3, 0.1); },
     exit() { [523, 659, 784, 1046].forEach((f, i) => tone('square', f, f, 0.18, 0.2, i * 0.12)); },
     alarm() { tone('square', 880, 660, 0.35, 0.12); tone('square', 880, 660, 0.35, 0.12, 0.4); },
+    // A guttural roar: detuned low saws with a shaky vibrato through a hard wave shaper,
+    // over a throaty band of noise (THE OVH FOUNDER's battle cry, game.js bossShout).
+    growl(dur, vol) {
+      if (!ac || muted) return;
+      const t = ac.currentTime;
+      const ws = ac.createWaveShaper(), curve = new Float32Array(256);
+      for (let i = 0; i < 256; i++) curve[i] = Math.tanh((i / 128 - 1) * 8);
+      ws.curve = curve;
+      const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1100;
+      const g = ac.createGain(); env(g, t, 0.08, vol, dur);
+      const lfo = ac.createOscillator(), lg = ac.createGain(); lfo.frequency.value = 11; lg.gain.value = 7;
+      lfo.connect(lg); lfo.start(t); lfo.stop(t + dur + 0.05);
+      for (const f of [55, 58, 82.5]) {
+        const o = ac.createOscillator();
+        o.type = 'sawtooth'; o.frequency.setValueAtTime(f, t); o.frequency.linearRampToValueAtTime(f * 0.75, t + dur);
+        lg.connect(o.frequency); o.connect(ws);
+        o.start(t); o.stop(t + dur + 0.05);
+      }
+      ws.connect(lp); lp.connect(g); g.connect(master);
+      noise(dur, 520, 260, vol * 0.6, 'bandpass', 3);
+    },
   };
 })();

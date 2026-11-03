@@ -63,7 +63,12 @@ Object.assign(ETYPES, {
   ticket: { ...ETYPES.spam, name: 'Zombie support ticket', shot: 'plus1', shot2: 'update', shotScale: 0.4, snd: 'bot' },
   abuse: { ...ETYPES.drone, name: 'Abuse report', snd: 'drone' },
   tbps: { ...MINI_BASE, name: 'THE 1 TBPS', tag: 'VOLUMETRIC DDOS', hp: 800, speed: 0.9, scale: 1.5, dmg: [4, 7], shot: 'packet', fan: 5, burst: 2, shotSpeed: 11, shotScale: 0.3, cd: 2.4, vac: true },
+  // The final boss cannot die: at 0 HP he turns into his `phase2` (bossPhase2), untouchable
+  // (invuln), and the mod's end screen follows FINALE seconds later.
+  founder: { ...BOSS_BASE, name: 'THE OVH FOUNDER', tag: 'WATERCOOLING MECH', hp: 2400, dmg: [9, 14], shot: 'ice', shotSpeed: 9, shotScale: 0.4, minion: 'troll', phase2: 'metal' },
+  metal: { ...BOSS_BASE, name: 'THE OVH FOUNDER', tag: 'YOU HAVE NO POWER HERE', hp: 2400, speed: 0.8, scale: 1.6, dmg: [6, 10], shot: 'lightning', fan: 3, shotSpeed: 13, shotScale: 0.45, cd: 1.1, invuln: true },
 });
+const FINALE = 12;
 const MOD_ENEMIES = { bug: 'gull', troll: 'blob', bot: 'mirai', spam: 'ticket', drone: 'abuse' };
 const ENEMY_CHARS = { b: 'bug', d: 'drone', o: 'bot', t: 'troll', m: 'spam', y: 'thief' };
 const ITEM_CHARS = '+HAascrukgjFMKGYL';
@@ -120,6 +125,23 @@ function quip(kind, chance = 1, force = false) {
       speechSynthesis.speak(u);
     } catch (e) { /* speech synthesis unavailable */ }
   }
+}
+
+// The final boss's battle cry, with a big banner: the speech synthesis at its lowest and
+// slowest over a distorted growl, or the growl alone without speech synthesis (WebKitGTK).
+function bossShout(text) {
+  L.banner = { text, t: 5 };
+  lastQuip = L.time + 3;   // no quip cuts it off for 7 s
+  const speech = voiceOn && window.speechSynthesis && window.SpeechSynthesisUtterance;
+  Sfx.growl(3, speech ? 0.5 : 0.8);
+  if (!speech) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.pitch = 0; u.rate = 0.55; u.volume = 1;
+    if (adminVoice) u.voice = adminVoice;
+    speechSynthesis.speak(u);
+  } catch (e) { /* speech synthesis unavailable */ }
 }
 
 /* ---------------------------------------------------------------- canvas */
@@ -946,6 +968,7 @@ function killEnemy(e, how) {
 
 function damageEnemy(e, dmg) {
   const T = ETYPES[e.type];
+  if (T.invuln) { addFx(e.x, e.y, 'plasmaHit', 0.2 + T.scale * 0.5, 0.5); return; }
   const o = L.obj;
   const shielded = T.vac && o && o.vac && o.vacOn < o.vac.length;
   if (shielded) {
@@ -956,9 +979,21 @@ function damageEnemy(e, dmg) {
   e.hp -= dmg;
   e.flash = shielded ? 0 : 0.08;
   e.alerted = true;
-  if (e.hp <= 0) { killEnemy(e); return; }
+  if (e.hp <= 0) { if (T.phase2) bossPhase2(e); else killEnemy(e); return; }
   if (e.state === 'idle') { e.state = 'chase'; Sfx.alert(sndKind(e), e); }
   if (Math.random() < T.pain) { e.painT = 0.22; Sfx.enemyPain(sndKind(e), e); if (e.state === 'attack' && !T.boss) e.state = 'chase'; }
+}
+
+// THE OVH FOUNDER at 0 HP: he leaves the mech as a metalhead, roars, and the finale starts.
+function bossPhase2(e) {
+  e.type = ETYPES[e.type].phase2;
+  Object.assign(e, { hp: ETYPES[e.type].hp, state: 'chase', painT: 0, shots: 0, cd: 2, flash: 0 });
+  addFx(e.x, e.y, 'bigBoom', 0.6, 1.2, 2);
+  P.shake = 1;
+  L.kills++;   // the mech counts as destroyed; L.bossAlive stays true so REBOOT stays locked
+  for (const o of L.enemies) if (o !== e && alive(o)) { o.hp = 0; killEnemy(o); }
+  L.finaleT = FINALE;
+  bossShout('YOU HAVE NO POWER HERE');
 }
 
 function shrinkEnemy(e) {
@@ -1034,8 +1069,8 @@ function enemyFire(e) {
 }
 
 function spawnMinions(boss) {
-  const type = ETYPES[boss.type].minion;
-  const n = L.enemies.filter((o) => o.type === type && alive(o)).length;
+  const type = ETYPES[boss.type].minion, kind = (L.def.mod && MOD_ENEMIES[type]) || type;
+  const n = L.enemies.filter((o) => o.type === kind && alive(o)).length;
   if (n >= 6) return;
   for (let k = 0; k < 2; k++) {
     for (let tries = 0; tries < 12; tries++) {
@@ -1716,6 +1751,16 @@ function drawOverlayText(g) {
     g.fillText(episodeLabel(L.def.episode), W / 2, 72);
     g.globalAlpha = 1;
   }
+  if (L.banner && L.banner.t > 0) {
+    g.globalAlpha = Math.min(1, L.banner.t);
+    const by = VH - 64, jx = Math.sin(L.time * 40) * 0.8;   // under the boss, above the subtitles
+    g.fillStyle = 'rgba(0,0,0,0.7)'; g.fillRect(0, by, W, 26);
+    g.fillStyle = '#ff2a2a'; g.fillRect(0, by, W, 1); g.fillRect(0, by + 25, W, 1);
+    g.font = `12px ${FONT}`; g.textAlign = 'center';
+    g.fillStyle = '#000'; g.fillText(L.banner.text, W / 2 + 1 + jx, by + 19);
+    g.fillStyle = L.time % 0.2 < 0.1 ? '#ff2a2a' : '#ffe14a'; g.fillText(L.banner.text, W / 2 + jx, by + 18);
+    g.globalAlpha = 1;
+  }
   if (L.subtitle && L.subtitle.t > 0) {
     g.globalAlpha = Math.min(1, L.subtitle.t);
     g.font = `6px ${FONT}`; g.textAlign = 'center';
@@ -1866,6 +1911,7 @@ function updateMsgs(dt) {
   L.msgs = L.msgs.filter((m) => m.t > 0);
   if (L.titleT > 0) L.titleT -= dt;
   if (L.subtitle) L.subtitle.t -= dt;
+  if (L.banner) L.banner.t -= dt;
 }
 
 // The mouse turns the view at every displayed frame, not at the logic's rate: no added latency.
@@ -1903,6 +1949,8 @@ function update(dt) {
   Objectives.update(L, dt);
   checkpointCheck();
   updateMsgs(dt);
+  // THE OVH FOUNDER's finale ends the mod, whether the player survives it or not
+  if (L.finaleT > 0 && state === 'playing' && ((L.finaleT -= dt) <= 0 || (P.dead && P.deadT > 1.6))) { completeLevel(); return; }
   if (P.dead && P.deadT > 1.6 && state === 'playing') {
     if (coop && !L.failReason) { if (P.deadT > 3) respawnHost(); } else showDeath();
   }
@@ -2784,7 +2832,7 @@ function showDeath() {
 
 function completeLevel() {
   Sfx.exit();
-  quip('exit', 0.7, true);
+  if (!L.finaleT) quip('exit', 0.7, true);   // never cut off the boss's shout
   state = 'intermission';
   firing = false;
   document.exitPointerLock && document.exitPointerLock();

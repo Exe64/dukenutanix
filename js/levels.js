@@ -92,7 +92,7 @@ const EPISODES = [
     intro: "Acres of servers as far as the eye can see. The RANSOMWARE is waiting at the end. It has no backup. Neither do you." },
   // the OVHCLOUD SPECIAL mod (MOD_LEVELS below); `mod` is the flag the textures, monsters,
   // objectives and music key on (L.def.mod)
-  { name: 'OVHCLOUD SPECIAL', mod: 'ovh', boss: 'ransomware', ambient: 0.9,
+  { name: 'OVHCLOUD SPECIAL', mod: 'ovh', boss: 'founder', ambient: 0.9,
     intro: 'Event day at OVHcloud: the datacenters from Roubaix to Gravelines are overrun, and the founder himself is behind it.' },
 ];
 // "EPISODE 2: COOLING ZONE", or the mod's name alone
