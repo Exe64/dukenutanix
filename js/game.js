@@ -2922,6 +2922,18 @@ function lockPointer() {
 }
 
 let cheatBuf = '';
+// Menu cheat (idclev): unlocks every level of the campaign and of the mod, then redraws the menu.
+function unlockAll() {
+  for (const [first, last] of [[0, LEVEL_COUNT - 1], [MOD_FIRST, MOD_FIRST + MOD_COUNT - 1]]) {
+    const s = readSave(first) || { level: first };
+    s.maxLevel = last;
+    try { localStorage.setItem(saveKey(first), JSON.stringify(s)); } catch (e) { /* storage unavailable */ }
+  }
+  Sfx.init(); Sfx.secret();
+  if (panel.querySelector('.grid.mod')) showMod();
+  else if (panel.querySelector('.grid')) showSelect();
+  else if (state === 'title') showTitle();
+}
 function onCheat(k) {
   cheatBuf = (cheatBuf + k.toLowerCase()).slice(-12);
   if (cheatBuf.endsWith('iddqd') || cheatBuf.endsWith('iddad')) { god = !god; msg(god ? 'ROOT MODE enabled (sudo su)' : 'ROOT MODE disabled'); }
@@ -2953,6 +2965,10 @@ window.addEventListener('keydown', (e) => {
   if (state === 'briefing' && (e.code === 'Enter' || e.code === 'Space')) { panel.querySelector('[data-go]')?.click(); return; }
   if (state === 'intermission' && e.code === 'Enter') { (panel.querySelector('[data-go]') || panel.querySelector('[data-act]'))?.click(); return; }
   if (state === 'paused' && e.code === 'Escape') { resumeGame(); return; }
+  if ((state === 'title' || state === 'select') && e.key && e.key.length === 1) {
+    cheatBuf = (cheatBuf + e.key.toLowerCase()).slice(-12);
+    if (cheatBuf.endsWith('idclev')) { cheatBuf = ''; unlockAll(); }
+  }
   if (state !== 'playing') return;
   keys[e.code] = true;
   if (e.repeat) return;
