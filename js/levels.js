@@ -381,7 +381,7 @@ const MOD_OBJECTIVE_INTRO = {
   hotswap: 'A customer server lost a hard drive: grab the spare HDD and swap it into the server with the failed disk.',
   leak: 'The watercooling loop is leaking into the hall: close the 3 valves before the water reaches the servers (5 minutes).',
   ram: 'A customer ordered more memory: pick up the 3 RAM kits and fit them into the 3 servers waiting in a rack row.',
-  backup: 'The backup window is open: load the 5 LTO tapes into the tape library before it closes (5 minutes).',
+  backup: 'The backup window is open: load the 5 LTO tapes into the tape library before it closes (10 minutes).',
   power: 'Blackout! Start the 3 generators (GE) to bring the power back.',
 };
 const MOD_ENDING = ['UPTIME RESTORED', 'THE CLOUD IS SAFE',

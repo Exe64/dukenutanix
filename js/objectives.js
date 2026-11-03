@@ -18,7 +18,7 @@
  *             a tenth of the damage until the 2 VAC terminals (I, on: 0) of its level are on
  *
  * OVHCLOUD SPECIAL: hotswap, backup and power keep their rules under OVHcloud names (HDD
- * replacement, LTO backup, generators), the backup gets the 5-minute countdown; a boss on
+ * replacement, LTO backup, generators), the backup gets a 10-minute countdown; a boss on
  * a mission level must go too. Two missions of its own:
  *   ram       fit the 3 RAM kits (v) into the 3 servers of a rack row (%)
  *   leak      close the 3 leaking watercooling valves (~, closed: =), hold E for 2 s each,
@@ -126,7 +126,8 @@ const Objectives = (() => {
         break;
       default: break;
     }
-    if (type === 'backup' && L.def.mod) o.timed = true;   // the backup window closes
+    // the backup window closes: 10 min, BARE METAL is the biggest map of the mod (par 6:45)
+    if (type === 'backup' && L.def.mod) { o.timed = true; o.left = 2 * TIMED_S; }
     // VAC terminals of THE 1 TBPS: keyed on the tiles, whatever the objective
     const vac = cellsOf(L, 'I');
     if (vac.length) { o.vac = vac; o.vacOn = 0; }
@@ -595,7 +596,7 @@ const Objectives = (() => {
   // the OVHcloud names of the campaign objectives in the mod
   const MOD_TITLES = {
     hotswap: ['HDD replacement: bring the spare HDD to the server with the failed disk', 'HDD replaced'],
-    backup: ['LTO backup: load the 5 LTO tapes into the tape library before the window closes (5 min)', 'Backup on tape'],
+    backup: ['LTO backup: load the 5 LTO tapes into the tape library before the window closes (10 min)', 'Backup on tape'],
     power: ['Blackout: start the 3 generators (GE)', 'Generators started'],
   };
   // The objective in one sentence (briefing), or its short name once done (level stats).
