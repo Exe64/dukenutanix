@@ -14,14 +14,6 @@ La vision d'ensemble (multijoueur) est résumée dans [`ROADMAP.md`](../../ROADM
 ---
 
 ## À faire
-### [Issue: #30] Mod OVHCLOUD SPECIAL [PRIORITÉ: HAUTE] [Complexité: XL] 🟢
-
-Plan : [`30-ovhcloud-special-mod.md`](30-ovhcloud-special-mod.md)
-
-5 niveaux dans des datacenters OVHcloud (dont GRA d'après le plan réel), monstres et missions dédiés, boss THE OVH FOUNDER qui passe en métalleux invincible.
-
----
-
 ### [Issue: #22] Mesurer MODERN sur du vrai matériel [PRIORITÉ: MOYENNE] [Complexité: S] 🟢
 
 Plan : [`22-modern-real-hw-benchmark.md`](22-modern-real-hw-benchmark.md)
@@ -56,7 +48,9 @@ Apple Developer ID avec notarisation et certificat Windows dans le workflow de r
 
 ## Fait
 
-### Plans livrés (2026-10-22 → 2026-11-02)
+### Plans livrés (2026-10-22 → 2026-11-03)
+- **[Issue: #30] `#30` — Mod OVHCLOUD SPECIAL** (2026-11-03) 🔵 — 5 niveaux OVHcloud (RBX, GRA d'après le plan réel, VRACK, BARE METAL, HQ), missions HDD / RAM / fuite / LTO / GE, techniciens AWS / Azure / GCP, mini-boss THE 1 TBPS, boss THE OVH FOUNDER qui finit en métalleux invincible ; codes iddad, comegetsome, idclev
+  [`30-ovhcloud-special-mod.md`](done/30-ovhcloud-special-mod.md)
 - **[Issue: #29] `#29` — Avatar du HUD d'après la vraie tête** (2026-11-02) 🔵 — `drawFace` en pixel-art d'après la photo de l'auteur (cheveux et barbe noirs, lunettes miroir bleues), fond bleu ardoise, humeurs conservées
   [`29-hud-avatar-real-face.md`](done/29-hud-avatar-real-face.md)
 - **[Issue: #1] `#1` — RETRO : 3 frames d'attaque pour les monstres** (2026-11-02) 🔵 — préparation, coup/tir et retour dans les 8 rotations RETRO, frame choisie selon les minuteurs d'attaque ; MODERN inchangé

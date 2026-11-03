@@ -2,8 +2,8 @@
 plan:
   id: '30'
   name: 30-ovhcloud-special-mod.md
-  link: https://github.com/Exe64/dukenutanix/blob/main/doc/roadmap/30-ovhcloud-special-mod.md
-status: in-progress
+  link: https://github.com/Exe64/dukenutanix/blob/main/doc/roadmap/done/30-ovhcloud-special-mod.md
+status: done
 date: 2026-11-02
 description: >
   Mod événementiel « OVHCLOUD SPECIAL » : 5 niveaux dans des datacenters OVHcloud, monstres et missions dédiés, boss final THE OVH FOUNDER.
@@ -84,7 +84,7 @@ inspiré d'Octave Klaba (« THE OVH FOUNDER »). Le branding est validé par l'u
 - [x] Étape 8 — Révision des monstres : 6 techniciens AWS / Azure / GCP (RETRO 8 rotations + 3 frames d'attaque, MODERN), mécaniques egress fees / renforts / écran bleu / lock-in / deprecated / rafale ; la mouette, le blob, la caméra, le ticket et l'Abuse report sont retirés (L · reasoning → Opus)
 - [x] Étape 9 — Révision du boss, phase 1 : Octave en personne (blazer, lunettes), projectiles serveurs et tuyaux, renforts transfuges ; phase 2 métalleux inchangée (M · reasoning → Opus)
 - [x] 🧪 Tests — Rédiger et exécuter la procédure de test (avant-dernière étape, obligatoire)
-- [ ] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
+- [x] ✅ Validation — Vérifier les résultats des tests et clôturer (dernière étape, obligatoire)
 
 ## Décisions techniques
 
